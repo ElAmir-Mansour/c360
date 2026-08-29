@@ -1,0 +1,854 @@
+openapi: 3.1.0
+info:
+  title: ClarioDR Service API
+  version: 1.0.0
+  description: Disaster recovery control-plane API for protected sites, consistency groups, replication streams, recovery points, agent enrollment, failover runs, and attestations.
+  x-gateway-contract:
+    id: clario-dr-service
+    version: 1.0.0
+    api_version: v1
+    fail_closed: false
+    fail_closed_profiles:
+      standard: false
+      regulated: true
+    regulated_posture:
+      startup_validation: fail_closed
+      readiness_check: dr_runtime_config
+servers:
+  - url: /api/v1/dr
+security:
+  - bearerAuth: []
+    tenantContext: []
+tags:
+  - name: Enrollment
+  - name: Sites
+  - name: Groups
+  - name: Streams
+  - name: RecoveryPoints
+  - name: InstantRecovery
+  - name: Journal
+  - name: Agents
+  - name: Failover
+paths:
+  /agents/enroll:
+    post:
+      tags: [Enrollment]
+      summary: Exchange a single-use enrollment token and CSR for an mTLS client certificate.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnrollmentExchangeRequest"
+      responses:
+        "200":
+          description: Certificate issued.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnrollmentExchangeResponseEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /agents/{agentID}/enrollment-token:
+    post:
+      tags: [Enrollment]
+      summary: Mint a single-use enrollment or rotation token for an existing DR agent.
+      security:
+        - bearerAuth: []
+          tenantContext: []
+      parameters:
+        - $ref: "#/components/parameters/AgentID"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MintEnrollmentTokenRequest"
+      responses:
+        "201":
+          description: Enrollment token minted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MintEnrollmentTokenResponseEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /sites:
+    get:
+      tags: [Sites]
+      summary: List protected sites.
+      responses:
+        "200":
+          $ref: "#/components/responses/DataList"
+    post:
+      tags: [Sites]
+      summary: Create a protected site.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSiteRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/DataObject"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /sites/{siteID}:
+    get:
+      tags: [Sites]
+      summary: Get a protected site.
+      parameters:
+        - $ref: "#/components/parameters/SiteID"
+      responses:
+        "200":
+          $ref: "#/components/responses/DataObject"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /groups:
+    get:
+      tags: [Groups]
+      summary: List consistency groups.
+      responses:
+        "200":
+          $ref: "#/components/responses/DataList"
+    post:
+      tags: [Groups]
+      summary: Create a consistency group.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGroupRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/DataObject"
+  /groups/{groupID}:
+    get:
+      tags: [Groups]
+      summary: Get a consistency group.
+      parameters:
+        - $ref: "#/components/parameters/GroupID"
+      responses:
+        "200":
+          $ref: "#/components/responses/DataObject"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /groups/{groupID}/members:
+    get:
+      tags: [Groups]
+      summary: List group members.
+      parameters:
+        - $ref: "#/components/parameters/GroupID"
+      responses:
+        "200":
+          $ref: "#/components/responses/DataList"
+    post:
+      tags: [Groups]
+      summary: Add a protected site to a consistency group.
+      parameters:
+        - $ref: "#/components/parameters/GroupID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddGroupMemberRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/DataObject"
+  /groups/{groupID}/network-mappings:
+    get:
+      tags: [Groups]
+      summary: List network mappings for a group.
+      parameters:
+        - $ref: "#/components/parameters/GroupID"
+      responses:
+        "200":
+          $ref: "#/components/responses/DataList"
+    post:
+      tags: [Groups]
+      summary: Create a production or isolated network mapping.
+      parameters:
+        - $ref: "#/components/parameters/GroupID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNetworkMappingRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/DataObject"
+  /groups/{groupID}/recovery-points:
+    get:
+      tags: [RecoveryPoints]
+      summary: List recovery points for a group.
+      parameters:
+        - $ref: "#/components/parameters/GroupID"
+      responses:
+        "200":
+          $ref: "#/components/responses/DataList"
+    post:
+      tags: [RecoveryPoints]
+      summary: Seal a new immutable recovery point for a consistency group.
+      parameters:
+        - $ref: "#/components/parameters/GroupID"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SealRecoveryPointRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/DataObject"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /groups/{groupID}/journal/materialize:
+    post:
+      tags: [Journal, Failover]
+      summary: Replay the CDP journal to a point in time and seal it as a recovery point.
+      parameters:
+        - $ref: "#/components/parameters/GroupID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MaterializeJournalRecoveryPointRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/DataObject"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          $ref: "#/components/responses/Gone"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /recovery-points/{recoveryPointID}:
+    get:
+      tags: [RecoveryPoints]
+      summary: Get a recovery point.
+      parameters:
+        - $ref: "#/components/parameters/RecoveryPointID"
+      responses:
+        "200":
+          $ref: "#/components/responses/DataObject"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /recovery-points/{recoveryPointID}/validate:
+    post:
+      tags: [RecoveryPoints]
+      summary: Validate a sealed recovery point and reconcile WORM legal holds.
+      parameters:
+        - $ref: "#/components/parameters/RecoveryPointID"
+      responses:
+        "200":
+          $ref: "#/components/responses/DataObject"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /recovery-points/{recoveryPointID}/instant-recovery:
+    post:
+      tags: [InstantRecovery]
+      summary: Start an instant recovery COW session over a sealed recovery point.
+      parameters:
+        - $ref: "#/components/parameters/RecoveryPointID"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartInstantRecoveryRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/DataObject"
+        "422":
+          $ref: "#/components/responses/BadRequest"
+  /instant-sessions/{instantSessionID}:
+    get:
+      tags: [InstantRecovery]
+      summary: Get an instant recovery session and hydration progress.
+      parameters:
+        - $ref: "#/components/parameters/InstantSessionID"
+      responses:
+        "200":
+          $ref: "#/components/responses/DataObject"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /instant-sessions/{instantSessionID}/chunks/{chunkIndex}:
+    get:
+      tags: [InstantRecovery]
+      summary: Read raw bytes from an instant recovery COW chunk.
+      parameters:
+        - $ref: "#/components/parameters/InstantSessionID"
+        - $ref: "#/components/parameters/ChunkIndex"
+      responses:
+        "200":
+          description: Raw chunk bytes.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [InstantRecovery]
+      summary: Write raw bytes into an instant recovery COW overlay chunk.
+      parameters:
+        - $ref: "#/components/parameters/InstantSessionID"
+        - $ref: "#/components/parameters/ChunkIndex"
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "204":
+          description: Overlay chunk written.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /instant-sessions/{instantSessionID}/finalize:
+    post:
+      tags: [InstantRecovery]
+      summary: Begin finalizing a ready instant recovery session into a standalone sealed copy.
+      parameters:
+        - $ref: "#/components/parameters/InstantSessionID"
+      responses:
+        "202":
+          $ref: "#/components/responses/DataObject"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /streams:
+    get:
+      tags: [Streams]
+      summary: List replication streams.
+      responses:
+        "200":
+          $ref: "#/components/responses/DataList"
+    post:
+      tags: [Streams]
+      summary: Create a replication stream.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStreamRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/DataObject"
+  /streams/{streamID}:
+    get:
+      tags: [Streams]
+      summary: Get a replication stream.
+      parameters:
+        - $ref: "#/components/parameters/StreamID"
+      responses:
+        "200":
+          $ref: "#/components/responses/DataObject"
+  /streams/{streamID}/rpo:
+    get:
+      tags: [Streams]
+      summary: Get live RPO for a replication stream.
+      parameters:
+        - $ref: "#/components/parameters/StreamID"
+      responses:
+        "200":
+          $ref: "#/components/responses/DataObject"
+  /streams/{streamID}/pause:
+    post:
+      tags: [Streams]
+      summary: Pause a replication stream.
+      parameters:
+        - $ref: "#/components/parameters/StreamID"
+      responses:
+        "204":
+          description: Stream paused.
+  /streams/{streamID}/resume:
+    post:
+      tags: [Streams]
+      summary: Resume a replication stream.
+      parameters:
+        - $ref: "#/components/parameters/StreamID"
+      responses:
+        "204":
+          description: Stream resumed.
+  /agents:
+    get:
+      tags: [Agents]
+      summary: List DR agents.
+      responses:
+        "200":
+          $ref: "#/components/responses/DataList"
+    post:
+      tags: [Agents]
+      summary: Register a DR agent record before enrollment.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAgentRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/DataObject"
+  /agents/{agentID}:
+    get:
+      tags: [Agents]
+      summary: Get a DR agent.
+      parameters:
+        - $ref: "#/components/parameters/AgentID"
+      responses:
+        "200":
+          $ref: "#/components/responses/DataObject"
+  /failover-runs:
+    get:
+      tags: [Failover]
+      summary: List failover and drill runs.
+      responses:
+        "200":
+          $ref: "#/components/responses/DataList"
+    post:
+      tags: [Failover]
+      summary: Create a failover or drill run.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFailoverRunRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/DataObject"
+  /failover-runs/{runID}:
+    get:
+      tags: [Failover]
+      summary: Get a failover or drill run.
+      parameters:
+        - $ref: "#/components/parameters/RunID"
+      responses:
+        "200":
+          $ref: "#/components/responses/DataObject"
+  /failover-runs/{runID}/approve:
+    post:
+      tags: [Failover]
+      summary: Approve a failover run that is awaiting operator approval.
+      parameters:
+        - $ref: "#/components/parameters/RunID"
+      responses:
+        "200":
+          $ref: "#/components/responses/DataObject"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /failover-runs/{runID}/steps:
+    get:
+      tags: [Failover]
+      summary: List durable failover step records.
+      parameters:
+        - $ref: "#/components/parameters/RunID"
+      responses:
+        "200":
+          $ref: "#/components/responses/DataList"
+  /failover-runs/{runID}/attestation:
+    get:
+      tags: [Failover]
+      summary: Get the sealed attestation metadata for a completed run.
+      parameters:
+        - $ref: "#/components/parameters/RunID"
+      responses:
+        "200":
+          $ref: "#/components/responses/DataObject"
+        "404":
+          $ref: "#/components/responses/NotFound"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    tenantContext:
+      type: apiKey
+      in: header
+      name: X-Tenant-ID
+  parameters:
+    AgentID:
+      name: agentID
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    GroupID:
+      name: groupID
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RecoveryPointID:
+      name: recoveryPointID
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    InstantSessionID:
+      name: instantSessionID
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ChunkIndex:
+      name: chunkIndex
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 0
+    RunID:
+      name: runID
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SiteID:
+      name: siteID
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    StreamID:
+      name: streamID
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    DataObject:
+      description: Object response.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/DataObjectEnvelope"
+    DataList:
+      description: List response.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/DataListEnvelope"
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Unauthorized:
+      description: Authentication or tenant context missing.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Forbidden:
+      description: Authenticated caller is not authorized.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Conflict:
+      description: Invalid state or already existing resource.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Gone:
+      description: Requested journal target is beyond the retention window.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    ServiceUnavailable:
+      description: Required dependency is not configured or unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+  schemas:
+    DataObjectEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+    DataListEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type:
+                - object
+                - "null"
+              additionalProperties: true
+    EnrollmentExchangeRequest:
+      type: object
+      required: [token, csr_pem]
+      properties:
+        token:
+          type: string
+        csr_pem:
+          type: string
+          description: PEM-encoded certificate signing request.
+        tenant_id:
+          type: string
+          format: uuid
+        site_id:
+          type: string
+          format: uuid
+    EnrollmentExchangeResponseEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/EnrollmentExchangeResponse"
+    EnrollmentExchangeResponse:
+      type: object
+      required: [cert_pem, ca_chain_pem, serial, expires_at, agent_id, tenant_id]
+      properties:
+        cert_pem:
+          type: string
+        ca_chain_pem:
+          type: string
+        serial:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        agent_id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        site_id:
+          type: string
+          format: uuid
+    MintEnrollmentTokenRequest:
+      type: object
+      properties:
+        tenant_id:
+          type: string
+          format: uuid
+          description: Optional fallback when tenant context is not injected by the gateway.
+        site_id:
+          type: string
+          format: uuid
+        purpose:
+          type: string
+          enum: [enroll, rotate]
+        ttl_seconds:
+          type: integer
+          minimum: 1
+    MintEnrollmentTokenResponseEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/MintEnrollmentTokenResponse"
+    MintEnrollmentTokenResponse:
+      type: object
+      required: [jwt, jti, agent_id, tenant_id, purpose, expires_at]
+      properties:
+        jwt:
+          type: string
+        jti:
+          type: string
+          format: uuid
+        agent_id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        site_id:
+          type: string
+          format: uuid
+        purpose:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+    CreateSiteRequest:
+      type: object
+      required: [name, kind, primary_endpoint]
+      properties:
+        name:
+          type: string
+        kind:
+          type: string
+          enum: [database, vm, kubernetes, object_store, service]
+        primary_endpoint:
+          type: string
+        rto_objective_seconds:
+          type: integer
+          minimum: 0
+        rpo_objective_seconds:
+          type: integer
+          minimum: 0
+    CreateGroupRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+    AddGroupMemberRequest:
+      type: object
+      required: [site_id]
+      properties:
+        site_id:
+          type: string
+          format: uuid
+        boot_order:
+          type: integer
+          minimum: 0
+    CreateNetworkMappingRequest:
+      type: object
+      required: [profile, primary_cidr, recovery_cidr]
+      properties:
+        profile:
+          type: string
+          enum: [production, isolated]
+        primary_cidr:
+          type: string
+        recovery_cidr:
+          type: string
+    SealRecoveryPointRequest:
+      type: object
+      properties:
+        retention_until:
+          type: string
+          format: date-time
+    StartInstantRecoveryRequest:
+      type: object
+      properties:
+        group_id:
+          type: string
+          format: uuid
+    CreateStreamRequest:
+      type: object
+      required: [site_id]
+      properties:
+        site_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+        applied_seq:
+          type: integer
+          minimum: 0
+        source_lsn:
+          type: string
+        applied_at:
+          type: string
+          format: date-time
+    CreateAgentRequest:
+      type: object
+      required: [site_id, name]
+      properties:
+        site_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+    CreateFailoverRunRequest:
+      type: object
+      required: [group_id, mode]
+      properties:
+        group_id:
+          type: string
+          format: uuid
+        mode:
+          type: string
+          enum: [real, drill]
+        recovery_point_id:
+          type: string
+          format: uuid
+        journal_target:
+          $ref: "#/components/schemas/JournalTargetRequest"
+    JournalTargetRequest:
+      type: object
+      description: Exactly one of at, lsn, or seq must be supplied.
+      properties:
+        at:
+          type: string
+          format: date-time
+        lsn:
+          type: string
+        seq:
+          type: integer
+          minimum: 1
+    MaterializeJournalRecoveryPointRequest:
+      type: object
+      description: Exactly one of at, lsn, or seq must be supplied.
+      properties:
+        at:
+          type: string
+          format: date-time
+        lsn:
+          type: string
+        seq:
+          type: integer
+          minimum: 1
+        retention_until:
+          type: string
+          format: date-time

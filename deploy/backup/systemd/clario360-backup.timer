@@ -1,0 +1,20 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# Clario 360 — On-Box Backup (systemd timer)
+# ═══════════════════════════════════════════════════════════════════════════════
+# NOT INSTALLED / NOT ENABLED by this repo. Reference unit only.
+# Daily backup at 02:00 UTC — matches the cadence OP-004 assumes. Pair with a
+# verify run at 04:00 UTC (see cron alternative in deploy/backup/README.md).
+# ═══════════════════════════════════════════════════════════════════════════════
+[Unit]
+Description=Clario 360 daily on-box PostgreSQL backup
+Documentation=file:/opt/clario360/deploy/backup/README.md
+
+[Timer]
+# 02:00 UTC daily. Persistent=true runs a missed backup after downtime.
+OnCalendar=*-*-* 02:00:00 UTC
+Persistent=true
+RandomizedDelaySec=300
+Unit=clario360-backup.service
+
+[Install]
+WantedBy=timers.target

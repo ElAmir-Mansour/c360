@@ -1,0 +1,48 @@
+# syntax=docker/dockerfile:1.6
+#
+# Reference container image for the customer-side ClarioDR capture agent.
+# Build: docker build -f deploy/docker/Dockerfile.clario-dr-agent -t clario360/clario-dr-agent:latest .
+
+FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS builder
+
+RUN apk add --no-cache ca-certificates git tzdata
+
+WORKDIR /src
+
+COPY backend/go.mod backend/go.sum ./
+RUN go mod download
+
+COPY backend/ .
+
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
+    go build -trimpath -ldflags="-s -w" \
+      -o /out/clario-dr-agent ./cmd/clario-dr-agent
+
+RUN mkdir -p /out/root/etc/clario360 /out/root/var/lib/clario-dr-agent /out/root/run/clario-dr-agent
+
+FROM gcr.io/distroless/static-debian12:nonroot AS runtime
+
+LABEL org.opencontainers.image.title="clario360-clario-dr-agent"
+LABEL org.opencontainers.image.description="Customer-side ClarioDR capture and resumable ingest agent"
+LABEL org.opencontainers.image.vendor="Clario360"
+LABEL org.opencontainers.image.source="https://github.com/clario360/platform"
+LABEL org.opencontainers.image.licenses="proprietary"
+
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /out/clario-dr-agent /clario-dr-agent
+COPY --chown=65532:65532 --from=builder /out/root/etc/clario360 /etc/clario360
+COPY --chown=65532:65532 --from=builder /out/root/var/lib/clario-dr-agent /var/lib/clario-dr-agent
+COPY --chown=65532:65532 --from=builder /out/root/run/clario-dr-agent /run/clario-dr-agent
+
+USER 65532:65532
+
+VOLUME ["/etc/clario360", "/var/lib/clario-dr-agent", "/run/clario-dr-agent"]
+
+EXPOSE 9098
+
+ENTRYPOINT ["/clario-dr-agent"]
+CMD ["--config", "/etc/clario360/clario-dr-agent.yaml", "--json-logs"]

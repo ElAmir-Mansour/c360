@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" role="img" aria-label="Clario360">
+  <title>Clario360</title>
+  <!-- Aperture mark (compact 3-strata) — leaf green on transparent, tuned for ≤24px favicons. -->
+  <mask id="f" maskUnits="userSpaceOnUse" x="0" y="0" width="80" height="80">
+    <rect x="0" y="0" width="80" height="80" fill="#fff"/>
+    <circle cx="40" cy="40" r="15" fill="#000"/>
+    <rect x="0" y="26" width="80" height="6" fill="#000"/>
+    <rect x="0" y="48" width="80" height="6" fill="#000"/>
+  </mask>
+  <circle cx="40" cy="40" r="36" fill="#ABB705" mask="url(#f)"/>
+</svg>

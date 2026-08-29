@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clario360.io/siem/events/sources/source.enabled.json",
+  "title": "siem.source.enabled",
+  "description": "Data payload of the siem.source.enabled CloudEvent.",
+  "type": "object",
+  "required": ["source_id", "tenant_id", "actor_user_id", "enabled_at"],
+  "properties": {
+    "source_id":     {"type": "string", "format": "uuid"},
+    "tenant_id":     {"type": "string", "format": "uuid"},
+    "actor_user_id": {"type": "string", "format": "uuid"},
+    "enabled_at":    {"type": "string", "format": "date-time"}
+  }
+}

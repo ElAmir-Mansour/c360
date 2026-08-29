@@ -1,0 +1,95 @@
+# ClarioDR capture agent reference configuration.
+#
+# Keep durable state on persistent local disk. The agent stores its enrolled
+# certificate, private key, CA chain, and stream checkpoints under cache_dir.
+# Prefer environment variables for enrollment tokens, DSNs, and DEKs.
+
+control_plane_url: "https://dr-control-plane.example.com"
+ingest_url: "https://dr-ingest.example.com:8098"
+cache_dir: "/var/lib/clario-dr-agent"
+
+agent_id: "agent-primary-us-east-1"
+tenant_id: "tenant-prod"
+site_id: "primary-us-east-1"
+
+# Prefer CLARIO_DR_AGENT_ENROLLMENT_TOKEN in an env file or secret manager.
+# enrollment_token: "single-use-token-from-control-plane"
+
+# Fresh single-use rotate tokens can be delivered by an operator/secret syncer
+# to this file. The running agent rereads it when cert_renew_before is reached.
+renewal_token_file: "/run/clario-dr-agent/rotate-token.jwt"
+cert_renew_before: 24h
+cert_renew_check_interval: 1h
+cert_renew_retry_backoff: 5m
+
+# Trust anchor for the initial HTTPS enrollment call. The mTLS ingest path uses
+# the CA chain returned by enrollment after the first successful run.
+enroll_ca_bundle_pem: "@/etc/clario360/enroll-ca.pem"
+
+# Optional send-path throttle. 0 means unlimited.
+throttle_bytes_per_sec: 10485760
+reconnect_backoff: 1s
+max_reconnect_backoff: 30s
+
+# Bind to loopback for host/systemd installs. In containers, override with
+# CLARIO_DR_AGENT_METRICS_ADDR=:9098 when publishing the port.
+metrics_addr: "127.0.0.1:9098"
+
+# Production-safe TLS defaults. insecure_skip_verify is accepted only for
+# loopback development URLs and should remain false in deployed agents.
+insecure_skip_verify: false
+server_name: "dr-ingest.example.com"
+
+sources:
+  # File-delta capture.
+  - stream_id: "customers-file"
+    kind: "file"
+    path: "/srv/customer-app/data"
+    # Prefer CLARIO_DR_AGENT_DEK_CUSTOMERS_FILE.
+    dek_hex: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+
+  # PostgreSQL logical replication using pgoutput.
+  - stream_id: "orders-pg-logical"
+    kind: "postgres"
+    # Prefer CLARIO_DR_AGENT_DSN_ORDERS_PG_LOGICAL.
+    dsn: "postgres://clario_repl:REPLACE_ME@postgres-primary.internal:5432/orders?sslmode=verify-full"
+    schema: "public"
+    table: "orders"
+    columns: ["id", "customer_id", "status", "total_cents", "updated_at"]
+    primary_key: ["id"]
+    mode: "logical"
+    plugin: "pgoutput"
+    slot_name: "clario_orders_slot"
+    publications: ["clario_orders_publication"]
+    # Prefer CLARIO_DR_AGENT_DEK_ORDERS_PG_LOGICAL.
+    dek_hex: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+
+  # PostgreSQL logical replication using wal2json.
+  - stream_id: "payments-pg-wal2json"
+    kind: "postgres"
+    # Prefer CLARIO_DR_AGENT_DSN_PAYMENTS_PG_WAL2JSON.
+    dsn: "postgres://clario_repl:REPLACE_ME@postgres-primary.internal:5432/payments?sslmode=verify-full"
+    schema: "public"
+    table: "payments"
+    columns: ["id", "order_id", "amount_cents", "state", "updated_at"]
+    primary_key: ["id"]
+    mode: "logical"
+    plugin: "wal2json"
+    slot_name: "clario_payments_slot"
+    plugin_args: ["include-xids=false", "include-timestamp=true"]
+    # Prefer CLARIO_DR_AGENT_DEK_PAYMENTS_PG_WAL2JSON.
+    dek_hex: "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
+
+  # PostgreSQL polling fallback for tables that cannot use logical decoding.
+  - stream_id: "customers-pg-watermark"
+    kind: "postgres"
+    # Prefer CLARIO_DR_AGENT_DSN_CUSTOMERS_PG_WATERMARK.
+    dsn: "postgres://readonly:REPLACE_ME@postgres-primary.internal:5432/app?sslmode=verify-full"
+    schema: "public"
+    table: "customers"
+    columns: ["id", "email", "name", "updated_at"]
+    primary_key: ["id"]
+    mode: "watermark"
+    watermark: "updated_at"
+    # Prefer CLARIO_DR_AGENT_DEK_CUSTOMERS_PG_WATERMARK.
+    dek_hex: "ffeeddccbbaa99887766554433221100ffeeddccbbaa99887766554433221100"

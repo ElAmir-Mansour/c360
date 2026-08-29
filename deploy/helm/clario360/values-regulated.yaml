@@ -1,0 +1,64 @@
+# Regulated ClarioDR overlay.
+#
+# Apply with the base chart values and provide secrets through an external
+# secret manager or a private values file. The DR Secret must include:
+#   DR_DB_URL
+#   DR_VAULT_APPROLE_ROLE_ID
+#   DR_VAULT_APPROLE_SECRET_ID
+#   DR_INTEGRATIONS_ENC_KEY       # base64-encoded 32-byte AES key
+#   DR_ENROLL_TOKEN_PRIVATE_KEY_PEM or DR_ENROLL_TOKEN_PRIVATE_JWK
+#
+# MinIO credentials continue to come from the chart MinIO secret unless
+# clarioDrService.existingSecret is used for all DR credentials.
+global:
+  environment: production
+  minio:
+    useSsl: "true"
+
+minio:
+  useSSL: true
+
+clarioDrService:
+  deploymentProfile: regulated
+  regulatedMode: true
+  replicaCount: 3
+  existingSecret: ""
+  enrollToken:
+    allowEphemeral: false
+  integrations:
+    encKey: ""
+  minio:
+    region: "af-west-1"
+    wormBucket: "dr-recovery-points"
+  mtls:
+    enabled: true
+    existingSecret: "clario-dr-mtls"
+    listenAddr: ":8098"
+    caBundlePath: "/etc/clario-dr/mtls/ca.crt"
+    serverCertPath: "/etc/clario-dr/mtls/tls.crt"
+    serverKeyPath: "/etc/clario-dr/mtls/tls.key"
+    crlRefresh: "30s"
+  vault:
+    addr: "https://vault.clario360.internal.corp"
+    authMethod: "approle"
+    transitPath: "transit/"
+    namespace: ""
+  recoveryDriver:
+    type: "command"
+    ensureCommand:
+      - "/opt/clario/dr-provisioner"
+      - "ensure"
+    teardownCommand:
+      - "/opt/clario/dr-provisioner"
+      - "teardown"
+    timeout: "15m"
+  failoverDriver:
+    enabled: true
+    unsafeSingleNode: false
+    interval: "2s"
+    leaderTtl: "30s"
+    leaderRenew: "10s"
+  rpoMonitor:
+    interval: "15s"
+    leaderTtl: "30s"
+    leaderRenew: "10s"

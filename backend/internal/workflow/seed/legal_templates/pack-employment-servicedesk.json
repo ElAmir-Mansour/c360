@@ -1,0 +1,1617 @@
+[
+  {
+    "id": "tmpl-employment-contract-qiwa",
+    "category": "legal",
+    "icon": "file-badge",
+    "tags": ["legal", "employment", "labor", "contracts", "qiwa", "gosi", "ksa"],
+    "name_i18n": {
+      "en": "Employment Contract Drafting & Review (Qiwa)",
+      "ar": "صياغة ومراجعة عقد العمل (قوى)"
+    },
+    "description_i18n": {
+      "en": "Drafts an MoL-compliant employment contract, runs labor-law and Saudization review, routes for HR & legal approval, authenticates the contract on Qiwa, and registers the worker with GOSI.",
+      "ar": "يصوغ عقد عمل متوافقاً مع نظام العمل، ويجري مراجعة نظامية ومراجعة للسعودة، ويوجّهه لاعتماد الموارد البشرية والإدارة القانونية، ويوثّق العقد عبر منصة قوى، ويسجّل العامل في التأمينات الاجتماعية."
+    },
+    "definition": {
+      "name": "Employment Contract Drafting & Review (Qiwa)",
+      "description": "Draft, review, approve, authenticate on Qiwa, and register a new employment contract with GOSI.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "employee_id": { "type": "string" },
+        "nationality": { "type": "string", "default": "saudi" },
+        "monthly_salary": { "type": "number", "default": 0 },
+        "qiwa_authenticated": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "draft_contract",
+          "type": "human_task",
+          "name": "Draft Employment Contract",
+          "config": {
+            "assignee_role": "legal_drafter",
+            "sla_hours": 24,
+            "escalation_role": "legal_section_head",
+            "form_fields": [
+              { "name": "employee_name", "type": "text", "label": "Employee Name", "required": true },
+              { "name": "nationality", "type": "select", "label": "Nationality", "required": true, "options": ["saudi", "non_saudi"] },
+              { "name": "job_title", "type": "text", "label": "Job Title", "required": true },
+              { "name": "monthly_salary", "type": "number", "label": "Monthly Salary (SAR)", "required": true },
+              { "name": "contract_type", "type": "select", "label": "Contract Type", "required": true, "options": ["fixed_term", "unlimited"] }
+            ]
+          },
+          "transitions": [
+            { "target": "labor_law_review" }
+          ]
+        },
+        {
+          "id": "labor_law_review",
+          "type": "human_task",
+          "name": "Labor-Law & Saudization Review",
+          "config": {
+            "assignee_role": "legal_counsel",
+            "sla_hours": 24,
+            "escalation_role": "legal_manager",
+            "form_fields": [
+              { "name": "labor_law_compliant", "type": "boolean", "label": "Compliant with Labor Law?", "required": true },
+              { "name": "saudization_impact", "type": "select", "label": "Saudization (Nitaqat) Impact", "required": true, "options": ["none", "improves", "at_risk"] },
+              { "name": "review_notes", "type": "textarea", "label": "Review Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.labor_law_review.output.labor_law_compliant == true", "target": "hr_legal_approval" },
+            { "target": "draft_contract" }
+          ]
+        },
+        {
+          "id": "hr_legal_approval",
+          "type": "approval_chain",
+          "name": "HR & Legal Approval",
+          "config": {
+            "approvers": [ { "role": "hr_manager" }, { "role": "legal_manager" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "qiwa_authenticate" }
+          ]
+        },
+        {
+          "id": "qiwa_authenticate",
+          "type": "service_task",
+          "name": "Authenticate Contract on Qiwa",
+          "config": {
+            "service": "qiwa",
+            "method": "POST",
+            "url": "/api/v1/integrations/qiwa/contracts/${variables.employee_id}/authenticate",
+            "body": {
+              "employee_id": "${variables.employee_id}",
+              "contract_type": "${steps.draft_contract.output.contract_type}",
+              "monthly_salary": "${steps.draft_contract.output.monthly_salary}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "gosi_register" }
+          ]
+        },
+        {
+          "id": "gosi_register",
+          "type": "service_task",
+          "name": "Register Worker with GOSI",
+          "config": {
+            "service": "gosi",
+            "method": "POST",
+            "url": "/api/v1/integrations/gosi/contributors/${variables.employee_id}/register",
+            "body": {
+              "employee_id": "${variables.employee_id}",
+              "monthly_salary": "${steps.draft_contract.output.monthly_salary}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-disciplinary-termination-review",
+    "category": "legal",
+    "icon": "user-x",
+    "tags": ["legal", "employment", "labor", "disciplinary", "termination", "ksa"],
+    "name_i18n": {
+      "en": "Disciplinary Action & Termination Review",
+      "ar": "مراجعة الإجراء التأديبي وإنهاء الخدمة"
+    },
+    "description_i18n": {
+      "en": "Reviews a disciplinary case against the labor regulation, ensures due-process (notice/hearing), gives a legal opinion on termination grounds (Art. 80) and DoA-routed sign-off, then issues the decision and notifies via Qiwa.",
+      "ar": "يراجع الحالة التأديبية وفق لائحة تنظيم العمل، ويضمن الإجراءات النظامية (الإشعار وسماع الأقوال)، ويقدّم رأياً قانونياً حول أسباب إنهاء الخدمة (المادة 80) واعتماداً وفق تفويض الصلاحيات، ثم يصدر القرار ويبلّغ عبر منصة قوى."
+    },
+    "definition": {
+      "name": "Disciplinary Action & Termination Review",
+      "description": "Investigate, due-process check, legal opinion, DoA approval, and issue a disciplinary/termination decision.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "employee_id": { "type": "string" },
+        "action_type": { "type": "string", "default": "warning" },
+        "is_termination": { "type": "boolean", "default": false },
+        "due_process_complete": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "case_intake",
+          "type": "human_task",
+          "name": "Disciplinary Case Intake",
+          "config": {
+            "assignee_role": "hr_business_partner",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "incident_summary", "type": "textarea", "label": "Incident Summary", "required": true },
+              { "name": "action_type", "type": "select", "label": "Proposed Action", "required": true, "options": ["warning", "deduction", "suspension", "termination"] },
+              { "name": "evidence_url", "type": "text", "label": "Evidence / File URL", "required": false }
+            ]
+          },
+          "transitions": [
+            { "target": "due_process_check" }
+          ]
+        },
+        {
+          "id": "due_process_check",
+          "type": "human_task",
+          "name": "Due-Process Verification (Notice & Hearing)",
+          "config": {
+            "assignee_role": "legal_counsel",
+            "sla_hours": 24,
+            "escalation_role": "legal_manager",
+            "form_fields": [
+              { "name": "notice_served", "type": "boolean", "label": "Written Notice Served?", "required": true },
+              { "name": "hearing_held", "type": "boolean", "label": "Hearing / Statement Taken?", "required": true },
+              { "name": "within_30_days", "type": "boolean", "label": "Within 30-Day Penalty Window?", "required": true },
+              { "name": "process_notes", "type": "textarea", "label": "Due-Process Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.due_process_check.output.notice_served == true", "target": "termination_gate" },
+            { "target": "remediate_process" }
+          ]
+        },
+        {
+          "id": "remediate_process",
+          "type": "human_task",
+          "name": "Remediate Due-Process Gaps",
+          "config": {
+            "assignee_role": "hr_business_partner",
+            "sla_hours": 48,
+            "form_fields": [
+              { "name": "remediation_action", "type": "textarea", "label": "Remediation Action Taken", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "due_process_check" }
+          ]
+        },
+        {
+          "id": "termination_gate",
+          "type": "condition",
+          "name": "Termination vs. Minor-Penalty Gate",
+          "config": {
+            "expression": "steps.case_intake.output.action_type == 'termination'"
+          },
+          "transitions": [
+            { "condition": "steps.case_intake.output.action_type == 'termination'", "target": "legal_opinion" },
+            { "target": "issue_decision" }
+          ]
+        },
+        {
+          "id": "legal_opinion",
+          "type": "approval_chain",
+          "name": "Legal Opinion & DoA Approval (Termination)",
+          "config": {
+            "approvers": [ { "role": "legal_manager" }, { "role": "legal_director" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "issue_decision" }
+          ]
+        },
+        {
+          "id": "issue_decision",
+          "type": "service_task",
+          "name": "Issue Decision & Notify (Qiwa)",
+          "config": {
+            "service": "qiwa",
+            "method": "POST",
+            "url": "/api/v1/integrations/qiwa/employees/${variables.employee_id}/disciplinary",
+            "body": {
+              "employee_id": "${variables.employee_id}",
+              "action_type": "${steps.case_intake.output.action_type}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-labor-dispute-amicable-settlement",
+    "category": "legal",
+    "icon": "handshake",
+    "tags": ["legal", "employment", "labor", "dispute", "settlement", "mhrsd", "ksa"],
+    "name_i18n": {
+      "en": "Labor Dispute Amicable Settlement (MHRSD Friendly Settlement)",
+      "ar": "التسوية الودية للنزاع العمالي (التسوية الودية - وزارة الموارد البشرية)"
+    },
+    "description_i18n": {
+      "en": "Manages an MHRSD friendly-settlement request: case assessment, exposure calculation, settlement-offer approval within DoA, the amicable-settlement session, and recording the outcome or escalation to the Labor Court.",
+      "ar": "يدير طلب التسوية الودية لدى وزارة الموارد البشرية: تقييم القضية، واحتساب الالتزام المالي، واعتماد عرض التسوية وفق تفويض الصلاحيات، وجلسة التسوية الودية، وتسجيل النتيجة أو الإحالة إلى المحكمة العمالية."
+    },
+    "definition": {
+      "name": "Labor Dispute Amicable Settlement (MHRSD Friendly Settlement)",
+      "description": "Assess, value, approve a settlement offer, attend the MHRSD friendly-settlement session, and record outcome or escalate.",
+      "trigger_config": {
+        "type": "event",
+        "topic": "labor.dispute.filed"
+      },
+      "variables": {
+        "dispute_id": { "type": "string" },
+        "claim_amount": { "type": "number", "default": 0 },
+        "settlement_amount": { "type": "number", "default": 0 },
+        "settled": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "assess_dispute",
+          "type": "human_task",
+          "name": "Assess Dispute & Exposure",
+          "config": {
+            "assignee_role": "labor_counsel",
+            "sla_hours": 24,
+            "escalation_role": "legal_manager",
+            "form_fields": [
+              { "name": "claim_summary", "type": "textarea", "label": "Claim Summary", "required": true },
+              { "name": "claim_amount", "type": "number", "label": "Claim Amount (SAR)", "required": true },
+              { "name": "estimated_exposure", "type": "number", "label": "Estimated Exposure (SAR)", "required": true },
+              { "name": "recommend_settle", "type": "boolean", "label": "Recommend Settlement?", "required": true }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.assess_dispute.output.recommend_settle == true", "target": "approve_offer" },
+            { "target": "escalate_to_court" }
+          ]
+        },
+        {
+          "id": "approve_offer",
+          "type": "approval_chain",
+          "name": "Settlement Offer Approval (DoA)",
+          "config": {
+            "approvers": [ { "role": "legal_manager" }, { "role": "finance_controller" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "settlement_session" }
+          ]
+        },
+        {
+          "id": "settlement_session",
+          "type": "human_task",
+          "name": "MHRSD Friendly-Settlement Session",
+          "config": {
+            "assignee_role": "labor_counsel",
+            "sla_hours": 72,
+            "form_fields": [
+              { "name": "session_date", "type": "date", "label": "Settlement Session Date", "required": true },
+              { "name": "settled", "type": "boolean", "label": "Settlement Reached?", "required": true },
+              { "name": "settlement_amount", "type": "number", "label": "Agreed Amount (SAR)", "required": false },
+              { "name": "session_notes", "type": "textarea", "label": "Session Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.settlement_session.output.settled == true", "target": "record_settlement" },
+            { "target": "escalate_to_court" }
+          ]
+        },
+        {
+          "id": "record_settlement",
+          "type": "service_task",
+          "name": "Record Settlement & Close",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/settlements/${variables.dispute_id}/record",
+            "body": {
+              "dispute_id": "${variables.dispute_id}",
+              "settlement_amount": "${steps.settlement_session.output.settlement_amount}",
+              "status": "settled"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "escalate_to_court",
+          "type": "service_task",
+          "name": "Escalate to Labor Court",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/legal-cases/from-dispute/${variables.dispute_id}",
+            "body": {
+              "dispute_id": "${variables.dispute_id}",
+              "court": "labor",
+              "status": "escalated"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-labor-court-litigation",
+    "category": "legal",
+    "icon": "gavel",
+    "tags": ["legal", "employment", "labor", "litigation", "najiz", "ksa"],
+    "name_i18n": {
+      "en": "Labor Court Litigation",
+      "ar": "التقاضي أمام المحكمة العمالية"
+    },
+    "description_i18n": {
+      "en": "Runs a labor-court matter end to end: case opening and strategy, statement of defense/claim filing on Najiz, hearing management with deadline timers, judgment review, and an appeal decision gated by DoA.",
+      "ar": "يدير قضية أمام المحكمة العمالية من البداية إلى النهاية: فتح القضية ووضع الاستراتيجية، وتقديم مذكرة الدفاع/الدعوى عبر ناجز، وإدارة الجلسات بمؤقتات للمواعيد، ومراجعة الحكم، وقرار الاستئناف وفق تفويض الصلاحيات."
+    },
+    "definition": {
+      "name": "Labor Court Litigation",
+      "description": "Open, file on Najiz, manage hearings, review judgment, and decide on appeal for a labor-court case.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "case_id": { "type": "string" },
+        "role": { "type": "string", "default": "defendant" },
+        "judgment_for_us": { "type": "boolean", "default": false },
+        "appeal_filed": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "open_case",
+          "type": "human_task",
+          "name": "Open Case & Litigation Strategy",
+          "config": {
+            "assignee_role": "litigation_lead",
+            "sla_hours": 8,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "case_title", "type": "text", "label": "Case Title", "required": true },
+              { "name": "najiz_reference", "type": "text", "label": "Najiz Reference", "required": true },
+              { "name": "role", "type": "select", "label": "Our Role", "required": true, "options": ["plaintiff", "defendant"] },
+              { "name": "strategy", "type": "textarea", "label": "Litigation Strategy", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "file_najiz" }
+          ]
+        },
+        {
+          "id": "file_najiz",
+          "type": "service_task",
+          "name": "File Pleading on Najiz",
+          "config": {
+            "service": "najiz",
+            "method": "POST",
+            "url": "/api/v1/integrations/najiz/cases/${variables.case_id}/file",
+            "body": {
+              "case_id": "${variables.case_id}",
+              "najiz_reference": "${steps.open_case.output.najiz_reference}",
+              "role": "${steps.open_case.output.role}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "await_hearing" }
+          ]
+        },
+        {
+          "id": "await_hearing",
+          "type": "timer",
+          "name": "Hearing Preparation Window",
+          "config": {
+            "duration": "120h"
+          },
+          "transitions": [
+            { "target": "manage_hearings" }
+          ]
+        },
+        {
+          "id": "manage_hearings",
+          "type": "human_task",
+          "name": "Manage Hearings & Pleadings",
+          "config": {
+            "assignee_role": "litigation_lead",
+            "sla_hours": 48,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "hearing_date", "type": "date", "label": "Next Hearing Date", "required": false },
+              { "name": "pleadings_filed", "type": "boolean", "label": "All Pleadings Filed?", "required": true },
+              { "name": "hearing_notes", "type": "textarea", "label": "Hearing Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "review_judgment" }
+          ]
+        },
+        {
+          "id": "review_judgment",
+          "type": "human_task",
+          "name": "Review Judgment",
+          "config": {
+            "assignee_role": "litigation_lead",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "judgment_summary", "type": "textarea", "label": "Judgment Summary", "required": true },
+              { "name": "judgment_for_us", "type": "boolean", "label": "Judgment in Our Favor?", "required": true },
+              { "name": "recommend_appeal", "type": "boolean", "label": "Recommend Appeal?", "required": true }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.review_judgment.output.recommend_appeal == true", "target": "appeal_decision" },
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "appeal_decision",
+          "type": "approval_chain",
+          "name": "Appeal Decision (DoA)",
+          "config": {
+            "approvers": [ { "role": "legal_director" }, { "role": "chief_executive" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 72
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-work-permit-saudization-compliance",
+    "category": "legal",
+    "icon": "id-card",
+    "tags": ["legal", "employment", "labor", "iqama", "saudization", "qiwa", "ksa"],
+    "name_i18n": {
+      "en": "Work Permit / Iqama & Saudization Compliance",
+      "ar": "الامتثال لرخصة العمل/الإقامة والسعودة"
+    },
+    "description_i18n": {
+      "en": "Verifies a worker's permit/Iqama status and the establishment's Nitaqat band, flags non-compliance, drives remediation, and issues or renews the work permit on Qiwa.",
+      "ar": "يتحقق من حالة رخصة عمل/إقامة العامل ونطاق المنشأة في برنامج نطاقات، ويرصد عدم الامتثال، ويقود المعالجة، ويصدر أو يجدّد رخصة العمل عبر منصة قوى."
+    },
+    "definition": {
+      "name": "Work Permit / Iqama & Saudization Compliance",
+      "description": "Check Iqama & Nitaqat status, remediate compliance gaps, and issue/renew the Qiwa work permit.",
+      "trigger_config": {
+        "type": "schedule",
+        "cron": "0 6 * * 1"
+      },
+      "variables": {
+        "establishment_id": { "type": "string" },
+        "nitaqat_band": { "type": "string", "default": "green" },
+        "compliant": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "check_status",
+          "type": "service_task",
+          "name": "Check Iqama & Nitaqat Status",
+          "config": {
+            "service": "qiwa",
+            "method": "GET",
+            "url": "/api/v1/integrations/qiwa/establishments/${variables.establishment_id}/compliance",
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "compliance_gate" }
+          ]
+        },
+        {
+          "id": "compliance_gate",
+          "type": "condition",
+          "name": "Compliance Gate (Nitaqat Band)",
+          "config": {
+            "expression": "steps.check_status.output.nitaqat_band == 'red' || steps.check_status.output.nitaqat_band == 'low_green'"
+          },
+          "transitions": [
+            { "condition": "steps.check_status.output.nitaqat_band == 'red' || steps.check_status.output.nitaqat_band == 'low_green'", "target": "remediation_plan" },
+            { "target": "issue_permit" }
+          ]
+        },
+        {
+          "id": "remediation_plan",
+          "type": "human_task",
+          "name": "Saudization Remediation Plan",
+          "config": {
+            "assignee_role": "compliance_officer",
+            "sla_hours": 72,
+            "escalation_role": "legal_manager",
+            "form_fields": [
+              { "name": "gap_analysis", "type": "textarea", "label": "Compliance Gap Analysis", "required": true },
+              { "name": "remediation_actions", "type": "textarea", "label": "Remediation Actions", "required": true },
+              { "name": "target_band", "type": "select", "label": "Target Nitaqat Band", "required": true, "options": ["green", "high_green", "platinum"] }
+            ]
+          },
+          "transitions": [
+            { "target": "legal_signoff" }
+          ]
+        },
+        {
+          "id": "legal_signoff",
+          "type": "approval_chain",
+          "name": "Legal Sign-off on Remediation",
+          "config": {
+            "approvers": [ { "role": "legal_manager" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 24
+          },
+          "transitions": [
+            { "target": "issue_permit" }
+          ]
+        },
+        {
+          "id": "issue_permit",
+          "type": "service_task",
+          "name": "Issue / Renew Work Permit (Qiwa)",
+          "config": {
+            "service": "qiwa",
+            "method": "POST",
+            "url": "/api/v1/integrations/qiwa/establishments/${variables.establishment_id}/work-permits",
+            "body": {
+              "establishment_id": "${variables.establishment_id}",
+              "action": "issue_or_renew"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-hr-policy-regulation-review",
+    "category": "legal",
+    "icon": "book-text",
+    "tags": ["legal", "employment", "labor", "policy", "regulation", "mhrsd", "ksa"],
+    "name_i18n": {
+      "en": "HR Policy / Internal Regulation Review",
+      "ar": "مراجعة سياسات الموارد البشرية/اللائحة الداخلية"
+    },
+    "description_i18n": {
+      "en": "Reviews an HR policy or internal work regulation for labor-law and PDPL alignment, runs stakeholder and legal approval, files the work regulation with MHRSD where required, and publishes the approved version.",
+      "ar": "يراجع سياسة موارد بشرية أو لائحة تنظيم عمل داخلية للتأكد من توافقها مع نظام العمل ونظام حماية البيانات الشخصية، ويجري اعتماد أصحاب العلاقة والاعتماد القانوني، ويودع لائحة تنظيم العمل لدى وزارة الموارد البشرية عند اللزوم، وينشر النسخة المعتمدة."
+    },
+    "definition": {
+      "name": "HR Policy / Internal Regulation Review",
+      "description": "Legal review, approval, MHRSD filing, and publication of an HR policy or work regulation.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "policy_id": { "type": "string" },
+        "is_work_regulation": { "type": "boolean", "default": false },
+        "approved": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "legal_review",
+          "type": "human_task",
+          "name": "Labor-Law & PDPL Review",
+          "config": {
+            "assignee_role": "legal_counsel",
+            "sla_hours": 48,
+            "escalation_role": "legal_manager",
+            "form_fields": [
+              { "name": "policy_title", "type": "text", "label": "Policy / Regulation Title", "required": true },
+              { "name": "labor_law_aligned", "type": "boolean", "label": "Aligned with Labor Law?", "required": true },
+              { "name": "pdpl_aligned", "type": "boolean", "label": "Aligned with PDPL?", "required": true },
+              { "name": "is_work_regulation", "type": "boolean", "label": "Is a Work Regulation (requires MHRSD filing)?", "required": true },
+              { "name": "review_notes", "type": "textarea", "label": "Review Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.legal_review.output.labor_law_aligned == true", "target": "stakeholder_approval" },
+            { "target": "revise_policy" }
+          ]
+        },
+        {
+          "id": "revise_policy",
+          "type": "human_task",
+          "name": "Revise Policy",
+          "config": {
+            "assignee_role": "hr_policy_owner",
+            "sla_hours": 48,
+            "form_fields": [
+              { "name": "revised_url", "type": "text", "label": "Revised Document URL", "required": true },
+              { "name": "revision_notes", "type": "textarea", "label": "Revision Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "legal_review" }
+          ]
+        },
+        {
+          "id": "stakeholder_approval",
+          "type": "approval_chain",
+          "name": "Stakeholder & Legal Approval",
+          "config": {
+            "approvers": [ { "role": "hr_director" }, { "role": "legal_manager" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 72
+          },
+          "transitions": [
+            { "target": "mhrsd_filing_gate" }
+          ]
+        },
+        {
+          "id": "mhrsd_filing_gate",
+          "type": "condition",
+          "name": "MHRSD Filing Required?",
+          "config": {
+            "expression": "steps.legal_review.output.is_work_regulation == true"
+          },
+          "transitions": [
+            { "condition": "steps.legal_review.output.is_work_regulation == true", "target": "file_mhrsd" },
+            { "target": "publish_policy" }
+          ]
+        },
+        {
+          "id": "file_mhrsd",
+          "type": "service_task",
+          "name": "File Work Regulation with MHRSD",
+          "config": {
+            "service": "mhrsd",
+            "method": "POST",
+            "url": "/api/v1/integrations/mhrsd/work-regulations/${variables.policy_id}/file",
+            "body": {
+              "policy_id": "${variables.policy_id}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "publish_policy" }
+          ]
+        },
+        {
+          "id": "publish_policy",
+          "type": "service_task",
+          "name": "Publish Approved Policy",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/policies/${variables.policy_id}/publish",
+            "body": {
+              "policy_id": "${variables.policy_id}",
+              "status": "published"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-end-of-service-settlement-review",
+    "category": "legal",
+    "icon": "calculator",
+    "tags": ["legal", "employment", "labor", "end-of-service", "settlement", "gosi", "ksa"],
+    "name_i18n": {
+      "en": "End-of-Service & Settlement Calculation Review",
+      "ar": "مراجعة مكافأة نهاية الخدمة واحتساب المخالصة"
+    },
+    "description_i18n": {
+      "en": "Validates an end-of-service benefit and final-settlement calculation against the labor regulation, reconciles GOSI, routes the payout for DoA approval, executes the release, and obtains the signed clearance (mukhalasa).",
+      "ar": "يتحقق من احتساب مكافأة نهاية الخدمة والمخالصة النهائية وفق نظام العمل، ويسوّي مستحقات التأمينات الاجتماعية، ويوجّه الصرف لاعتماد تفويض الصلاحيات، وينفّذ الصرف، ويحصل على المخالصة الموقّعة."
+    },
+    "definition": {
+      "name": "End-of-Service & Settlement Calculation Review",
+      "description": "Validate EOSB calculation, reconcile GOSI, approve the payout per DoA, release funds, and obtain signed clearance.",
+      "trigger_config": {
+        "type": "event",
+        "topic": "employee.offboarding.initiated"
+      },
+      "variables": {
+        "employee_id": { "type": "string" },
+        "service_years": { "type": "number", "default": 0 },
+        "eosb_amount": { "type": "number", "default": 0 },
+        "cleared": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "calc_review",
+          "type": "human_task",
+          "name": "Review EOSB & Final Settlement Calculation",
+          "config": {
+            "assignee_role": "labor_counsel",
+            "sla_hours": 24,
+            "escalation_role": "legal_manager",
+            "form_fields": [
+              { "name": "termination_reason", "type": "select", "label": "Termination Reason", "required": true, "options": ["resignation", "expiry", "employer_termination", "art77", "art80"] },
+              { "name": "service_years", "type": "number", "label": "Years of Service", "required": true },
+              { "name": "eosb_amount", "type": "number", "label": "Calculated EOSB (SAR)", "required": true },
+              { "name": "calc_correct", "type": "boolean", "label": "Calculation Correct?", "required": true }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.calc_review.output.calc_correct == true", "target": "gosi_reconcile" },
+            { "target": "recalculate" }
+          ]
+        },
+        {
+          "id": "recalculate",
+          "type": "human_task",
+          "name": "Recalculate Settlement",
+          "config": {
+            "assignee_role": "payroll_specialist",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "corrected_amount", "type": "number", "label": "Corrected EOSB (SAR)", "required": true },
+              { "name": "correction_notes", "type": "textarea", "label": "Correction Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "calc_review" }
+          ]
+        },
+        {
+          "id": "gosi_reconcile",
+          "type": "service_task",
+          "name": "Reconcile GOSI Contributions",
+          "config": {
+            "service": "gosi",
+            "method": "GET",
+            "url": "/api/v1/integrations/gosi/contributors/${variables.employee_id}/reconciliation",
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "payout_approval" }
+          ]
+        },
+        {
+          "id": "payout_approval",
+          "type": "approval_chain",
+          "name": "Settlement Payout Approval (DoA)",
+          "config": {
+            "approvers": [ { "role": "legal_manager" }, { "role": "finance_controller" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "obtain_clearance" }
+          ]
+        },
+        {
+          "id": "obtain_clearance",
+          "type": "human_task",
+          "name": "Execute Release & Obtain Signed Clearance",
+          "config": {
+            "assignee_role": "hr_business_partner",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "payment_reference", "type": "text", "label": "Payment Reference", "required": true },
+              { "name": "clearance_signed", "type": "boolean", "label": "Clearance (Mukhalasa) Signed?", "required": true },
+              { "name": "clearance_url", "type": "text", "label": "Signed Clearance URL", "required": false }
+            ]
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-legal-consultation-request",
+    "category": "legal",
+    "icon": "message-circle-question",
+    "tags": ["legal", "service-desk", "consultation", "sla", "ksa"],
+    "name_i18n": {
+      "en": "Legal Consultation Request",
+      "ar": "طلب استشارة قانونية"
+    },
+    "description_i18n": {
+      "en": "Handles a legal consultation request from intake and SLA acknowledgement through assignment, drafting of the legal opinion, peer/managerial review, and delivery to the beneficiary.",
+      "ar": "يعالج طلب استشارة قانونية من الاستلام والإقرار وفق اتفاقية مستوى الخدمة، مروراً بالإسناد، وصياغة الرأي القانوني، والمراجعة من قبل الزملاء/الإدارة، وتسليم الرأي إلى الجهة المستفيدة."
+    },
+    "definition": {
+      "name": "Legal Consultation Request",
+      "description": "Intake, acknowledge within SLA, assign, draft opinion, review, and deliver a legal consultation.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "request_id": { "type": "string" },
+        "priority": { "type": "string", "default": "normal" },
+        "complex": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "intake",
+          "type": "human_task",
+          "name": "Capture Consultation Request",
+          "config": {
+            "assignee_role": "legal_intake_officer",
+            "sla_hours": 2,
+            "form_fields": [
+              { "name": "subject", "type": "text", "label": "Subject", "required": true },
+              { "name": "question", "type": "textarea", "label": "Legal Question", "required": true },
+              { "name": "beneficiary_entity", "type": "text", "label": "Beneficiary Entity", "required": true },
+              { "name": "priority", "type": "select", "label": "Priority", "required": true, "options": ["low", "normal", "high", "urgent"] }
+            ]
+          },
+          "transitions": [
+            { "target": "acknowledge" }
+          ]
+        },
+        {
+          "id": "acknowledge",
+          "type": "service_task",
+          "name": "Acknowledge (SLA Start)",
+          "config": {
+            "service": "notification",
+            "method": "POST",
+            "url": "/api/v1/notifications",
+            "body": {
+              "template": "legal_consultation_acknowledged",
+              "request_id": "${variables.request_id}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "assign" }
+          ]
+        },
+        {
+          "id": "assign",
+          "type": "human_task",
+          "name": "Assign Lawyer",
+          "config": {
+            "assignee_role": "legal_section_head",
+            "sla_hours": 4,
+            "escalation_role": "legal_manager",
+            "form_fields": [
+              { "name": "assigned_lawyer", "type": "text", "label": "Assigned Lawyer", "required": true },
+              { "name": "complex", "type": "boolean", "label": "Complex (requires senior review)?", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "draft_opinion" }
+          ]
+        },
+        {
+          "id": "draft_opinion",
+          "type": "human_task",
+          "name": "Draft Legal Opinion",
+          "config": {
+            "assignee_role": "legal_counsel",
+            "sla_hours": 48,
+            "escalation_role": "legal_section_head",
+            "form_fields": [
+              { "name": "opinion_text", "type": "textarea", "label": "Legal Opinion", "required": true },
+              { "name": "references", "type": "textarea", "label": "Legal References", "required": false }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.assign.output.complex == true", "target": "senior_review" },
+            { "target": "deliver" }
+          ]
+        },
+        {
+          "id": "senior_review",
+          "type": "approval_chain",
+          "name": "Senior Review (Complex)",
+          "config": {
+            "approvers": [ { "role": "legal_manager" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 24
+          },
+          "transitions": [
+            { "target": "deliver" }
+          ]
+        },
+        {
+          "id": "deliver",
+          "type": "service_task",
+          "name": "Deliver Opinion to Beneficiary",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/consultations/${variables.request_id}/deliver",
+            "body": {
+              "request_id": "${variables.request_id}",
+              "status": "delivered"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-document-review-drafting-request",
+    "category": "legal",
+    "icon": "file-pen",
+    "tags": ["legal", "service-desk", "drafting", "review", "sla"],
+    "name_i18n": {
+      "en": "Document Review / Legal Drafting Request",
+      "ar": "طلب مراجعة وثيقة/صياغة قانونية"
+    },
+    "description_i18n": {
+      "en": "Routes a document review or drafting request through intake, assignment, drafting/review, quality approval, and return of the finalized document to the requester within SLA.",
+      "ar": "يوجّه طلب مراجعة وثيقة أو صياغة قانونية عبر الاستلام، والإسناد، والصياغة/المراجعة، واعتماد الجودة، وإعادة الوثيقة النهائية إلى مقدّم الطلب ضمن اتفاقية مستوى الخدمة."
+    },
+    "definition": {
+      "name": "Document Review / Legal Drafting Request",
+      "description": "Intake, assign, draft/review, quality approval, and return of a legal document.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "request_id": { "type": "string" },
+        "request_kind": { "type": "string", "default": "review" },
+        "approved": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "intake",
+          "type": "human_task",
+          "name": "Capture Document Request",
+          "config": {
+            "assignee_role": "legal_intake_officer",
+            "sla_hours": 2,
+            "form_fields": [
+              { "name": "title", "type": "text", "label": "Document Title", "required": true },
+              { "name": "request_kind", "type": "select", "label": "Request Kind", "required": true, "options": ["review", "drafting"] },
+              { "name": "source_document_url", "type": "text", "label": "Source Document URL", "required": false },
+              { "name": "instructions", "type": "textarea", "label": "Instructions", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "assign" }
+          ]
+        },
+        {
+          "id": "assign",
+          "type": "human_task",
+          "name": "Assign Drafter",
+          "config": {
+            "assignee_role": "legal_section_head",
+            "sla_hours": 4,
+            "escalation_role": "legal_manager",
+            "form_fields": [
+              { "name": "assigned_drafter", "type": "text", "label": "Assigned Drafter", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "draft_review" }
+          ]
+        },
+        {
+          "id": "draft_review",
+          "type": "human_task",
+          "name": "Draft / Review Document",
+          "config": {
+            "assignee_role": "legal_drafter",
+            "sla_hours": 48,
+            "escalation_role": "legal_section_head",
+            "form_fields": [
+              { "name": "draft_url", "type": "text", "label": "Draft / Reviewed Document URL", "required": true },
+              { "name": "drafter_notes", "type": "textarea", "label": "Notes", "required": false }
+            ]
+          },
+          "transitions": [
+            { "target": "quality_approval" }
+          ]
+        },
+        {
+          "id": "quality_approval",
+          "type": "approval_chain",
+          "name": "Quality Approval",
+          "config": {
+            "approvers": [ { "role": "legal_manager" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 24
+          },
+          "transitions": [
+            { "target": "return_document" }
+          ]
+        },
+        {
+          "id": "return_document",
+          "type": "service_task",
+          "name": "Return Finalized Document",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/legal-requests/${variables.request_id}/deliver",
+            "body": {
+              "request_id": "${variables.request_id}",
+              "status": "delivered"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-service-catalog-sla-admin",
+    "category": "legal",
+    "icon": "list-checks",
+    "tags": ["legal", "service-desk", "catalog", "sla", "admin"],
+    "name_i18n": {
+      "en": "Service Catalog & SLA Administration",
+      "ar": "إدارة كتالوج الخدمات واتفاقيات مستوى الخدمة"
+    },
+    "description_i18n": {
+      "en": "Governs a change to the legal service catalog or an SLA target: drafting the change, impact assessment, governance approval, publishing the new SLA definitions, and notifying stakeholders.",
+      "ar": "يحكم تغييراً في كتالوج الخدمات القانونية أو في مستهدف اتفاقية مستوى الخدمة: صياغة التغيير، وتقييم الأثر، والاعتماد الحوكمي، ونشر تعريفات اتفاقية مستوى الخدمة الجديدة، وإبلاغ أصحاب العلاقة."
+    },
+    "definition": {
+      "name": "Service Catalog & SLA Administration",
+      "description": "Draft, assess, approve, publish, and announce a legal service catalog / SLA change.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "catalog_change_id": { "type": "string" },
+        "change_type": { "type": "string", "default": "sla_update" },
+        "approved": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "draft_change",
+          "type": "human_task",
+          "name": "Draft Catalog / SLA Change",
+          "config": {
+            "assignee_role": "legal_ops_manager",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "service_name", "type": "text", "label": "Service Name", "required": true },
+              { "name": "change_type", "type": "select", "label": "Change Type", "required": true, "options": ["add_service", "retire_service", "sla_update", "catalog_metadata"] },
+              { "name": "proposed_sla_hours", "type": "number", "label": "Proposed SLA (hours)", "required": false },
+              { "name": "rationale", "type": "textarea", "label": "Rationale", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "impact_assessment" }
+          ]
+        },
+        {
+          "id": "impact_assessment",
+          "type": "human_task",
+          "name": "Impact Assessment",
+          "config": {
+            "assignee_role": "legal_ops_analyst",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "capacity_impact", "type": "select", "label": "Capacity Impact", "required": true, "options": ["none", "low", "medium", "high"] },
+              { "name": "assessment_notes", "type": "textarea", "label": "Assessment Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "governance_approval" }
+          ]
+        },
+        {
+          "id": "governance_approval",
+          "type": "approval_chain",
+          "name": "Governance Approval",
+          "config": {
+            "approvers": [ { "role": "legal_ops_manager" }, { "role": "legal_director" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "publish_catalog" }
+          ]
+        },
+        {
+          "id": "publish_catalog",
+          "type": "service_task",
+          "name": "Publish Catalog / SLA Definitions",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/service-catalog/${variables.catalog_change_id}/publish",
+            "body": {
+              "catalog_change_id": "${variables.catalog_change_id}",
+              "status": "published"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "notify_stakeholders" }
+          ]
+        },
+        {
+          "id": "notify_stakeholders",
+          "type": "service_task",
+          "name": "Notify Stakeholders",
+          "config": {
+            "service": "notification",
+            "method": "POST",
+            "url": "/api/v1/notifications",
+            "body": {
+              "template": "service_catalog_updated",
+              "catalog_change_id": "${variables.catalog_change_id}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-sla-breach-escalation",
+    "category": "legal",
+    "icon": "alarm-clock-off",
+    "tags": ["legal", "service-desk", "sla", "escalation"],
+    "name_i18n": {
+      "en": "SLA Breach Escalation",
+      "ar": "تصعيد خرق اتفاقية مستوى الخدمة"
+    },
+    "description_i18n": {
+      "en": "Triggered when a legal request nears or breaches its SLA: confirms the breach, notifies the owner, escalates up the management chain on a timer, applies recovery actions, and logs the root cause.",
+      "ar": "يُفعَّل عند اقتراب طلب قانوني من خرق اتفاقية مستوى الخدمة أو تجاوزها: يؤكّد الخرق، ويبلّغ المسؤول، ويصعّد عبر سلسلة الإدارة وفق مؤقّت، ويطبّق إجراءات المعالجة، ويوثّق السبب الجذري."
+    },
+    "definition": {
+      "name": "SLA Breach Escalation",
+      "description": "Confirm breach, notify owner, timed escalation, recovery action, and root-cause logging.",
+      "trigger_config": {
+        "type": "event",
+        "topic": "legal.sla.breach_warning"
+      },
+      "variables": {
+        "request_id": { "type": "string" },
+        "breach_level": { "type": "string", "default": "warning" },
+        "resolved": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "confirm_breach",
+          "type": "human_task",
+          "name": "Confirm SLA Breach",
+          "config": {
+            "assignee_role": "legal_section_head",
+            "sla_hours": 1,
+            "escalation_role": "legal_manager",
+            "form_fields": [
+              { "name": "breach_confirmed", "type": "boolean", "label": "Breach Confirmed?", "required": true },
+              { "name": "breach_reason", "type": "textarea", "label": "Reason", "required": true }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.confirm_breach.output.breach_confirmed == true", "target": "notify_owner" },
+            { "target": "log_root_cause" }
+          ]
+        },
+        {
+          "id": "notify_owner",
+          "type": "service_task",
+          "name": "Notify Assigned Owner",
+          "config": {
+            "service": "notification",
+            "method": "POST",
+            "url": "/api/v1/notifications",
+            "body": {
+              "template": "sla_breach_alert",
+              "request_id": "${variables.request_id}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "escalation_timer" }
+          ]
+        },
+        {
+          "id": "escalation_timer",
+          "type": "timer",
+          "name": "Escalation Grace Window",
+          "config": {
+            "duration": "4h"
+          },
+          "transitions": [
+            { "target": "management_escalation" }
+          ]
+        },
+        {
+          "id": "management_escalation",
+          "type": "approval_chain",
+          "name": "Management Escalation & Recovery Decision",
+          "config": {
+            "approvers": [ { "role": "legal_manager" }, { "role": "legal_director" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 8
+          },
+          "transitions": [
+            { "target": "apply_recovery" }
+          ]
+        },
+        {
+          "id": "apply_recovery",
+          "type": "human_task",
+          "name": "Apply Recovery Action",
+          "config": {
+            "assignee_role": "legal_section_head",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "recovery_action", "type": "textarea", "label": "Recovery Action", "required": true },
+              { "name": "resolved", "type": "boolean", "label": "Resolved?", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "log_root_cause" }
+          ]
+        },
+        {
+          "id": "log_root_cause",
+          "type": "service_task",
+          "name": "Log Root Cause",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/sla/${variables.request_id}/root-cause",
+            "body": {
+              "request_id": "${variables.request_id}",
+              "breach_level": "${variables.breach_level}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-legal-kpi-compliance-reporting",
+    "category": "legal",
+    "icon": "bar-chart-3",
+    "tags": ["legal", "service-desk", "kpi", "reporting", "compliance"],
+    "name_i18n": {
+      "en": "Legal KPI & Compliance Reporting",
+      "ar": "تقارير مؤشرات الأداء والامتثال القانوني"
+    },
+    "description_i18n": {
+      "en": "Generates the periodic legal KPI and compliance report: aggregates metrics, analyst review, management sign-off, distribution to leadership, and archival of the published report.",
+      "ar": "يُنتج تقرير مؤشرات الأداء والامتثال القانوني الدوري: تجميع المؤشرات، ومراجعة المحلل، واعتماد الإدارة، والتوزيع على القيادة، وأرشفة التقرير المنشور."
+    },
+    "definition": {
+      "name": "Legal KPI & Compliance Reporting",
+      "description": "Aggregate KPIs, analyst review, management sign-off, distribute, and archive the legal report.",
+      "trigger_config": {
+        "type": "schedule",
+        "cron": "0 7 1 * *"
+      },
+      "variables": {
+        "report_id": { "type": "string" },
+        "period": { "type": "string", "default": "monthly" },
+        "approved": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "aggregate_metrics",
+          "type": "service_task",
+          "name": "Aggregate KPI & Compliance Metrics",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/reports/${variables.report_id}/aggregate",
+            "body": {
+              "report_id": "${variables.report_id}",
+              "period": "${variables.period}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "analyst_review" }
+          ]
+        },
+        {
+          "id": "analyst_review",
+          "type": "human_task",
+          "name": "Analyst Review & Narrative",
+          "config": {
+            "assignee_role": "legal_ops_analyst",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "narrative", "type": "textarea", "label": "Executive Narrative", "required": true },
+              { "name": "anomalies", "type": "textarea", "label": "Anomalies / Notes", "required": false }
+            ]
+          },
+          "transitions": [
+            { "target": "management_signoff" }
+          ]
+        },
+        {
+          "id": "management_signoff",
+          "type": "approval_chain",
+          "name": "Management Sign-off",
+          "config": {
+            "approvers": [ { "role": "legal_director" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "distribute" }
+          ]
+        },
+        {
+          "id": "distribute",
+          "type": "service_task",
+          "name": "Distribute to Leadership",
+          "config": {
+            "service": "notification",
+            "method": "POST",
+            "url": "/api/v1/notifications",
+            "body": {
+              "template": "legal_kpi_report",
+              "report_id": "${variables.report_id}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "archive_report" }
+          ]
+        },
+        {
+          "id": "archive_report",
+          "type": "service_task",
+          "name": "Archive Published Report",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/reports/${variables.report_id}/archive",
+            "body": {
+              "report_id": "${variables.report_id}",
+              "status": "archived"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-records-retention-earchive-disposal",
+    "category": "legal",
+    "icon": "archive",
+    "tags": ["legal", "service-desk", "records", "retention", "e-archive", "pdpl", "ksa"],
+    "name_i18n": {
+      "en": "Records Retention & E-Archive Disposal",
+      "ar": "الاحتفاظ بالسجلات والإتلاف من الأرشيف الإلكتروني"
+    },
+    "description_i18n": {
+      "en": "Governs disposal of records whose retention period has elapsed: identifies eligible records, legal-hold check, retention & PDPL review, dual-control disposal approval, executes e-archive disposal, and issues a certificate of destruction.",
+      "ar": "يحكم إتلاف السجلات التي انتهت مدة الاحتفاظ بها: تحديد السجلات المؤهلة، وفحص الحجز القانوني، ومراجعة مدة الاحتفاظ ونظام حماية البيانات الشخصية، واعتماد الإتلاف برقابة مزدوجة، وتنفيذ الإتلاف من الأرشيف الإلكتروني، وإصدار شهادة إتلاف."
+    },
+    "definition": {
+      "name": "Records Retention & E-Archive Disposal",
+      "description": "Identify eligible records, legal-hold check, retention/PDPL review, dual approval, dispose, and certify.",
+      "trigger_config": {
+        "type": "schedule",
+        "cron": "0 5 1 1,4,7,10 *"
+      },
+      "variables": {
+        "batch_id": { "type": "string" },
+        "on_legal_hold": { "type": "boolean", "default": false },
+        "approved": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "identify_records",
+          "type": "service_task",
+          "name": "Identify Retention-Expired Records",
+          "config": {
+            "service": "earchive",
+            "method": "POST",
+            "url": "/api/v1/integrations/earchive/retention/${variables.batch_id}/eligible",
+            "body": {
+              "batch_id": "${variables.batch_id}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "legal_hold_check" }
+          ]
+        },
+        {
+          "id": "legal_hold_check",
+          "type": "condition",
+          "name": "Legal-Hold Gate",
+          "config": {
+            "expression": "steps.identify_records.output.on_legal_hold == true"
+          },
+          "transitions": [
+            { "condition": "steps.identify_records.output.on_legal_hold == true", "target": "hold_resolution" },
+            { "target": "retention_review" }
+          ]
+        },
+        {
+          "id": "hold_resolution",
+          "type": "human_task",
+          "name": "Resolve Legal Hold",
+          "config": {
+            "assignee_role": "records_manager",
+            "sla_hours": 48,
+            "escalation_role": "legal_manager",
+            "form_fields": [
+              { "name": "hold_cleared", "type": "boolean", "label": "Legal Hold Cleared?", "required": true },
+              { "name": "hold_notes", "type": "textarea", "label": "Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "retention_review" }
+          ]
+        },
+        {
+          "id": "retention_review",
+          "type": "human_task",
+          "name": "Retention & PDPL Review",
+          "config": {
+            "assignee_role": "legal_counsel",
+            "sla_hours": 48,
+            "form_fields": [
+              { "name": "retention_satisfied", "type": "boolean", "label": "Retention Period Satisfied?", "required": true },
+              { "name": "pdpl_cleared", "type": "boolean", "label": "PDPL Disposal Cleared?", "required": true },
+              { "name": "review_notes", "type": "textarea", "label": "Review Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "disposal_approval" }
+          ]
+        },
+        {
+          "id": "disposal_approval",
+          "type": "approval_chain",
+          "name": "Dual-Control Disposal Approval",
+          "config": {
+            "approvers": [ { "role": "records_manager" }, { "role": "legal_manager" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "execute_disposal" }
+          ]
+        },
+        {
+          "id": "execute_disposal",
+          "type": "service_task",
+          "name": "Execute E-Archive Disposal & Certify",
+          "config": {
+            "service": "earchive",
+            "method": "POST",
+            "url": "/api/v1/integrations/earchive/retention/${variables.batch_id}/dispose",
+            "body": {
+              "batch_id": "${variables.batch_id}",
+              "issue_certificate": true
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  }
+]

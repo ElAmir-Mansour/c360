@@ -1,0 +1,579 @@
+package service
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/pquerna/otp/totp"
+	"github.com/redis/go-redis/v9"
+	"github.com/rs/zerolog"
+	"golang.org/x/crypto/bcrypt"
+
+	"github.com/clario360/platform/internal/events"
+	"github.com/clario360/platform/internal/iam/dto"
+	"github.com/clario360/platform/internal/iam/model"
+	"github.com/clario360/platform/internal/iam/repository"
+	"github.com/clario360/platform/pkg/crypto"
+)
+
+type UserService struct {
+	userRepo    repository.UserRepository
+	roleRepo    repository.RoleRepository
+	sessionRepo repository.SessionRepository
+	redis       *redis.Client
+	producer    *events.Producer
+	logger      zerolog.Logger
+	bcryptCost  int
+	mfaKey      []byte // 32-byte AES-256 key for MFA secret encryption
+}
+
+func NewUserService(
+	userRepo repository.UserRepository,
+	roleRepo repository.RoleRepository,
+	sessionRepo repository.SessionRepository,
+	rdb *redis.Client,
+	producer *events.Producer,
+	logger zerolog.Logger,
+	bcryptCost int,
+) *UserService {
+	return &UserService{
+		userRepo:    userRepo,
+		roleRepo:    roleRepo,
+		sessionRepo: sessionRepo,
+		redis:       rdb,
+		producer:    producer,
+		logger:      logger,
+		bcryptCost:  bcryptCost,
+	}
+}
+
+// SetMFAEncryptionKey sets the AES-256 key used to encrypt MFA secrets at rest.
+func (s *UserService) SetMFAEncryptionKey(key []byte) {
+	s.mfaKey = key
+}
+
+// AdminCreateUser creates a user within a tenant with optional status and role assignments.
+// This is the admin-only endpoint (requires users:create permission, enforced by handler).
+func (s *UserService) AdminCreateUser(ctx context.Context, tenantID string, req *dto.AdminCreateUserRequest, createdBy string) (*dto.UserResponse, error) {
+	if err := validatePassword(req.Password); err != nil {
+		return nil, fmt.Errorf("%s: %w", err.Error(), model.ErrValidation)
+	}
+
+	// Check if email already exists in tenant
+	_, err := s.userRepo.GetByEmail(ctx, tenantID, req.Email)
+	if err == nil {
+		return nil, fmt.Errorf("email %s already exists: %w", req.Email, model.ErrConflict)
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), s.bcryptCost)
+	if err != nil {
+		return nil, fmt.Errorf("hashing password: %w", err)
+	}
+
+	status := model.UserStatusActive
+	if req.Status != "" {
+		status = model.UserStatus(req.Status)
+	}
+
+	user := &model.User{
+		TenantID:      tenantID,
+		Email:         req.Email,
+		PasswordHash:  string(hash),
+		FirstName:     req.FirstName,
+		LastName:      req.LastName,
+		Status:        status,
+		EmailVerified: status == model.UserStatusActive,
+		CreatedBy:     &createdBy,
+	}
+
+	if err := s.userRepo.Create(ctx, user); err != nil {
+		return nil, fmt.Errorf("creating user: %w", err)
+	}
+
+	// Assign roles if provided
+	for _, roleID := range req.RoleIDs {
+		if err := s.roleRepo.AssignToUser(ctx, user.ID, roleID, tenantID, createdBy); err != nil {
+			s.logger.Error().Err(err).Str("role_id", roleID).Msg("failed to assign role during admin create")
+		}
+	}
+
+	s.publishEvent(ctx, "user.created", tenantID, user.ID, map[string]any{
+		"created_by":         createdBy,
+		"send_welcome_email": req.SendWelcomeEmail,
+	})
+
+	// Re-fetch with roles populated
+	created, err := s.userRepo.GetByID(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+	resp := dto.UserToResponse(created)
+	return &resp, nil
+}
+
+func (s *UserService) List(ctx context.Context, tenantID string, page, perPage int, search, status, sort, order string) ([]dto.UserResponse, int, error) {
+	filter := repository.UserFilter{
+		Page:    page,
+		PerPage: perPage,
+		Sort:    sort,
+		SortDir: order,
+	}
+	if search != "" {
+		filter.Search = &search
+	}
+	if status != "" {
+		filter.Status = &status
+	}
+
+	users, total, err := s.userRepo.List(ctx, tenantID, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return dto.UsersToResponse(users), total, nil
+}
+
+func (s *UserService) GetByID(ctx context.Context, userID string) (*dto.UserResponse, error) {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	resp := dto.UserToResponse(user)
+	return &resp, nil
+}
+
+// getUserInTenant loads a user by ID but enforces tenant isolation: if the user
+// exists in a different tenant it is reported as ErrNotFound, so a caller can
+// neither read nor mutate a foreign-tenant user by UUID. An empty tenantID
+// (trusted internal / self-service callers) skips the check. This mirrors the
+// tenant scoping List already applies and is the guard the public /users/{id}
+// read, update, delete and status endpoints route through.
+func (s *UserService) getUserInTenant(ctx context.Context, tenantID, userID string) (*model.User, error) {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if tenantID != "" && user.TenantID != tenantID {
+		return nil, fmt.Errorf("user %s: %w", userID, model.ErrNotFound)
+	}
+	return user, nil
+}
+
+// GetByIDInTenant returns a user only when it belongs to the caller's tenant,
+// closing the cross-tenant IDOR on GET /api/v1/users/{id}.
+func (s *UserService) GetByIDInTenant(ctx context.Context, tenantID, userID string) (*dto.UserResponse, error) {
+	user, err := s.getUserInTenant(ctx, tenantID, userID)
+	if err != nil {
+		return nil, err
+	}
+	resp := dto.UserToResponse(user)
+	return &resp, nil
+}
+
+func (s *UserService) GetByEmail(ctx context.Context, tenantID, email string) (*dto.UserResponse, error) {
+	var (
+		user *model.User
+		err  error
+	)
+
+	if tenantID != "" {
+		user, err = s.userRepo.GetByEmail(ctx, tenantID, email)
+	} else {
+		user, err = s.userRepo.GetByEmailGlobal(ctx, email)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	resp := dto.UserToResponse(user)
+	return &resp, nil
+}
+
+// UpdateInTenant is the tenant-scoped entry point for the admin/self
+// PUT /users/{id} endpoint: it rejects a foreign-tenant target with ErrNotFound
+// before delegating to Update.
+func (s *UserService) UpdateInTenant(ctx context.Context, tenantID, userID string, req *dto.UpdateUserRequest, updatedBy string) (*dto.UserResponse, error) {
+	if _, err := s.getUserInTenant(ctx, tenantID, userID); err != nil {
+		return nil, err
+	}
+	return s.Update(ctx, userID, req, updatedBy)
+}
+
+func (s *UserService) Update(ctx context.Context, userID string, req *dto.UpdateUserRequest, updatedBy string) (*dto.UserResponse, error) {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.FirstName != nil {
+		user.FirstName = *req.FirstName
+	}
+	if req.LastName != nil {
+		user.LastName = *req.LastName
+	}
+	if req.AvatarURL != nil {
+		user.AvatarURL = req.AvatarURL
+	}
+	user.UpdatedBy = &updatedBy
+
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		return nil, err
+	}
+
+	s.publishEvent(ctx, "user.updated", user.TenantID, user.ID, nil)
+
+	updated, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	resp := dto.UserToResponse(updated)
+	return &resp, nil
+}
+
+// SetAvatar sets (or clears, when avatar is nil) the current user's profile
+// picture and returns the refreshed profile. The caller (handler) is responsible
+// for validating the avatar payload — data-URL shape, MIME allowlist, magic bytes,
+// and size cap — before calling; this method only persists.
+func (s *UserService) SetAvatar(ctx context.Context, userID string, avatar *string, updatedBy string) (*dto.UserResponse, error) {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	user.AvatarURL = avatar
+	user.UpdatedBy = &updatedBy
+
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		return nil, err
+	}
+
+	s.publishEvent(ctx, "user.updated", user.TenantID, user.ID, nil)
+
+	updated, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	resp := dto.UserToResponse(updated)
+	return &resp, nil
+}
+
+// DeleteInTenant is the tenant-scoped entry point for DELETE /users/{id}: it
+// rejects a foreign-tenant target with ErrNotFound before delegating to Delete.
+func (s *UserService) DeleteInTenant(ctx context.Context, tenantID, userID, deletedBy string) error {
+	if _, err := s.getUserInTenant(ctx, tenantID, userID); err != nil {
+		return err
+	}
+	return s.Delete(ctx, userID, deletedBy)
+}
+
+func (s *UserService) Delete(ctx context.Context, userID, deletedBy string) error {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	if err := s.userRepo.SoftDelete(ctx, userID, deletedBy); err != nil {
+		return err
+	}
+
+	// Invalidate all sessions
+	_ = s.sessionRepo.DeleteByUserID(ctx, userID)
+
+	s.publishEvent(ctx, "user.deleted", user.TenantID, user.ID, nil)
+	return nil
+}
+
+// UpdateStatusInTenant is the tenant-scoped entry point for
+// PUT /users/{id}/status: it rejects a foreign-tenant target with ErrNotFound
+// before delegating to UpdateStatus.
+func (s *UserService) UpdateStatusInTenant(ctx context.Context, tenantID, userID string, req *dto.UpdateStatusRequest, updatedBy string) error {
+	if _, err := s.getUserInTenant(ctx, tenantID, userID); err != nil {
+		return err
+	}
+	return s.UpdateStatus(ctx, userID, req, updatedBy)
+}
+
+func (s *UserService) UpdateStatus(ctx context.Context, userID string, req *dto.UpdateStatusRequest, updatedBy string) error {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	status := model.UserStatus(req.Status)
+	if err := s.userRepo.UpdateStatus(ctx, userID, status, updatedBy); err != nil {
+		return err
+	}
+
+	// If suspended, invalidate sessions
+	if status == model.UserStatusSuspended {
+		_ = s.sessionRepo.DeleteByUserID(ctx, userID)
+	}
+
+	s.publishEvent(ctx, "user.updated", user.TenantID, user.ID, nil)
+	return nil
+}
+
+func (s *UserService) ChangePassword(ctx context.Context, userID string, req *dto.ChangePasswordRequest) error {
+	if err := validatePassword(req.NewPassword); err != nil {
+		return fmt.Errorf("%s: %w", err.Error(), model.ErrValidation)
+	}
+
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.CurrentPassword)); err != nil {
+		return fmt.Errorf("current password is incorrect: %w", model.ErrUnauthorized)
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), s.bcryptCost)
+	if err != nil {
+		return fmt.Errorf("hashing password: %w", err)
+	}
+
+	if err := s.userRepo.UpdatePassword(ctx, userID, string(hash)); err != nil {
+		return err
+	}
+
+	// Invalidate all other sessions
+	_ = s.sessionRepo.DeleteByUserID(ctx, userID)
+
+	return nil
+}
+
+// ListSessions returns the user's active sessions. currentSessionID is extracted
+// from the caller's JWT "sid" claim and used to mark the active session accurately.
+func (s *UserService) ListSessions(ctx context.Context, tenantID, userID, currentSessionID string) ([]dto.SessionResponse, error) {
+	sessions, err := s.sessionRepo.GetByUserID(ctx, tenantID, userID)
+	if err != nil {
+		return nil, err
+	}
+	return dto.SessionsToResponse(sessions, currentSessionID), nil
+}
+
+func (s *UserService) DeleteSession(ctx context.Context, tenantID, userID, currentSessionID, targetSessionID string) error {
+	if currentSessionID != "" && currentSessionID == targetSessionID {
+		return fmt.Errorf("cannot revoke current session: %w", model.ErrForbidden)
+	}
+	sessions, err := s.sessionRepo.GetByUserID(ctx, tenantID, userID)
+	if err != nil {
+		return err
+	}
+	// Fallback: if no session_id in JWT, treat the most-recently-active session as current.
+	if currentSessionID == "" && len(sessions) > 0 && sessions[0].ID == targetSessionID {
+		return fmt.Errorf("cannot revoke current session: %w", model.ErrForbidden)
+	}
+	for _, session := range sessions {
+		if session.ID == targetSessionID {
+			return s.sessionRepo.Delete(ctx, targetSessionID)
+		}
+	}
+	return model.ErrNotFound
+}
+
+func (s *UserService) DeleteSessions(ctx context.Context, tenantID, userID string, excludeCurrent bool) error {
+	if !excludeCurrent {
+		return s.sessionRepo.DeleteByUserID(ctx, userID)
+	}
+
+	sessions, err := s.sessionRepo.GetByUserID(ctx, tenantID, userID)
+	if err != nil {
+		return err
+	}
+	for idx, session := range sessions {
+		if idx == 0 {
+			continue
+		}
+		if err := s.sessionRepo.Delete(ctx, session.ID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// EnableMFA generates a TOTP secret and recovery codes but does NOT enable MFA yet.
+// The user must call VerifyMFASetup with a valid code to confirm their authenticator is configured.
+func (s *UserService) EnableMFA(ctx context.Context, userID string) (*dto.MFASetupResponse, error) {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if user.MFAEnabled {
+		return nil, fmt.Errorf("MFA is already enabled: %w", model.ErrConflict)
+	}
+
+	key, err := totp.Generate(totp.GenerateOpts{
+		Issuer:      "Clario360",
+		AccountName: user.Email,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("generating TOTP key: %w", err)
+	}
+
+	secret := key.Secret()
+
+	// Encrypt MFA secret before storing
+	storedSecret := secret
+	if len(s.mfaKey) == 32 {
+		encrypted, err := crypto.Encrypt([]byte(secret), s.mfaKey)
+		if err != nil {
+			return nil, fmt.Errorf("encrypting MFA secret: %w", err)
+		}
+		storedSecret = encrypted
+	}
+
+	// Store the secret but do NOT enable MFA yet (two-step flow)
+	if err := s.userRepo.UpdateMFA(ctx, userID, false, &storedSecret); err != nil {
+		return nil, err
+	}
+
+	// Generate recovery codes (bcrypt hashed)
+	codes := make([]string, recoveryCodeCount)
+	recoveryKey := recoveryPrefix + userID
+	s.redis.Del(ctx, recoveryKey)
+
+	for i := 0; i < recoveryCodeCount; i++ {
+		code, err := generateRandomHex(4)
+		if err != nil {
+			return nil, fmt.Errorf("generating recovery code: %w", err)
+		}
+		codes[i] = code
+		hash, err := bcrypt.GenerateFromPassword([]byte(code), bcrypt.MinCost)
+		if err != nil {
+			return nil, fmt.Errorf("hashing recovery code: %w", err)
+		}
+		s.redis.SAdd(ctx, recoveryKey, string(hash))
+	}
+	s.redis.Persist(ctx, recoveryKey)
+
+	return &dto.MFASetupResponse{
+		Secret:        secret,
+		OTPURL:        key.URL(),
+		RecoveryCodes: codes,
+	}, nil
+}
+
+// VerifyMFASetup confirms the user's authenticator is correctly configured by validating a TOTP code.
+// Only after this succeeds is MFA actually enabled on the account.
+func (s *UserService) VerifyMFASetup(ctx context.Context, userID string, code string) error {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	if user.MFAEnabled {
+		return fmt.Errorf("MFA is already enabled: %w", model.ErrConflict)
+	}
+
+	if user.MFASecret == nil {
+		return fmt.Errorf("MFA setup not initiated — call enable first: %w", model.ErrValidation)
+	}
+
+	// Decrypt the stored secret
+	secret := *user.MFASecret
+	if len(s.mfaKey) == 32 {
+		decrypted, err := crypto.Decrypt(secret, s.mfaKey)
+		if err != nil {
+			return fmt.Errorf("decrypting MFA secret: %w", err)
+		}
+		secret = string(decrypted)
+	}
+
+	if !totp.Validate(code, secret) {
+		return fmt.Errorf("invalid code — please re-scan QR code and try again: %w", model.ErrInvalidMFA)
+	}
+
+	// Code is valid — enable MFA
+	storedSecret := *user.MFASecret // keep the encrypted version
+	if err := s.userRepo.UpdateMFA(ctx, userID, true, &storedSecret); err != nil {
+		return err
+	}
+
+	s.publishEvent(ctx, "user.mfa.enabled", user.TenantID, user.ID, map[string]any{
+		"user_id":   user.ID,
+		"email":     user.Email,
+		"timestamp": time.Now().UTC(),
+	})
+	return nil
+}
+
+func (s *UserService) DisableMFA(ctx context.Context, userID string, req *dto.DisableMFARequest) error {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	if !user.MFAEnabled || user.MFASecret == nil {
+		return fmt.Errorf("MFA is not enabled: %w", model.ErrValidation)
+	}
+
+	// Decrypt secret for TOTP validation
+	secret := *user.MFASecret
+	if len(s.mfaKey) == 32 {
+		decrypted, err := crypto.Decrypt(secret, s.mfaKey)
+		if err != nil {
+			return fmt.Errorf("decrypting MFA secret: %w", err)
+		}
+		secret = string(decrypted)
+	}
+
+	if !totp.Validate(req.Code, secret) {
+		return model.ErrInvalidMFA
+	}
+
+	if err := s.userRepo.UpdateMFA(ctx, userID, false, nil); err != nil {
+		return err
+	}
+
+	// Remove recovery codes
+	s.redis.Del(ctx, recoveryPrefix+userID)
+
+	s.publishEvent(ctx, "user.mfa.disabled", user.TenantID, user.ID, map[string]any{
+		"user_id":     user.ID,
+		"email":       user.Email,
+		"disabled_by": user.ID,
+		"reason":      "user_requested",
+		"timestamp":   time.Now().UTC(),
+	})
+	return nil
+}
+
+// decryptMFASecret decrypts a stored MFA secret for TOTP validation.
+func (s *UserService) decryptMFASecret(stored string) (string, error) {
+	if len(s.mfaKey) == 32 {
+		decrypted, err := crypto.Decrypt(stored, s.mfaKey)
+		if err != nil {
+			return "", fmt.Errorf("decrypting MFA secret: %w", err)
+		}
+		return string(decrypted), nil
+	}
+	return stored, nil
+}
+
+func (s *UserService) publishEvent(ctx context.Context, eventType, tenantID, userID string, data map[string]any) {
+	if s.producer == nil {
+		return
+	}
+	payload := map[string]any{}
+	for key, value := range data {
+		payload[key] = value
+	}
+	if tenantID != "" {
+		payload["tenant_id"] = tenantID
+	}
+	if userID != "" {
+		payload["user_id"] = userID
+	}
+
+	evt, err := events.NewEvent(normalizeIAMEventType(eventType), "iam-service", tenantID, payload)
+	if err != nil {
+		s.logger.Error().Err(err).Str("event_type", eventType).Msg("failed to create event")
+		return
+	}
+	evt.UserID = userID
+	if err := s.producer.Publish(ctx, "platform.iam.events", evt); err != nil {
+		s.logger.Error().Err(err).Str("event_type", eventType).Msg("failed to publish event")
+	}
+}

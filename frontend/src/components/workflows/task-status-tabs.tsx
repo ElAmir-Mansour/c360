@@ -1,0 +1,65 @@
+'use client';
+
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { useWorkflowPageLabels } from '@/app/(dashboard)/workflows/_lib/workflow-page-i18n';
+import type { TaskCounts } from '@/types/models';
+
+interface TaskStatusTabsProps {
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+  counts?: TaskCounts;
+}
+
+export function TaskStatusTabs({ activeTab, onTabChange, counts }: TaskStatusTabsProps) {
+  const labels = useWorkflowPageLabels();
+  const allCount = counts
+    ? (counts.pending ?? 0) +
+      (counts.claimed_by_me ?? 0) +
+      (counts.completed ?? 0) +
+      (counts.overdue ?? 0) +
+      (counts.escalated ?? 0)
+    : undefined;
+
+  const tabs = [
+    { key: 'all', label: labels.tasks.list.all, count: allCount },
+    { key: 'pending', label: labels.tasks.list.pending, count: counts?.pending },
+    { key: 'claimed', label: labels.tasks.list.claimed, count: counts?.claimed_by_me },
+    { key: 'completed', label: labels.tasks.list.completed, count: counts?.completed },
+    { key: 'overdue', label: labels.tasks.list.overdue, count: counts?.overdue, urgent: true },
+  ];
+
+  return (
+    <Tabs value={activeTab} onValueChange={onTabChange}>
+      <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0">
+        {tabs.map((tab) => (
+          <TabsTrigger
+            key={tab.key}
+            value={tab.key}
+            className={cn(
+              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm',
+              tab.urgent && (tab.count ?? 0) > 0 && 'text-destructive',
+            )}
+          >
+            {tab.label}
+            {tab.count !== undefined && (
+              <Badge
+                variant={tab.urgent && tab.count > 0 ? 'destructive' : 'secondary'}
+                className="h-4 min-w-4 px-1 text-overline"
+              >
+                {tab.count}
+              </Badge>
+            )}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+      {/* The filtered task list is rendered by the parent, not in a panel. These
+          empty, force-mounted panels exist only so each trigger's auto-generated
+          aria-controls resolves to a real element (WCAG aria-valid-attr-value). */}
+      {tabs.map((tab) => (
+        <TabsContent key={tab.key} value={tab.key} forceMount className="sr-only" />
+      ))}
+    </Tabs>
+  );
+}

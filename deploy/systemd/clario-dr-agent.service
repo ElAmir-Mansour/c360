@@ -1,0 +1,40 @@
+[Unit]
+Description=ClarioDR customer-side capture agent
+Documentation=file:/etc/clario360/clario-dr-agent.yaml
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=clario-dr-agent
+Group=clario-dr-agent
+EnvironmentFile=-/etc/clario360/clario-dr-agent.env
+ExecStart=/usr/local/bin/clario-dr-agent --config /etc/clario360/clario-dr-agent.yaml --json-logs
+Restart=always
+RestartSec=5s
+TimeoutStopSec=30s
+KillSignal=SIGTERM
+UMask=0077
+
+StateDirectory=clario-dr-agent
+StateDirectoryMode=0700
+ConfigurationDirectory=clario360
+ConfigurationDirectoryMode=0750
+RuntimeDirectory=clario-dr-agent
+RuntimeDirectoryMode=0700
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/clario-dr-agent /run/clario-dr-agent
+CapabilityBoundingSet=
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

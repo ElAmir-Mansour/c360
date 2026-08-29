@@ -1,0 +1,22 @@
+{{- if .Values.licenseService.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "clario360.componentName" (dict "root" . "component" "license-service") }}
+  namespace: {{ include "clario360.namespace" . }}
+  labels:
+    {{- include "clario360.componentLabels" (dict "root" . "component" "license-service") | nindent 4 }}
+spec:
+  {{- if .Values.licenseService.pdb }}
+  {{- if .Values.licenseService.pdb.minAvailable }}
+  minAvailable: {{ .Values.licenseService.pdb.minAvailable }}
+  {{- else }}
+  maxUnavailable: {{ .Values.licenseService.pdb.maxUnavailable | default 1 }}
+  {{- end }}
+  {{- else }}
+  maxUnavailable: 1
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "clario360.componentSelectorLabels" (dict "root" . "component" "license-service") | nindent 6 }}
+{{- end }}

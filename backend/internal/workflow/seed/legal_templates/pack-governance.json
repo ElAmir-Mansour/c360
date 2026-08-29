@@ -1,0 +1,1139 @@
+[
+  {
+    "id": "tmpl-board-meeting-pack",
+    "category": "legal",
+    "icon": "presentation",
+    "tags": ["legal", "governance", "board", "resolution", "ksa"],
+    "name_i18n": {
+      "en": "Board Meeting Pack & Resolution Prep",
+      "ar": "إعداد حزمة اجتماع مجلس الإدارة وتجهيز القرارات"
+    },
+    "description_i18n": {
+      "en": "Assembles the board meeting agenda and pack, drafts resolutions, secures the company-secretary and chairman review and quorum confirmation, circulates the pack within the statutory notice window, and records the minutes and adopted resolutions.",
+      "ar": "يجمّع جدول أعمال اجتماع مجلس الإدارة وحزمته، ويصيغ القرارات، ويضمن مراجعة أمين سر الشركة ورئيس المجلس وتأكيد النصاب، ويعمّم الحزمة ضمن مهلة الإشعار النظامية، ويوثّق المحضر والقرارات المعتمدة."
+    },
+    "definition": {
+      "name": "Board Meeting Pack & Resolution Prep",
+      "description": "Prepare agenda and pack, draft resolutions, review, confirm quorum, circulate, and record minutes.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "meeting_id": { "type": "string" },
+        "meeting_date": { "type": "string" },
+        "quorum_met": { "type": "boolean", "default": false },
+        "notice_days": { "type": "number", "default": 7 }
+      },
+      "steps": [
+        {
+          "id": "draft_agenda",
+          "type": "human_task",
+          "name": "Draft Agenda & Assemble Board Pack",
+          "config": {
+            "assignee_role": "company_secretary",
+            "sla_hours": 48,
+            "form_fields": [
+              { "name": "meeting_date", "type": "date", "label": "Meeting Date", "required": true },
+              { "name": "agenda_items", "type": "textarea", "label": "Agenda Items", "required": true },
+              { "name": "pack_url", "type": "text", "label": "Board Pack URL", "required": true },
+              { "name": "draft_resolutions", "type": "textarea", "label": "Draft Resolutions", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "chairman_review" }
+          ]
+        },
+        {
+          "id": "chairman_review",
+          "type": "human_task",
+          "name": "Chairman & Secretary Review",
+          "config": {
+            "assignee_role": "board_chairman",
+            "sla_hours": 24,
+            "escalation_role": "company_secretary",
+            "form_fields": [
+              { "name": "review_approved", "type": "boolean", "label": "Approved for Circulation?", "required": true },
+              { "name": "review_notes", "type": "textarea", "label": "Review Notes", "required": false }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.chairman_review.output.review_approved == true", "target": "confirm_quorum" },
+            { "target": "draft_agenda" }
+          ]
+        },
+        {
+          "id": "confirm_quorum",
+          "type": "human_task",
+          "name": "Confirm Quorum & RSVP",
+          "config": {
+            "assignee_role": "company_secretary",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "quorum_met", "type": "boolean", "label": "Quorum Met?", "required": true },
+              { "name": "confirmed_attendees", "type": "textarea", "label": "Confirmed Attendees", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "circulate_pack" }
+          ]
+        },
+        {
+          "id": "circulate_pack",
+          "type": "service_task",
+          "name": "Circulate Pack (Statutory Notice)",
+          "config": {
+            "service": "notification",
+            "method": "POST",
+            "url": "/api/v1/notifications",
+            "body": {
+              "template": "board_pack_circulated",
+              "meeting_id": "${variables.meeting_id}",
+              "pack_url": "${steps.draft_agenda.output.pack_url}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "record_minutes" }
+          ]
+        },
+        {
+          "id": "record_minutes",
+          "type": "human_task",
+          "name": "Record Minutes & Adopted Resolutions",
+          "config": {
+            "assignee_role": "company_secretary",
+            "sla_hours": 72,
+            "form_fields": [
+              { "name": "minutes_url", "type": "text", "label": "Minutes URL", "required": true },
+              { "name": "adopted_resolutions", "type": "textarea", "label": "Adopted Resolutions", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-resolution-by-circulation",
+    "category": "legal",
+    "icon": "file-check",
+    "tags": ["legal", "governance", "resolution", "approval", "ksa"],
+    "name_i18n": {
+      "en": "Board/Shareholder Resolution by Circulation",
+      "ar": "قرار مجلس الإدارة/الشركاء بالتمرير"
+    },
+    "description_i18n": {
+      "en": "Drafts a written resolution to be passed without a meeting, runs a legal-validity check, collects member approvals against the required quorum, captures e-signatures, and records the resolution in the corporate register.",
+      "ar": "يصيغ قراراً مكتوباً يُتخذ دون عقد اجتماع، ويجري فحص الصحة القانونية، ويجمع موافقات الأعضاء وفق النصاب المطلوب، ويلتقط التواقيع الإلكترونية، ويسجّل القرار في السجل الشركاتي."
+    },
+    "definition": {
+      "name": "Board/Shareholder Resolution by Circulation",
+      "description": "Draft a written resolution, validate, collect quorum approvals, e-sign, and register.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "resolution_id": { "type": "string" },
+        "resolution_type": { "type": "string", "default": "board" },
+        "required_quorum": { "type": "number", "default": 2 }
+      },
+      "steps": [
+        {
+          "id": "draft_resolution",
+          "type": "human_task",
+          "name": "Draft Written Resolution",
+          "config": {
+            "assignee_role": "company_secretary",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "resolution_type", "type": "select", "label": "Resolution Type", "required": true, "options": ["board", "shareholder"] },
+              { "name": "subject", "type": "text", "label": "Subject", "required": true },
+              { "name": "resolution_text", "type": "textarea", "label": "Resolution Text", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "validity_check" }
+          ]
+        },
+        {
+          "id": "validity_check",
+          "type": "human_task",
+          "name": "Legal Validity Check",
+          "config": {
+            "assignee_role": "legal_counsel",
+            "sla_hours": 24,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "is_valid", "type": "boolean", "label": "Legally Valid for Circulation?", "required": true },
+              { "name": "validity_notes", "type": "textarea", "label": "Notes", "required": false }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.validity_check.output.is_valid == true", "target": "collect_approvals" },
+            { "target": "draft_resolution" }
+          ]
+        },
+        {
+          "id": "collect_approvals",
+          "type": "approval_chain",
+          "name": "Collect Member Approvals (Quorum)",
+          "config": {
+            "approvers": [
+              { "role": "board_member" },
+              { "role": "board_chairman" }
+            ],
+            "mode": "parallel",
+            "quorum": 2,
+            "sla_hours": 72
+          },
+          "transitions": [
+            { "target": "esign_resolution" }
+          ]
+        },
+        {
+          "id": "esign_resolution",
+          "type": "service_task",
+          "name": "Capture E-Signatures",
+          "config": {
+            "service": "esign",
+            "method": "POST",
+            "url": "/api/v1/lex/resolutions/${variables.resolution_id}/sign",
+            "body": {
+              "resolution_id": "${variables.resolution_id}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "register_resolution" }
+          ]
+        },
+        {
+          "id": "register_resolution",
+          "type": "service_task",
+          "name": "Record in Corporate Register",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/corporate/resolutions/${variables.resolution_id}/register",
+            "body": {
+              "resolution_id": "${variables.resolution_id}",
+              "status": "adopted"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-power-of-attorney",
+    "category": "legal",
+    "icon": "stamp",
+    "tags": ["legal", "governance", "power-of-attorney", "najiz", "ksa"],
+    "name_i18n": {
+      "en": "Power of Attorney Issuance & Revocation",
+      "ar": "إصدار وإلغاء الوكالة الشرعية"
+    },
+    "description_i18n": {
+      "en": "Handles a request to issue or revoke a power of attorney: captures scope and grantee, runs DoA-based approval, notarizes/registers via Najiz, notifies stakeholders, and records the instrument with its expiry.",
+      "ar": "يعالج طلب إصدار أو إلغاء وكالة شرعية: يلتقط النطاق والموكَّل، ويطبّق الاعتماد وفق تفويض الصلاحيات، ويوثّق/يسجّل عبر ناجز، ويُشعر أصحاب العلاقة، ويسجّل السند مع تاريخ انتهائه."
+    },
+    "definition": {
+      "name": "Power of Attorney Issuance & Revocation",
+      "description": "Issue or revoke a PoA with DoA approval, Najiz notarization/registration, and registry recording.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "poa_id": { "type": "string" },
+        "action": { "type": "string", "default": "issue" },
+        "grantee": { "type": "string" },
+        "is_revocation": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "capture_request",
+          "type": "human_task",
+          "name": "Capture PoA Request",
+          "config": {
+            "assignee_role": "legal_intake_officer",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "action", "type": "select", "label": "Action", "required": true, "options": ["issue", "revoke"] },
+              { "name": "grantee", "type": "text", "label": "Grantee / Attorney-in-Fact", "required": true },
+              { "name": "scope", "type": "textarea", "label": "Scope of Authority", "required": true },
+              { "name": "expiry_date", "type": "date", "label": "Expiry Date", "required": false }
+            ]
+          },
+          "transitions": [
+            { "target": "doa_approval" }
+          ]
+        },
+        {
+          "id": "doa_approval",
+          "type": "approval_chain",
+          "name": "DoA Approval (Authorized Signatory)",
+          "config": {
+            "approvers": [
+              { "role": "legal_director" },
+              { "role": "authorized_signatory" }
+            ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "action_gate" }
+          ]
+        },
+        {
+          "id": "action_gate",
+          "type": "condition",
+          "name": "Issue or Revoke?",
+          "config": {
+            "expression": "steps.capture_request.output.action == 'revoke'"
+          },
+          "transitions": [
+            { "condition": "steps.capture_request.output.action == 'revoke'", "target": "najiz_revoke" },
+            { "target": "najiz_register" }
+          ]
+        },
+        {
+          "id": "najiz_register",
+          "type": "service_task",
+          "name": "Notarize & Register via Najiz",
+          "config": {
+            "service": "najiz",
+            "method": "POST",
+            "url": "/api/v1/integrations/najiz/poa/${variables.poa_id}/register",
+            "body": {
+              "poa_id": "${variables.poa_id}",
+              "grantee": "${steps.capture_request.output.grantee}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "record_registry" }
+          ]
+        },
+        {
+          "id": "najiz_revoke",
+          "type": "service_task",
+          "name": "Revoke via Najiz",
+          "config": {
+            "service": "najiz",
+            "method": "POST",
+            "url": "/api/v1/integrations/najiz/poa/${variables.poa_id}/revoke",
+            "body": {
+              "poa_id": "${variables.poa_id}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "record_registry" }
+          ]
+        },
+        {
+          "id": "record_registry",
+          "type": "human_task",
+          "name": "Record Instrument & Notify Stakeholders",
+          "config": {
+            "assignee_role": "company_secretary",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "registry_reference", "type": "text", "label": "Registry / Najiz Reference", "required": true },
+              { "name": "notify_list", "type": "textarea", "label": "Stakeholders to Notify", "required": false }
+            ]
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-authorized-signatory-matrix",
+    "category": "legal",
+    "icon": "users-cog",
+    "tags": ["legal", "governance", "signatory", "doa", "ksa"],
+    "name_i18n": {
+      "en": "Authorized-Signatory Matrix Maintenance",
+      "ar": "تحديث مصفوفة المخوّلين بالتوقيع"
+    },
+    "description_i18n": {
+      "en": "Processes a change to the authorized-signatory and DoA matrix: captures the proposed change, validates against the bylaws and DoA limits, secures board/management approval, updates the matrix of record, and syncs signatory data to banking and government portals.",
+      "ar": "يعالج تعديلاً على مصفوفة المخوّلين بالتوقيع وتفويض الصلاحيات: يلتقط التعديل المقترح، ويتحقق من توافقه مع النظام الأساسي وحدود التفويض، ويضمن اعتماد المجلس/الإدارة، ويحدّث المصفوفة المعتمدة، ويزامن بيانات المخوّلين مع البنوك والبوابات الحكومية."
+    },
+    "definition": {
+      "name": "Authorized-Signatory Matrix Maintenance",
+      "description": "Capture, validate, approve, update, and sync changes to the authorized-signatory/DoA matrix.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "change_id": { "type": "string" },
+        "change_type": { "type": "string", "default": "add" },
+        "within_doa": { "type": "boolean", "default": true }
+      },
+      "steps": [
+        {
+          "id": "capture_change",
+          "type": "human_task",
+          "name": "Capture Proposed Signatory Change",
+          "config": {
+            "assignee_role": "company_secretary",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "change_type", "type": "select", "label": "Change Type", "required": true, "options": ["add", "remove", "amend_limit"] },
+              { "name": "signatory_name", "type": "text", "label": "Signatory Name", "required": true },
+              { "name": "authority_scope", "type": "textarea", "label": "Authority Scope / Limits", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "validate_bylaws" }
+          ]
+        },
+        {
+          "id": "validate_bylaws",
+          "type": "human_task",
+          "name": "Validate Against Bylaws & DoA",
+          "config": {
+            "assignee_role": "legal_counsel",
+            "sla_hours": 24,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "compliant", "type": "boolean", "label": "Compliant with Bylaws/DoA?", "required": true },
+              { "name": "validation_notes", "type": "textarea", "label": "Validation Notes", "required": false }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.validate_bylaws.output.compliant == true", "target": "approval" },
+            { "target": "capture_change" }
+          ]
+        },
+        {
+          "id": "approval",
+          "type": "approval_chain",
+          "name": "Board / Management Approval",
+          "config": {
+            "approvers": [
+              { "role": "legal_director" },
+              { "role": "board_chairman" }
+            ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 72
+          },
+          "transitions": [
+            { "target": "update_matrix" }
+          ]
+        },
+        {
+          "id": "update_matrix",
+          "type": "service_task",
+          "name": "Update Matrix of Record",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/corporate/signatory-matrix/${variables.change_id}/apply",
+            "body": {
+              "change_id": "${variables.change_id}",
+              "change_type": "${steps.capture_change.output.change_type}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "sync_portals" }
+          ]
+        },
+        {
+          "id": "sync_portals",
+          "type": "service_task",
+          "name": "Sync to Banking & Government Portals",
+          "config": {
+            "service": "integration",
+            "method": "POST",
+            "url": "/api/v1/integrations/signatory/${variables.change_id}/sync",
+            "body": {
+              "change_id": "${variables.change_id}",
+              "targets": ["banking", "moc", "qiwa"]
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-subsidiary-incorporation",
+    "category": "legal",
+    "icon": "building-2",
+    "tags": ["legal", "governance", "incorporation", "moc", "ksa"],
+    "name_i18n": {
+      "en": "Subsidiary/Entity Incorporation",
+      "ar": "تأسيس شركة تابعة/كيان"
+    },
+    "description_i18n": {
+      "en": "Drives incorporation of a new subsidiary or entity: captures the structure and capital, secures investment-committee approval, prepares the Articles of Association, reserves the name and registers with the Ministry of Commerce, and completes post-incorporation registrations (ZATCA, GOSI, Qiwa).",
+      "ar": "يقود تأسيس شركة تابعة أو كيان جديد: يلتقط الهيكل ورأس المال، ويضمن اعتماد لجنة الاستثمار، ويعدّ عقد التأسيس، ويحجز الاسم ويسجّل لدى وزارة التجارة، ويستكمل التسجيلات اللاحقة للتأسيس (الزكاة والضريبة، التأمينات، قوى)."
+    },
+    "definition": {
+      "name": "Subsidiary/Entity Incorporation",
+      "description": "Capture structure, approve, draft AoA, register with MoC, and complete post-incorporation registrations.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "entity_id": { "type": "string" },
+        "entity_type": { "type": "string", "default": "llc" },
+        "capital": { "type": "number", "default": 0 }
+      },
+      "steps": [
+        {
+          "id": "capture_structure",
+          "type": "human_task",
+          "name": "Capture Entity Structure & Capital",
+          "config": {
+            "assignee_role": "legal_counsel",
+            "sla_hours": 48,
+            "form_fields": [
+              { "name": "proposed_name", "type": "text", "label": "Proposed Name", "required": true },
+              { "name": "entity_type", "type": "select", "label": "Entity Type", "required": true, "options": ["llc", "jsc", "branch", "spc"] },
+              { "name": "capital", "type": "number", "label": "Capital (SAR)", "required": true },
+              { "name": "shareholders", "type": "textarea", "label": "Shareholders / Ownership", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "investment_approval" }
+          ]
+        },
+        {
+          "id": "investment_approval",
+          "type": "approval_chain",
+          "name": "Investment Committee Approval",
+          "config": {
+            "approvers": [
+              { "role": "legal_director" },
+              { "role": "investment_committee" },
+              { "role": "chief_executive" }
+            ],
+            "mode": "sequential",
+            "quorum": 3,
+            "sla_hours": 120
+          },
+          "transitions": [
+            { "target": "draft_aoa" }
+          ]
+        },
+        {
+          "id": "draft_aoa",
+          "type": "human_task",
+          "name": "Prepare Articles of Association",
+          "config": {
+            "assignee_role": "legal_counsel",
+            "sla_hours": 72,
+            "form_fields": [
+              { "name": "aoa_url", "type": "text", "label": "Draft AoA URL", "required": true },
+              { "name": "managers", "type": "textarea", "label": "Managers / Directors", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "moc_register" }
+          ]
+        },
+        {
+          "id": "moc_register",
+          "type": "service_task",
+          "name": "Reserve Name & Register with MoC",
+          "config": {
+            "service": "moc",
+            "method": "POST",
+            "url": "/api/v1/integrations/moc/entities/${variables.entity_id}/register",
+            "body": {
+              "entity_id": "${variables.entity_id}",
+              "name": "${steps.capture_structure.output.proposed_name}",
+              "entity_type": "${steps.capture_structure.output.entity_type}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "post_incorporation" }
+          ]
+        },
+        {
+          "id": "post_incorporation",
+          "type": "service_task",
+          "name": "Post-Incorporation Registrations (ZATCA/GOSI/Qiwa)",
+          "config": {
+            "service": "integration",
+            "method": "POST",
+            "url": "/api/v1/integrations/gov/entities/${variables.entity_id}/onboard",
+            "body": {
+              "entity_id": "${variables.entity_id}",
+              "targets": ["zatca", "gosi", "qiwa"]
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "confirm_complete" }
+          ]
+        },
+        {
+          "id": "confirm_complete",
+          "type": "human_task",
+          "name": "Confirm Incorporation Complete",
+          "config": {
+            "assignee_role": "company_secretary",
+            "sla_hours": 48,
+            "form_fields": [
+              { "name": "cr_number", "type": "text", "label": "CR Number", "required": true },
+              { "name": "registration_notes", "type": "textarea", "label": "Notes", "required": false }
+            ]
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-cr-renewal-update",
+    "category": "legal",
+    "icon": "refresh-cw",
+    "tags": ["legal", "governance", "commercial-registration", "moc", "ksa"],
+    "name_i18n": {
+      "en": "Commercial Registration (CR) Renewal & Update",
+      "ar": "تجديد وتحديث السجل التجاري"
+    },
+    "description_i18n": {
+      "en": "Manages renewal or update of a Commercial Registration before expiry: an expiry timer fires the workflow, data is verified, fees are approved and paid, the CR is renewed/updated with the Ministry of Commerce, and the entity registry and stakeholders are updated.",
+      "ar": "يدير تجديد أو تحديث السجل التجاري قبل انتهائه: يُطلق المؤقّت سير العمل قبل الانتهاء، ويُتحقق من البيانات، وتُعتمد الرسوم وتُسدّد، ويُجدَّد/يُحدَّث السجل لدى وزارة التجارة، ويُحدَّث سجل الكيان وأصحاب العلاقة."
+    },
+    "definition": {
+      "name": "Commercial Registration (CR) Renewal & Update",
+      "description": "Pre-expiry renewal/update of a CR with verification, fee approval, MoC renewal, and registry update.",
+      "trigger_config": {
+        "type": "schedule",
+        "cron": "0 6 * * *"
+      },
+      "variables": {
+        "entity_id": { "type": "string" },
+        "cr_number": { "type": "string" },
+        "renewal_fee": { "type": "number", "default": 0 }
+      },
+      "steps": [
+        {
+          "id": "pre_expiry_timer",
+          "type": "timer",
+          "name": "Pre-Expiry Lead Time",
+          "config": {
+            "duration": "720h"
+          },
+          "transitions": [
+            { "target": "verify_data" }
+          ]
+        },
+        {
+          "id": "verify_data",
+          "type": "human_task",
+          "name": "Verify CR Data",
+          "config": {
+            "assignee_role": "company_secretary",
+            "sla_hours": 48,
+            "form_fields": [
+              { "name": "cr_number", "type": "text", "label": "CR Number", "required": true },
+              { "name": "data_correct", "type": "boolean", "label": "Data Up to Date?", "required": true },
+              { "name": "updates_needed", "type": "textarea", "label": "Updates Needed", "required": false }
+            ]
+          },
+          "transitions": [
+            { "target": "fee_approval" }
+          ]
+        },
+        {
+          "id": "fee_approval",
+          "type": "approval_chain",
+          "name": "Renewal Fee Approval",
+          "config": {
+            "approvers": [
+              { "role": "legal_manager" }
+            ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "moc_renew" }
+          ]
+        },
+        {
+          "id": "moc_renew",
+          "type": "service_task",
+          "name": "Renew/Update CR with MoC",
+          "config": {
+            "service": "moc",
+            "method": "POST",
+            "url": "/api/v1/integrations/moc/cr/${variables.entity_id}/renew",
+            "body": {
+              "entity_id": "${variables.entity_id}",
+              "cr_number": "${steps.verify_data.output.cr_number}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "update_registry" }
+          ]
+        },
+        {
+          "id": "update_registry",
+          "type": "service_task",
+          "name": "Update Entity Registry & Notify",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/corporate/entities/${variables.entity_id}/cr-updated",
+            "body": {
+              "entity_id": "${variables.entity_id}",
+              "status": "renewed"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-bylaws-amendment",
+    "category": "legal",
+    "icon": "scroll-text",
+    "tags": ["legal", "governance", "bylaws", "moc", "ksa"],
+    "name_i18n": {
+      "en": "Bylaws/Articles Amendment",
+      "ar": "تعديل النظام الأساسي/عقد التأسيس"
+    },
+    "description_i18n": {
+      "en": "Manages amendment of company bylaws or articles: drafts the proposed amendment, runs legal review, secures extraordinary general assembly approval, notarizes and registers the amendment with the Ministry of Commerce, and updates the corporate records.",
+      "ar": "يدير تعديل النظام الأساسي للشركة أو عقد تأسيسها: يصيغ التعديل المقترح، ويجري المراجعة القانونية، ويضمن اعتماد الجمعية العامة غير العادية، ويوثّق ويسجّل التعديل لدى وزارة التجارة، ويحدّث السجلات الشركاتية."
+    },
+    "definition": {
+      "name": "Bylaws/Articles Amendment",
+      "description": "Draft, review, EGA-approve, register with MoC, and record an amendment to the bylaws/articles.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "amendment_id": { "type": "string" },
+        "entity_id": { "type": "string" },
+        "ega_approved": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "draft_amendment",
+          "type": "human_task",
+          "name": "Draft Proposed Amendment",
+          "config": {
+            "assignee_role": "legal_counsel",
+            "sla_hours": 72,
+            "form_fields": [
+              { "name": "amended_clauses", "type": "textarea", "label": "Clauses to Amend", "required": true },
+              { "name": "rationale", "type": "textarea", "label": "Rationale", "required": true },
+              { "name": "draft_url", "type": "text", "label": "Draft Amendment URL", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "legal_review" }
+          ]
+        },
+        {
+          "id": "legal_review",
+          "type": "human_task",
+          "name": "Legal Review",
+          "config": {
+            "assignee_role": "legal_director",
+            "sla_hours": 48,
+            "form_fields": [
+              { "name": "review_cleared", "type": "boolean", "label": "Cleared for EGA?", "required": true },
+              { "name": "review_notes", "type": "textarea", "label": "Review Notes", "required": false }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.legal_review.output.review_cleared == true", "target": "ega_approval" },
+            { "target": "draft_amendment" }
+          ]
+        },
+        {
+          "id": "ega_approval",
+          "type": "approval_chain",
+          "name": "Extraordinary General Assembly Approval",
+          "config": {
+            "approvers": [
+              { "role": "board_chairman" },
+              { "role": "shareholder_assembly" }
+            ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 240
+          },
+          "transitions": [
+            { "target": "moc_register" }
+          ]
+        },
+        {
+          "id": "moc_register",
+          "type": "service_task",
+          "name": "Notarize & Register Amendment (MoC)",
+          "config": {
+            "service": "moc",
+            "method": "POST",
+            "url": "/api/v1/integrations/moc/entities/${variables.entity_id}/amend",
+            "body": {
+              "entity_id": "${variables.entity_id}",
+              "amendment_id": "${variables.amendment_id}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "update_records" }
+          ]
+        },
+        {
+          "id": "update_records",
+          "type": "human_task",
+          "name": "Update Corporate Records",
+          "config": {
+            "assignee_role": "company_secretary",
+            "sla_hours": 48,
+            "form_fields": [
+              { "name": "registration_reference", "type": "text", "label": "MoC Registration Reference", "required": true },
+              { "name": "effective_date", "type": "date", "label": "Effective Date", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-agm-shareholder-meeting",
+    "category": "legal",
+    "icon": "users",
+    "tags": ["legal", "governance", "agm", "shareholder", "ksa"],
+    "name_i18n": {
+      "en": "AGM/Shareholder Meeting",
+      "ar": "اجتماع الجمعية العامة/المساهمين"
+    },
+    "description_i18n": {
+      "en": "Orchestrates an Annual General Meeting: sets the agenda and statutory invitation, dispatches the notice within the legal window, registers attendance and confirms quorum, conducts voting on resolutions, and records the minutes and adopted resolutions.",
+      "ar": "ينظّم اجتماع الجمعية العامة السنوي: يحدد جدول الأعمال والدعوة النظامية، ويرسل الإشعار ضمن المهلة القانونية، ويسجّل الحضور ويؤكّد النصاب، ويُجري التصويت على القرارات، ويوثّق المحضر والقرارات المعتمدة."
+    },
+    "definition": {
+      "name": "AGM/Shareholder Meeting",
+      "description": "Set agenda, dispatch statutory notice, register quorum, conduct voting, and record minutes.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "meeting_id": { "type": "string" },
+        "meeting_date": { "type": "string" },
+        "quorum_met": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "set_agenda",
+          "type": "human_task",
+          "name": "Set Agenda & Statutory Invitation",
+          "config": {
+            "assignee_role": "company_secretary",
+            "sla_hours": 48,
+            "form_fields": [
+              { "name": "meeting_date", "type": "date", "label": "Meeting Date", "required": true },
+              { "name": "agenda_items", "type": "textarea", "label": "Agenda Items", "required": true },
+              { "name": "resolutions_for_vote", "type": "textarea", "label": "Resolutions for Vote", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "dispatch_notice" }
+          ]
+        },
+        {
+          "id": "dispatch_notice",
+          "type": "service_task",
+          "name": "Dispatch Statutory Notice",
+          "config": {
+            "service": "notification",
+            "method": "POST",
+            "url": "/api/v1/notifications",
+            "body": {
+              "template": "agm_notice",
+              "meeting_id": "${variables.meeting_id}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "notice_window" }
+          ]
+        },
+        {
+          "id": "notice_window",
+          "type": "timer",
+          "name": "Statutory Notice Window",
+          "config": {
+            "duration": "504h"
+          },
+          "transitions": [
+            { "target": "register_quorum" }
+          ]
+        },
+        {
+          "id": "register_quorum",
+          "type": "human_task",
+          "name": "Register Attendance & Confirm Quorum",
+          "config": {
+            "assignee_role": "company_secretary",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "quorum_met", "type": "boolean", "label": "Quorum Met?", "required": true },
+              { "name": "attendance_pct", "type": "number", "label": "Capital Represented (%)", "required": true }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.register_quorum.output.quorum_met == true", "target": "conduct_voting" },
+            { "target": "record_minutes" }
+          ]
+        },
+        {
+          "id": "conduct_voting",
+          "type": "human_task",
+          "name": "Conduct Voting on Resolutions",
+          "config": {
+            "assignee_role": "board_chairman",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "voting_results", "type": "textarea", "label": "Voting Results", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "record_minutes" }
+          ]
+        },
+        {
+          "id": "record_minutes",
+          "type": "human_task",
+          "name": "Record Minutes & Adopted Resolutions",
+          "config": {
+            "assignee_role": "company_secretary",
+            "sla_hours": 72,
+            "form_fields": [
+              { "name": "minutes_url", "type": "text", "label": "Minutes URL", "required": true },
+              { "name": "outcome", "type": "select", "label": "Meeting Outcome", "required": true, "options": ["held", "adjourned", "no_quorum"] }
+            ]
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-coi-related-party-approval",
+    "category": "legal",
+    "icon": "scale",
+    "tags": ["legal", "governance", "conflict-of-interest", "related-party", "ksa"],
+    "name_i18n": {
+      "en": "Conflict of Interest & Related-Party Transaction Approval",
+      "ar": "اعتماد تعارض المصالح وصفقات الأطراف ذات العلاقة"
+    },
+    "description_i18n": {
+      "en": "Reviews a declared conflict of interest or related-party transaction: captures the disclosure, assesses materiality and relatedness, recuses conflicted parties, routes for board/independent-director approval based on materiality, and records the decision in the governance register.",
+      "ar": "يراجع تعارض مصالح معلَناً أو صفقة طرف ذي علاقة: يلتقط الإفصاح، ويقيّم الجوهرية وصلة القرابة، ويستبعد الأطراف ذات التعارض، ويوجّه للاعتماد من المجلس/العضو المستقل بحسب الجوهرية، ويسجّل القرار في سجل الحوكمة."
+    },
+    "definition": {
+      "name": "Conflict of Interest & Related-Party Transaction Approval",
+      "description": "Capture disclosure, assess materiality, recuse, route for materiality-based approval, and record.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "disclosure_id": { "type": "string" },
+        "transaction_value": { "type": "number", "default": 0 },
+        "is_material": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "capture_disclosure",
+          "type": "human_task",
+          "name": "Capture Disclosure",
+          "config": {
+            "assignee_role": "company_secretary",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "related_party", "type": "text", "label": "Related Party", "required": true },
+              { "name": "relationship", "type": "text", "label": "Nature of Relationship", "required": true },
+              { "name": "transaction_value", "type": "number", "label": "Transaction Value (SAR)", "required": true },
+              { "name": "description", "type": "textarea", "label": "Transaction Description", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "assess_materiality" }
+          ]
+        },
+        {
+          "id": "assess_materiality",
+          "type": "human_task",
+          "name": "Assess Materiality & Relatedness",
+          "config": {
+            "assignee_role": "legal_counsel",
+            "sla_hours": 48,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "is_material", "type": "boolean", "label": "Material Related-Party Transaction?", "required": true },
+              { "name": "assessment_notes", "type": "textarea", "label": "Assessment Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "recuse_parties" }
+          ]
+        },
+        {
+          "id": "recuse_parties",
+          "type": "service_task",
+          "name": "Recuse Conflicted Parties",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/governance/coi/${variables.disclosure_id}/recuse",
+            "body": {
+              "disclosure_id": "${variables.disclosure_id}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "materiality_gate" }
+          ]
+        },
+        {
+          "id": "materiality_gate",
+          "type": "condition",
+          "name": "Materiality Gate",
+          "config": {
+            "expression": "steps.assess_materiality.output.is_material == true"
+          },
+          "transitions": [
+            { "condition": "steps.assess_materiality.output.is_material == true", "target": "board_approval" },
+            { "target": "management_approval" }
+          ]
+        },
+        {
+          "id": "board_approval",
+          "type": "approval_chain",
+          "name": "Board / Independent-Director Approval",
+          "config": {
+            "approvers": [
+              { "role": "independent_director" },
+              { "role": "board_chairman" }
+            ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 120
+          },
+          "transitions": [
+            { "target": "record_decision" }
+          ]
+        },
+        {
+          "id": "management_approval",
+          "type": "approval_chain",
+          "name": "Management Approval (Non-Material)",
+          "config": {
+            "approvers": [
+              { "role": "legal_director" }
+            ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "record_decision" }
+          ]
+        },
+        {
+          "id": "record_decision",
+          "type": "human_task",
+          "name": "Record Decision in Governance Register",
+          "config": {
+            "assignee_role": "company_secretary",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "decision", "type": "select", "label": "Decision", "required": true, "options": ["approved", "rejected", "approved_with_conditions"] },
+              { "name": "register_reference", "type": "text", "label": "Governance Register Reference", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  }
+]

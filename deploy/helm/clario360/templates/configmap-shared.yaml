@@ -1,0 +1,55 @@
+{{/*
+Shared ConfigMaps — non-sensitive configuration consumed by services via envFrom.
+The -shared-config name is canonical; -shared is kept as a compatibility alias.
+*/}}
+{{- define "clario360.sharedConfigMapData" -}}
+# -- Environment -----------------------------------------------------
+ENVIRONMENT: {{ .Values.global.environment | quote }}
+LOG_LEVEL: {{ .Values.global.logLevel | quote }}
+LOG_FORMAT: {{ .Values.global.logFormat | quote }}
+
+# -- Kafka -----------------------------------------------------------
+KAFKA_BROKERS: {{ .Values.global.kafka.brokers | quote }}
+KAFKA_SECURITY_PROTOCOL: {{ .Values.global.kafka.securityProtocol | quote }}
+KAFKA_SASL_MECHANISM: {{ .Values.global.kafka.saslMechanism | quote }}
+
+# -- OpenTelemetry ---------------------------------------------------
+OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.global.otel.otlpEndpoint | quote }}
+
+# -- PostgreSQL ------------------------------------------------------
+DATABASE_HOST: {{ .Values.global.database.host | quote }}
+DATABASE_PORT: {{ .Values.global.database.port | quote }}
+DATABASE_SSL_MODE: {{ .Values.global.database.sslMode | quote }}
+
+# -- Redis -----------------------------------------------------------
+REDIS_HOST: {{ .Values.global.redis.host | quote }}
+REDIS_PORT: {{ .Values.global.redis.port | quote }}
+REDIS_ADDR: {{ printf "%s:%s" .Values.global.redis.host (toString .Values.global.redis.port) | quote }}
+REDIS_DB: {{ .Values.global.redis.db | quote }}
+
+# -- MinIO / Object Storage -----------------------------------------
+MINIO_ENDPOINT: {{ .Values.global.minio.endpoint | quote }}
+MINIO_USE_SSL: {{ .Values.global.minio.useSsl | quote }}
+{{- end }}
+{{- $root := . -}}
+{{- $sharedConfigs := list
+  (dict "name" (include "clario360.sharedConfigMapName" .) "role" "canonical")
+  (dict "name" (include "clario360.legacySharedConfigMapName" .) "role" "legacy")
+-}}
+{{- range $index, $config := $sharedConfigs }}
+{{- if $index }}
+---
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $config.name }}
+  namespace: {{ include "clario360.namespace" $root }}
+  labels:
+    {{- include "clario360.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: shared-config
+  annotations:
+    clario360.io/shared-config-role: {{ $config.role | quote }}
+data:
+{{ include "clario360.sharedConfigMapData" $root | indent 2 }}
+{{- end }}

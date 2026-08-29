@@ -1,0 +1,165 @@
+# Binaries and local builds
+backend/bin/
+/backend/bin/
+backend/workflow-engine
+backend/migrator
+backend/cti-seeder
+backend/seeder
+backend/notification-service
+backend/audit-rebaseline
+backend/api-gateway
+backend/clario-dr-service
+backend/lex-llm-smoke
+backend/cyber-service
+backend/audit-isolation
+backend/automation-service
+backend/data-service
+backend/clario-dr-agent
+backend/prompt59-seeder
+backend/audit-service
+backend/siem-service
+backend/iam-service
+backend/license-service
+backend/lex-service
+backend/reference-library-seed
+backend/cmd/siem-service/siem-service
+.next/
+node_modules/
+dist/
+build/
+*.cpuprofile
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+debug
+__debug_bin*
+out/
+
+# Python & Virtual Environments
+.venv/
+**/.venv/
+venv/
+**/venv/
+env/
+**/env/
+*.egg-info/
+**/*.egg-info/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Temporary artifacts & captures
+.artifacts/
+artifacts/
+test-results-diag/
+docs/deck/_qa/
+*.png
+*.mp4
+*.mov
+*.zip
+*.tar.gz
+
+# Preserve production UI icons, assets, and design logos
+!frontend/public/**/*.png
+!frontend/src/**/*.png
+!logo/**/*.png
+
+# Test & Coverage
+*.test
+*.out
+coverage/
+coverage.html
+coverage.txt
+.next.prev.1773501525/
+.next-*/
+frontend/.next-verify2/
+frontend/.next-verify3/
+frontend/test-results/
+frontend/playwright-report/
+frontend/e2e/.auth/
+
+# Go
+/vendor/
+backend/vendor/
+
+# Environment
+.env
+.env.local
+.env.*.local
+.tmp-claude/
+
+# Local scratch + build caches (node compile cache lives under .tmp/)
+.tmp/
+**/.tmp/
+*.tsbuildinfo
+
+# IDE & OS
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.cache/
+.DS_Store
+Thumbs.db
+*.bak
+
+# Docker
+docker-compose.override.yml
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfplan
+
+# Infrastructure & MinIO data
+minio-data/
+kafka-data/
+redis-data/
+postgres-data/
+prometheus-data/
+grafana-data/
+zookeeper-data/
+elasticsearch-data/
+
+# Logs
+*.log
+
+# Temp
+tmp/
+
+# Security / secrets
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+secrets/
+
+# Local test/escrow artifacts
+escrow-0.1.0-test/
+
+# Enterprise dev runtime artifacts (start.sh / stop.sh / status.sh)
+.dev-secrets/
+.dev-bin/
+.dev-logs/
+.dev-pids/
+
+# Office artifacts (decks, sheets, lock files)
+*.pptx
+*.xlsx
+*.docx
+~$*.pptx
+~$*.xlsx
+~$*.docx
+
+# WatheeqTech reference-library PDFs — served from object storage (MinIO), never versioned
+docs/ClarioWatheeq/WatheeqTech Library/

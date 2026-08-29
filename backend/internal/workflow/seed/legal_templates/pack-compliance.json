@@ -1,0 +1,1316 @@
+[
+  {
+    "id": "tmpl-regulatory-change-monitoring",
+    "category": "legal",
+    "icon": "radar",
+    "tags": ["legal", "compliance", "regulatory", "ksa", "monitoring"],
+    "name_i18n": {
+      "en": "Regulatory Change Monitoring & Impact Assessment",
+      "ar": "رصد التغييرات التنظيمية وتقييم الأثر"
+    },
+    "description_i18n": {
+      "en": "Captures a newly published regulatory change, screens its applicability, assesses business and legal impact, routes affected-policy actions to owners, and obtains legal sign-off before publishing the impact register entry.",
+      "ar": "يستقبل تغييراً تنظيمياً صادراً حديثاً، ويفحص مدى انطباقه، ويقيّم الأثر القانوني وأثره على الأعمال، ويوجّه إجراءات السياسات المتأثرة إلى ملاكها، ويحصل على اعتماد الإدارة القانونية قبل نشر قيد سجل الأثر."
+    },
+    "definition": {
+      "name": "Regulatory Change Monitoring & Impact Assessment",
+      "description": "Capture, screen applicability, assess impact, route actions, and obtain legal sign-off for a regulatory change.",
+      "trigger_config": {
+        "type": "event",
+        "topic": "regulatory.change.published"
+      },
+      "variables": {
+        "change_id": { "type": "string" },
+        "regulator": { "type": "string", "default": "SDAIA" },
+        "applicable": { "type": "boolean", "default": false },
+        "impact_level": { "type": "string", "default": "medium" }
+      },
+      "steps": [
+        {
+          "id": "capture_change",
+          "type": "human_task",
+          "name": "Capture Regulatory Change",
+          "config": {
+            "assignee_role": "compliance_analyst",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "regulator", "type": "select", "label": "Regulator / Authority", "required": true, "options": ["SDAIA", "SAMA", "ZATCA", "CMA", "MHRSD", "MoC", "other"] },
+              { "name": "instrument_title", "type": "text", "label": "Instrument / Circular Title", "required": true },
+              { "name": "publication_date", "type": "date", "label": "Publication Date", "required": true },
+              { "name": "source_url", "type": "text", "label": "Source / Official Gazette URL", "required": false },
+              { "name": "summary", "type": "textarea", "label": "Summary of Change", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "screen_applicability" }
+          ]
+        },
+        {
+          "id": "screen_applicability",
+          "type": "service_task",
+          "name": "Screen Applicability Against Entity Profile",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/compliance/regulatory-changes/${variables.change_id}/screen",
+            "body": {
+              "regulator": "${steps.capture_change.output.regulator}",
+              "instrument_title": "${steps.capture_change.output.instrument_title}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "applicability_gate" }
+          ]
+        },
+        {
+          "id": "applicability_gate",
+          "type": "condition",
+          "name": "Applicable to Entity?",
+          "config": {
+            "expression": "steps.screen_applicability.output.applicable == true"
+          },
+          "transitions": [
+            { "condition": "steps.screen_applicability.output.applicable == true", "target": "impact_assessment" },
+            { "target": "publish_register" }
+          ]
+        },
+        {
+          "id": "impact_assessment",
+          "type": "human_task",
+          "name": "Legal & Business Impact Assessment",
+          "config": {
+            "assignee_role": "legal_counsel",
+            "sla_hours": 72,
+            "escalation_role": "legal_manager",
+            "form_fields": [
+              { "name": "impact_level", "type": "select", "label": "Impact Level", "required": true, "options": ["low", "medium", "high", "critical"] },
+              { "name": "affected_policies", "type": "textarea", "label": "Affected Policies / Contracts", "required": true },
+              { "name": "remediation_actions", "type": "textarea", "label": "Required Remediation Actions", "required": true },
+              { "name": "target_compliance_date", "type": "date", "label": "Target Compliance Date", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "route_actions" }
+          ]
+        },
+        {
+          "id": "route_actions",
+          "type": "service_task",
+          "name": "Route Remediation Actions to Owners",
+          "config": {
+            "service": "notification",
+            "method": "POST",
+            "url": "/api/v1/notifications",
+            "body": {
+              "template": "regulatory_change_action_assigned",
+              "change_id": "${variables.change_id}",
+              "impact_level": "${steps.impact_assessment.output.impact_level}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "legal_signoff" }
+          ]
+        },
+        {
+          "id": "legal_signoff",
+          "type": "approval_chain",
+          "name": "Legal Sign-off on Impact Register",
+          "config": {
+            "approvers": [ { "role": "legal_manager" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 24
+          },
+          "transitions": [
+            { "target": "publish_register" }
+          ]
+        },
+        {
+          "id": "publish_register",
+          "type": "service_task",
+          "name": "Publish Impact Register Entry",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/compliance/regulatory-changes/${variables.change_id}/publish",
+            "body": {
+              "change_id": "${variables.change_id}",
+              "status": "registered"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-pdpl-dsr-handling",
+    "category": "legal",
+    "icon": "user-check",
+    "tags": ["legal", "compliance", "pdpl", "privacy", "ksa", "dsr"],
+    "name_i18n": {
+      "en": "PDPL Data-Subject Request (DSR) Handling",
+      "ar": "معالجة طلب صاحب البيانات وفق نظام حماية البيانات الشخصية"
+    },
+    "description_i18n": {
+      "en": "Intakes a PDPL data-subject request, verifies the requester's identity via Nafath, validates the request scope, fulfils it across systems, obtains DPO approval, and dispatches the response within the statutory 30-day window.",
+      "ar": "يستقبل طلب صاحب البيانات وفق نظام حماية البيانات الشخصية، ويتحقق من هوية مقدّم الطلب عبر نفاذ، ويتحقق من نطاق الطلب، وينفّذه عبر الأنظمة، ويحصل على موافقة مسؤول حماية البيانات، ويرسل الرد خلال المدة النظامية البالغة ثلاثين يوماً."
+    },
+    "definition": {
+      "name": "PDPL Data-Subject Request (DSR) Handling",
+      "description": "Intake, Nafath identity verification, scope validation, fulfilment, DPO approval, and response for a PDPL data-subject request.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "dsr_id": { "type": "string" },
+        "request_type": { "type": "string", "default": "access" },
+        "identity_verified": { "type": "boolean", "default": false },
+        "due_date": { "type": "string" }
+      },
+      "steps": [
+        {
+          "id": "intake_dsr",
+          "type": "human_task",
+          "name": "Intake Data-Subject Request",
+          "config": {
+            "assignee_role": "privacy_intake_officer",
+            "sla_hours": 4,
+            "form_fields": [
+              { "name": "data_subject_name", "type": "text", "label": "Data-Subject Name", "required": true },
+              { "name": "request_type", "type": "select", "label": "Request Type", "required": true, "options": ["access", "rectification", "erasure", "portability", "objection", "withdraw_consent"] },
+              { "name": "national_id", "type": "text", "label": "National ID / Iqama", "required": true },
+              { "name": "request_details", "type": "textarea", "label": "Request Details", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "verify_identity" }
+          ]
+        },
+        {
+          "id": "verify_identity",
+          "type": "service_task",
+          "name": "Verify Identity via Nafath",
+          "config": {
+            "service": "nafath",
+            "method": "POST",
+            "url": "/api/v1/lex/integrations/nafath/verify",
+            "body": {
+              "national_id": "${steps.intake_dsr.output.national_id}",
+              "purpose": "pdpl_dsr"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "identity_gate" }
+          ]
+        },
+        {
+          "id": "identity_gate",
+          "type": "condition",
+          "name": "Identity Verified?",
+          "config": {
+            "expression": "steps.verify_identity.output.verified == true"
+          },
+          "transitions": [
+            { "condition": "steps.verify_identity.output.verified == true", "target": "validate_scope" },
+            { "target": "reject_unverified" }
+          ]
+        },
+        {
+          "id": "validate_scope",
+          "type": "human_task",
+          "name": "Validate Request Scope & Exemptions",
+          "config": {
+            "assignee_role": "privacy_officer",
+            "sla_hours": 48,
+            "escalation_role": "data_protection_officer",
+            "form_fields": [
+              { "name": "in_scope", "type": "boolean", "label": "Request In Scope?", "required": true },
+              { "name": "exemptions_applied", "type": "textarea", "label": "Exemptions Applied (if any)", "required": false },
+              { "name": "scope_notes", "type": "textarea", "label": "Scope Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "fulfil_request" }
+          ]
+        },
+        {
+          "id": "fulfil_request",
+          "type": "service_task",
+          "name": "Fulfil Request Across Systems",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/compliance/dsr/${variables.dsr_id}/fulfil",
+            "body": {
+              "dsr_id": "${variables.dsr_id}",
+              "request_type": "${steps.intake_dsr.output.request_type}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "dpo_approval" }
+          ]
+        },
+        {
+          "id": "dpo_approval",
+          "type": "approval_chain",
+          "name": "DPO Approval of Response",
+          "config": {
+            "approvers": [ { "role": "data_protection_officer" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "dispatch_response" }
+          ]
+        },
+        {
+          "id": "dispatch_response",
+          "type": "service_task",
+          "name": "Dispatch Response (within 30 days)",
+          "config": {
+            "service": "notification",
+            "method": "POST",
+            "url": "/api/v1/notifications",
+            "body": {
+              "template": "pdpl_dsr_response",
+              "dsr_id": "${variables.dsr_id}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "reject_unverified",
+          "type": "human_task",
+          "name": "Reject / Request Re-Verification",
+          "config": {
+            "assignee_role": "privacy_officer",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "rejection_reason", "type": "textarea", "label": "Rejection / Re-Verification Reason", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-dpia",
+    "category": "legal",
+    "icon": "shield-check",
+    "tags": ["legal", "compliance", "pdpl", "privacy", "ksa", "dpia"],
+    "name_i18n": {
+      "en": "Data Protection Impact Assessment (DPIA)",
+      "ar": "تقييم أثر حماية البيانات"
+    },
+    "description_i18n": {
+      "en": "Runs a DPIA for a new or changed processing activity: screening threshold, data-flow mapping, risk assessment, mitigation planning, and DPO approval with a high-risk escalation to prior consultation with the regulator.",
+      "ar": "ينفّذ تقييم أثر حماية البيانات لنشاط معالجة جديد أو معدّل: فحص حد التقييم، ورسم تدفق البيانات، وتقييم المخاطر، وتخطيط إجراءات التخفيف، واعتماد مسؤول حماية البيانات مع تصعيد المخاطر العالية إلى الاستشارة المسبقة مع الجهة المنظِّمة."
+    },
+    "definition": {
+      "name": "Data Protection Impact Assessment (DPIA)",
+      "description": "Threshold screening, data-flow mapping, risk assessment, mitigation, and DPO approval for a processing activity.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "dpia_id": { "type": "string" },
+        "processing_activity": { "type": "string" },
+        "residual_risk": { "type": "string", "default": "medium" },
+        "high_risk": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "screen_threshold",
+          "type": "human_task",
+          "name": "DPIA Threshold Screening",
+          "config": {
+            "assignee_role": "privacy_officer",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "processing_activity", "type": "text", "label": "Processing Activity", "required": true },
+              { "name": "data_categories", "type": "textarea", "label": "Personal-Data Categories", "required": true },
+              { "name": "sensitive_data", "type": "boolean", "label": "Sensitive Data Involved?", "required": true },
+              { "name": "large_scale", "type": "boolean", "label": "Large-Scale / Systematic Monitoring?", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "map_data_flows" }
+          ]
+        },
+        {
+          "id": "map_data_flows",
+          "type": "service_task",
+          "name": "Map Data Flows & Processors",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/compliance/dpia/${variables.dpia_id}/map-flows",
+            "body": {
+              "dpia_id": "${variables.dpia_id}",
+              "processing_activity": "${steps.screen_threshold.output.processing_activity}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "risk_assessment" }
+          ]
+        },
+        {
+          "id": "risk_assessment",
+          "type": "human_task",
+          "name": "Risk Assessment & Mitigation Plan",
+          "config": {
+            "assignee_role": "privacy_officer",
+            "sla_hours": 72,
+            "escalation_role": "data_protection_officer",
+            "form_fields": [
+              { "name": "inherent_risk", "type": "select", "label": "Inherent Risk", "required": true, "options": ["low", "medium", "high", "critical"] },
+              { "name": "mitigations", "type": "textarea", "label": "Mitigation Measures", "required": true },
+              { "name": "residual_risk", "type": "select", "label": "Residual Risk", "required": true, "options": ["low", "medium", "high", "critical"] }
+            ]
+          },
+          "transitions": [
+            { "target": "risk_gate" }
+          ]
+        },
+        {
+          "id": "risk_gate",
+          "type": "condition",
+          "name": "High Residual Risk?",
+          "config": {
+            "expression": "steps.risk_assessment.output.residual_risk == 'high' || steps.risk_assessment.output.residual_risk == 'critical'"
+          },
+          "transitions": [
+            { "condition": "steps.risk_assessment.output.residual_risk == 'high' || steps.risk_assessment.output.residual_risk == 'critical'", "target": "prior_consultation" },
+            { "target": "dpo_approval" }
+          ]
+        },
+        {
+          "id": "prior_consultation",
+          "type": "human_task",
+          "name": "Prior Consultation with Regulator (SDAIA)",
+          "config": {
+            "assignee_role": "data_protection_officer",
+            "sla_hours": 120,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "consultation_reference", "type": "text", "label": "SDAIA Consultation Reference", "required": true },
+              { "name": "regulator_guidance", "type": "textarea", "label": "Regulator Guidance / Conditions", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "dpo_approval" }
+          ]
+        },
+        {
+          "id": "dpo_approval",
+          "type": "approval_chain",
+          "name": "DPO Approval / Sign-off",
+          "config": {
+            "approvers": [ { "role": "data_protection_officer" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "publish_dpia" }
+          ]
+        },
+        {
+          "id": "publish_dpia",
+          "type": "service_task",
+          "name": "Record & Publish DPIA",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/compliance/dpia/${variables.dpia_id}/publish",
+            "body": {
+              "dpia_id": "${variables.dpia_id}",
+              "status": "approved"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-personal-data-breach-response",
+    "category": "legal",
+    "icon": "shield-alert",
+    "tags": ["legal", "compliance", "pdpl", "privacy", "ksa", "breach", "incident"],
+    "name_i18n": {
+      "en": "Personal-Data Breach Response & Notification",
+      "ar": "الاستجابة لخرق البيانات الشخصية والإخطار به"
+    },
+    "description_i18n": {
+      "en": "Triages a suspected personal-data breach, contains it, assesses severity and notification obligations, notifies SDAIA within 72 hours where required, communicates to affected data subjects, and closes with a lessons-learned record.",
+      "ar": "يفرز خرقاً مشتبهاً به للبيانات الشخصية، ويحتويه، ويقيّم شدّته والتزامات الإخطار، ويُخطر الهيئة السعودية للبيانات والذكاء الاصطناعي خلال اثنتين وسبعين ساعة عند اللزوم، ويبلّغ أصحاب البيانات المتأثرين، ثم يُغلق الحادثة مع توثيق الدروس المستفادة."
+    },
+    "definition": {
+      "name": "Personal-Data Breach Response & Notification",
+      "description": "Triage, contain, assess, notify SDAIA, communicate, and close a personal-data breach incident.",
+      "trigger_config": {
+        "type": "event",
+        "topic": "privacy.breach.suspected"
+      },
+      "variables": {
+        "incident_id": { "type": "string" },
+        "severity": { "type": "string", "default": "medium" },
+        "notify_regulator": { "type": "boolean", "default": false },
+        "affected_count": { "type": "number", "default": 0 }
+      },
+      "steps": [
+        {
+          "id": "triage_breach",
+          "type": "human_task",
+          "name": "Triage Suspected Breach",
+          "config": {
+            "assignee_role": "privacy_incident_responder",
+            "sla_hours": 2,
+            "escalation_role": "data_protection_officer",
+            "form_fields": [
+              { "name": "incident_summary", "type": "textarea", "label": "Incident Summary", "required": true },
+              { "name": "data_categories", "type": "textarea", "label": "Affected Data Categories", "required": true },
+              { "name": "affected_count", "type": "number", "label": "Estimated Affected Data Subjects", "required": true },
+              { "name": "confirmed", "type": "boolean", "label": "Breach Confirmed?", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "contain_breach" }
+          ]
+        },
+        {
+          "id": "contain_breach",
+          "type": "service_task",
+          "name": "Containment & Evidence Preservation",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/compliance/breaches/${variables.incident_id}/contain",
+            "body": {
+              "incident_id": "${variables.incident_id}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "assess_severity" }
+          ]
+        },
+        {
+          "id": "assess_severity",
+          "type": "human_task",
+          "name": "Severity & Notification Obligation Assessment",
+          "config": {
+            "assignee_role": "data_protection_officer",
+            "sla_hours": 12,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "severity", "type": "select", "label": "Severity", "required": true, "options": ["low", "medium", "high", "critical"] },
+              { "name": "harm_likely", "type": "boolean", "label": "Harm to Data Subjects Likely?", "required": true },
+              { "name": "notify_regulator", "type": "boolean", "label": "Regulator Notification Required?", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "notification_gate" }
+          ]
+        },
+        {
+          "id": "notification_gate",
+          "type": "condition",
+          "name": "Notify Regulator?",
+          "config": {
+            "expression": "steps.assess_severity.output.notify_regulator == true"
+          },
+          "transitions": [
+            { "condition": "steps.assess_severity.output.notify_regulator == true", "target": "notify_sdaia" },
+            { "target": "close_incident" }
+          ]
+        },
+        {
+          "id": "notify_sdaia",
+          "type": "service_task",
+          "name": "Notify SDAIA (within 72h)",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/compliance/breaches/${variables.incident_id}/notify-regulator",
+            "body": {
+              "incident_id": "${variables.incident_id}",
+              "regulator": "SDAIA"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "notify_subjects" }
+          ]
+        },
+        {
+          "id": "notify_subjects",
+          "type": "service_task",
+          "name": "Notify Affected Data Subjects",
+          "config": {
+            "service": "notification",
+            "method": "POST",
+            "url": "/api/v1/notifications",
+            "body": {
+              "template": "personal_data_breach_subject_notice",
+              "incident_id": "${variables.incident_id}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "close_incident" }
+          ]
+        },
+        {
+          "id": "close_incident",
+          "type": "human_task",
+          "name": "Close Incident & Lessons Learned",
+          "config": {
+            "assignee_role": "data_protection_officer",
+            "sla_hours": 168,
+            "form_fields": [
+              { "name": "root_cause", "type": "textarea", "label": "Root Cause", "required": true },
+              { "name": "corrective_actions", "type": "textarea", "label": "Corrective Actions", "required": true },
+              { "name": "closure_confirmed", "type": "boolean", "label": "Closure Confirmed?", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-cross-border-data-transfer-approval",
+    "category": "legal",
+    "icon": "globe-lock",
+    "tags": ["legal", "compliance", "pdpl", "privacy", "ksa", "cross-border"],
+    "name_i18n": {
+      "en": "Cross-Border Data Transfer Approval",
+      "ar": "اعتماد نقل البيانات عبر الحدود"
+    },
+    "description_i18n": {
+      "en": "Assesses a proposed cross-border personal-data transfer for an adequate-protection basis, performs a transfer risk assessment, applies safeguards, and routes for DPO and legal Delegation-of-Authority approval per PDPL transfer rules.",
+      "ar": "يقيّم نقلاً مقترحاً للبيانات الشخصية عبر الحدود للتحقق من وجود أساس حماية كافٍ، وينفّذ تقييم مخاطر النقل، ويطبّق الضمانات، ثم يوجّهه لاعتماد مسؤول حماية البيانات وتفويض الصلاحيات القانوني وفق قواعد النقل في نظام حماية البيانات الشخصية."
+    },
+    "definition": {
+      "name": "Cross-Border Data Transfer Approval",
+      "description": "Adequacy basis check, transfer risk assessment, safeguards, and DPO/legal DoA approval for a cross-border transfer.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "transfer_id": { "type": "string" },
+        "destination_country": { "type": "string" },
+        "adequate": { "type": "boolean", "default": false },
+        "transfer_risk": { "type": "string", "default": "medium" }
+      },
+      "steps": [
+        {
+          "id": "request_transfer",
+          "type": "human_task",
+          "name": "Cross-Border Transfer Request",
+          "config": {
+            "assignee_role": "privacy_officer",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "destination_country", "type": "text", "label": "Destination Country", "required": true },
+              { "name": "recipient", "type": "text", "label": "Recipient / Processor", "required": true },
+              { "name": "data_categories", "type": "textarea", "label": "Data Categories Transferred", "required": true },
+              { "name": "transfer_purpose", "type": "textarea", "label": "Purpose of Transfer", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "check_adequacy" }
+          ]
+        },
+        {
+          "id": "check_adequacy",
+          "type": "service_task",
+          "name": "Check Adequacy / Whitelist Status",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/compliance/transfers/${variables.transfer_id}/check-adequacy",
+            "body": {
+              "destination_country": "${steps.request_transfer.output.destination_country}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "adequacy_gate" }
+          ]
+        },
+        {
+          "id": "adequacy_gate",
+          "type": "condition",
+          "name": "Adequate Protection Level?",
+          "config": {
+            "expression": "steps.check_adequacy.output.adequate == true"
+          },
+          "transitions": [
+            { "condition": "steps.check_adequacy.output.adequate == true", "target": "dpo_approval" },
+            { "target": "transfer_risk_assessment" }
+          ]
+        },
+        {
+          "id": "transfer_risk_assessment",
+          "type": "human_task",
+          "name": "Transfer Risk Assessment & Safeguards",
+          "config": {
+            "assignee_role": "data_protection_officer",
+            "sla_hours": 72,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "transfer_risk", "type": "select", "label": "Transfer Risk", "required": true, "options": ["low", "medium", "high"] },
+              { "name": "safeguard_mechanism", "type": "select", "label": "Safeguard Mechanism", "required": true, "options": ["standard_contractual_clauses", "binding_corporate_rules", "explicit_consent", "regulator_authorization"] },
+              { "name": "safeguard_notes", "type": "textarea", "label": "Safeguard Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "dpo_approval" }
+          ]
+        },
+        {
+          "id": "dpo_approval",
+          "type": "approval_chain",
+          "name": "DPO & Legal DoA Approval",
+          "config": {
+            "approvers": [ { "role": "data_protection_officer" }, { "role": "legal_director" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 72
+          },
+          "transitions": [
+            { "target": "record_decision" }
+          ]
+        },
+        {
+          "id": "record_decision",
+          "type": "service_task",
+          "name": "Record Transfer Decision",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/compliance/transfers/${variables.transfer_id}/decision",
+            "body": {
+              "transfer_id": "${variables.transfer_id}",
+              "status": "approved"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-whistleblower-complaint-handling",
+    "category": "legal",
+    "icon": "megaphone",
+    "tags": ["legal", "compliance", "ethics", "whistleblower", "ksa"],
+    "name_i18n": {
+      "en": "Whistleblower / Ethics Complaint Handling",
+      "ar": "معالجة بلاغات المبلّغين وشكاوى الأخلاقيات"
+    },
+    "description_i18n": {
+      "en": "Receives a whistleblower or ethics complaint under strict confidentiality, screens admissibility, runs a conflict-of-interest check on the proposed handler, triages severity, refers substantiated matters to investigation, and closes with anonymized reporting.",
+      "ar": "يستقبل بلاغ مبلّغ أو شكوى أخلاقيات بسرّية تامة، ويفحص مدى قبولها، ويُجري فحص تعارض مصالح على الجهة المكلّفة بالمعالجة، ويفرز الخطورة، ويحيل المسائل المثبتة إلى التحقيق، ثم يُغلق مع رفع تقرير مجهّل الهوية."
+    },
+    "definition": {
+      "name": "Whistleblower / Ethics Complaint Handling",
+      "description": "Confidential intake, admissibility screening, conflict check, triage, investigation referral, and anonymized closure.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "complaint_id": { "type": "string" },
+        "anonymous": { "type": "boolean", "default": true },
+        "admissible": { "type": "boolean", "default": false },
+        "severity": { "type": "string", "default": "medium" }
+      },
+      "steps": [
+        {
+          "id": "receive_complaint",
+          "type": "human_task",
+          "name": "Receive Complaint (Confidential)",
+          "config": {
+            "assignee_role": "ethics_intake_officer",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "category", "type": "select", "label": "Complaint Category", "required": true, "options": ["fraud", "corruption", "harassment", "conflict_of_interest", "safety", "data_misuse", "other"] },
+              { "name": "anonymous", "type": "boolean", "label": "Submitted Anonymously?", "required": true },
+              { "name": "allegation", "type": "textarea", "label": "Allegation Details", "required": true },
+              { "name": "subject_parties", "type": "text", "label": "Subject Party / Department", "required": false }
+            ]
+          },
+          "transitions": [
+            { "target": "screen_admissibility" }
+          ]
+        },
+        {
+          "id": "screen_admissibility",
+          "type": "human_task",
+          "name": "Screen Admissibility",
+          "config": {
+            "assignee_role": "ethics_officer",
+            "sla_hours": 24,
+            "escalation_role": "compliance_manager",
+            "form_fields": [
+              { "name": "admissible", "type": "boolean", "label": "Admissible?", "required": true },
+              { "name": "severity", "type": "select", "label": "Severity", "required": true, "options": ["low", "medium", "high", "critical"] },
+              { "name": "screening_notes", "type": "textarea", "label": "Screening Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "admissibility_gate" }
+          ]
+        },
+        {
+          "id": "admissibility_gate",
+          "type": "condition",
+          "name": "Admissible?",
+          "config": {
+            "expression": "steps.screen_admissibility.output.admissible == true"
+          },
+          "transitions": [
+            { "condition": "steps.screen_admissibility.output.admissible == true", "target": "conflict_check" },
+            { "target": "close_inadmissible" }
+          ]
+        },
+        {
+          "id": "conflict_check",
+          "type": "service_task",
+          "name": "Handler Conflict-of-Interest Check",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/compliance/complaints/${variables.complaint_id}/conflict-check",
+            "body": {
+              "complaint_id": "${variables.complaint_id}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "refer_investigation" }
+          ]
+        },
+        {
+          "id": "refer_investigation",
+          "type": "human_task",
+          "name": "Refer to Investigation & Assign Handler",
+          "config": {
+            "assignee_role": "compliance_manager",
+            "sla_hours": 48,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "assigned_investigator", "type": "text", "label": "Assigned Investigator", "required": true },
+              { "name": "investigation_scope", "type": "textarea", "label": "Investigation Scope", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "anonymized_report" }
+          ]
+        },
+        {
+          "id": "anonymized_report",
+          "type": "service_task",
+          "name": "Anonymized Case Report & Audit Log",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/compliance/complaints/${variables.complaint_id}/report",
+            "body": {
+              "complaint_id": "${variables.complaint_id}",
+              "status": "referred"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "close_inadmissible",
+          "type": "human_task",
+          "name": "Close as Inadmissible",
+          "config": {
+            "assignee_role": "ethics_officer",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "closure_reason", "type": "textarea", "label": "Closure Reason", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-internal-legal-investigation",
+    "category": "legal",
+    "icon": "search",
+    "tags": ["legal", "compliance", "investigation", "ksa"],
+    "name_i18n": {
+      "en": "Internal Legal Investigation",
+      "ar": "التحقيق القانوني الداخلي"
+    },
+    "description_i18n": {
+      "en": "Manages an internal legal investigation end-to-end: scoping and legal hold, evidence collection, witness interviews, findings memo, Delegation-of-Authority review of recommended actions, and case closure with retention.",
+      "ar": "يدير تحقيقاً قانونياً داخلياً من البداية إلى النهاية: تحديد النطاق والحجز القانوني، وجمع الأدلة، ومقابلة الشهود، ومذكرة النتائج، ومراجعة الإجراءات الموصى بها وفق تفويض الصلاحيات، وإغلاق القضية مع الاحتفاظ بالسجلات."
+    },
+    "definition": {
+      "name": "Internal Legal Investigation",
+      "description": "Scope and legal hold, evidence collection, interviews, findings, DoA review, and closure of an internal investigation.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "investigation_id": { "type": "string" },
+        "subject_matter": { "type": "string" },
+        "substantiated": { "type": "boolean", "default": false },
+        "recommended_action": { "type": "string", "default": "none" }
+      },
+      "steps": [
+        {
+          "id": "scope_investigation",
+          "type": "human_task",
+          "name": "Scope Investigation & Set Legal Hold",
+          "config": {
+            "assignee_role": "investigation_lead",
+            "sla_hours": 24,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "subject_matter", "type": "text", "label": "Subject Matter", "required": true },
+              { "name": "scope_statement", "type": "textarea", "label": "Scope Statement", "required": true },
+              { "name": "legal_hold_required", "type": "boolean", "label": "Legal Hold Required?", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "apply_legal_hold" }
+          ]
+        },
+        {
+          "id": "apply_legal_hold",
+          "type": "service_task",
+          "name": "Apply Legal Hold & Preserve Records",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/compliance/investigations/${variables.investigation_id}/legal-hold",
+            "body": {
+              "investigation_id": "${variables.investigation_id}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "collect_evidence" }
+          ]
+        },
+        {
+          "id": "collect_evidence",
+          "type": "human_task",
+          "name": "Collect Evidence & Conduct Interviews",
+          "config": {
+            "assignee_role": "investigator",
+            "sla_hours": 120,
+            "escalation_role": "investigation_lead",
+            "form_fields": [
+              { "name": "evidence_summary", "type": "textarea", "label": "Evidence Summary", "required": true },
+              { "name": "interviews_conducted", "type": "number", "label": "Interviews Conducted", "required": true },
+              { "name": "evidence_log_url", "type": "text", "label": "Evidence Log URL", "required": false }
+            ]
+          },
+          "transitions": [
+            { "target": "findings_memo" }
+          ]
+        },
+        {
+          "id": "findings_memo",
+          "type": "human_task",
+          "name": "Findings Memo & Recommendation",
+          "config": {
+            "assignee_role": "investigation_lead",
+            "sla_hours": 72,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "substantiated", "type": "boolean", "label": "Allegations Substantiated?", "required": true },
+              { "name": "findings", "type": "textarea", "label": "Findings", "required": true },
+              { "name": "recommended_action", "type": "select", "label": "Recommended Action", "required": true, "options": ["none", "training", "disciplinary", "termination", "referral_to_authorities", "policy_change"] }
+            ]
+          },
+          "transitions": [
+            { "target": "doa_review" }
+          ]
+        },
+        {
+          "id": "doa_review",
+          "type": "approval_chain",
+          "name": "DoA Review of Recommended Actions",
+          "config": {
+            "approvers": [ { "role": "legal_director" }, { "role": "chief_compliance_officer" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 72
+          },
+          "transitions": [
+            { "target": "close_investigation" }
+          ]
+        },
+        {
+          "id": "close_investigation",
+          "type": "service_task",
+          "name": "Close Investigation & Retain Records",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/compliance/investigations/${variables.investigation_id}/close",
+            "body": {
+              "investigation_id": "${variables.investigation_id}",
+              "status": "closed"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-regulatory-inquiry-response",
+    "category": "legal",
+    "icon": "landmark",
+    "tags": ["legal", "compliance", "regulatory", "government", "ksa", "najiz"],
+    "name_i18n": {
+      "en": "Regulatory Inquiry / Government Request Response",
+      "ar": "الرد على استفسار تنظيمي أو طلب حكومي"
+    },
+    "description_i18n": {
+      "en": "Logs an incoming regulatory inquiry or government request, verifies legitimacy and deadline, assembles the response with privilege review, obtains legal and executive Delegation-of-Authority approval, and submits the official response on record.",
+      "ar": "يسجّل استفساراً تنظيمياً وارداً أو طلباً حكومياً، ويتحقق من مشروعيته وموعده النهائي، ويُعدّ الرد مع مراجعة الامتياز القانوني، ويحصل على اعتماد الإدارة القانونية والتنفيذيين وفق تفويض الصلاحيات، ثم يقدّم الرد الرسمي ويوثّقه."
+    },
+    "definition": {
+      "name": "Regulatory Inquiry / Government Request Response",
+      "description": "Log inquiry, verify legitimacy/deadline, assemble response with privilege review, DoA approval, and official submission.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "inquiry_id": { "type": "string" },
+        "authority": { "type": "string", "default": "Najiz" },
+        "deadline": { "type": "string" },
+        "high_sensitivity": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "log_inquiry",
+          "type": "human_task",
+          "name": "Log Inquiry & Verify Legitimacy",
+          "config": {
+            "assignee_role": "legal_intake_officer",
+            "sla_hours": 4,
+            "escalation_role": "legal_manager",
+            "form_fields": [
+              { "name": "authority", "type": "select", "label": "Authority / Body", "required": true, "options": ["Najiz", "SDAIA", "ZATCA", "SAMA", "CMA", "MHRSD", "MoC", "Public_Prosecution", "other"] },
+              { "name": "reference_number", "type": "text", "label": "Official Reference Number", "required": true },
+              { "name": "deadline", "type": "date", "label": "Response Deadline", "required": true },
+              { "name": "request_summary", "type": "textarea", "label": "Request Summary", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "assemble_response" }
+          ]
+        },
+        {
+          "id": "assemble_response",
+          "type": "human_task",
+          "name": "Assemble Response & Privilege Review",
+          "config": {
+            "assignee_role": "legal_counsel",
+            "sla_hours": 72,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "response_draft_url", "type": "text", "label": "Response Draft URL", "required": true },
+              { "name": "privilege_reviewed", "type": "boolean", "label": "Privilege / Confidentiality Reviewed?", "required": true },
+              { "name": "high_sensitivity", "type": "boolean", "label": "High-Sensitivity Matter?", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "sensitivity_gate" }
+          ]
+        },
+        {
+          "id": "sensitivity_gate",
+          "type": "condition",
+          "name": "High Sensitivity?",
+          "config": {
+            "expression": "steps.assemble_response.output.high_sensitivity == true"
+          },
+          "transitions": [
+            { "condition": "steps.assemble_response.output.high_sensitivity == true", "target": "executive_approval" },
+            { "target": "legal_approval" }
+          ]
+        },
+        {
+          "id": "legal_approval",
+          "type": "approval_chain",
+          "name": "Legal Approval (within DoA)",
+          "config": {
+            "approvers": [ { "role": "legal_manager" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 24
+          },
+          "transitions": [
+            { "target": "submit_response" }
+          ]
+        },
+        {
+          "id": "executive_approval",
+          "type": "approval_chain",
+          "name": "Executive Approval (high sensitivity)",
+          "config": {
+            "approvers": [ { "role": "legal_director" }, { "role": "chief_executive" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "submit_response" }
+          ]
+        },
+        {
+          "id": "submit_response",
+          "type": "service_task",
+          "name": "Submit Official Response & Record",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/compliance/inquiries/${variables.inquiry_id}/submit",
+            "body": {
+              "inquiry_id": "${variables.inquiry_id}",
+              "authority": "${steps.log_inquiry.output.authority}",
+              "status": "submitted"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-legal-opinion-policy-approval",
+    "category": "legal",
+    "icon": "scale",
+    "tags": ["legal", "compliance", "opinion", "policy", "ksa", "approval"],
+    "name_i18n": {
+      "en": "Policy / Regulatory Approval & Legal Opinion Issuance",
+      "ar": "اعتماد السياسات والأنظمة وإصدار الرأي القانوني"
+    },
+    "description_i18n": {
+      "en": "Handles a request for a legal opinion or policy approval: intake and conflict screening, drafting and peer review, value/risk-based Delegation-of-Authority approval, and issuance of the signed opinion to the requester.",
+      "ar": "يعالج طلب رأي قانوني أو اعتماد سياسة: الاستقبال وفحص التعارض، والصياغة ومراجعة الأقران، والاعتماد المبني على المخاطر وفق تفويض الصلاحيات، وإصدار الرأي الموقّع لمقدّم الطلب."
+    },
+    "definition": {
+      "name": "Policy / Regulatory Approval & Legal Opinion Issuance",
+      "description": "Intake, drafting and peer review, risk-based DoA approval, and issuance of a legal opinion or policy.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "opinion_id": { "type": "string" },
+        "subject": { "type": "string" },
+        "risk_rating": { "type": "string", "default": "medium" },
+        "issued": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "intake_request",
+          "type": "human_task",
+          "name": "Intake Opinion / Policy Request",
+          "config": {
+            "assignee_role": "legal_intake_officer",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "request_kind", "type": "select", "label": "Request Kind", "required": true, "options": ["legal_opinion", "policy_approval", "regulatory_interpretation"] },
+              { "name": "subject", "type": "text", "label": "Subject", "required": true },
+              { "name": "background", "type": "textarea", "label": "Background & Questions", "required": true },
+              { "name": "needed_by", "type": "date", "label": "Needed By", "required": false }
+            ]
+          },
+          "transitions": [
+            { "target": "draft_opinion" }
+          ]
+        },
+        {
+          "id": "draft_opinion",
+          "type": "human_task",
+          "name": "Draft Opinion & Risk Rating",
+          "config": {
+            "assignee_role": "legal_counsel",
+            "sla_hours": 72,
+            "escalation_role": "legal_manager",
+            "form_fields": [
+              { "name": "draft_url", "type": "text", "label": "Draft URL", "required": true },
+              { "name": "risk_rating", "type": "select", "label": "Risk Rating", "required": true, "options": ["low", "medium", "high"] },
+              { "name": "key_conclusions", "type": "textarea", "label": "Key Conclusions", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "peer_review" }
+          ]
+        },
+        {
+          "id": "peer_review",
+          "type": "human_task",
+          "name": "Peer Review",
+          "config": {
+            "assignee_role": "senior_legal_counsel",
+            "sla_hours": 48,
+            "form_fields": [
+              { "name": "review_passed", "type": "boolean", "label": "Review Passed?", "required": true },
+              { "name": "review_comments", "type": "textarea", "label": "Review Comments", "required": true }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.peer_review.output.review_passed == true", "target": "risk_gate" },
+            { "target": "draft_opinion" }
+          ]
+        },
+        {
+          "id": "risk_gate",
+          "type": "condition",
+          "name": "High Risk Rating?",
+          "config": {
+            "expression": "steps.draft_opinion.output.risk_rating == 'high'"
+          },
+          "transitions": [
+            { "condition": "steps.draft_opinion.output.risk_rating == 'high'", "target": "director_approval" },
+            { "target": "manager_approval" }
+          ]
+        },
+        {
+          "id": "manager_approval",
+          "type": "approval_chain",
+          "name": "Manager Approval (within DoA)",
+          "config": {
+            "approvers": [ { "role": "legal_manager" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 24
+          },
+          "transitions": [
+            { "target": "issue_opinion" }
+          ]
+        },
+        {
+          "id": "director_approval",
+          "type": "approval_chain",
+          "name": "Director Approval (high risk)",
+          "config": {
+            "approvers": [ { "role": "legal_director" }, { "role": "general_counsel" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "issue_opinion" }
+          ]
+        },
+        {
+          "id": "issue_opinion",
+          "type": "service_task",
+          "name": "Issue Signed Opinion to Requester",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/compliance/opinions/${variables.opinion_id}/issue",
+            "body": {
+              "opinion_id": "${variables.opinion_id}",
+              "status": "issued"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  }
+]

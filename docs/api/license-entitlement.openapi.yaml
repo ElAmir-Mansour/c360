@@ -1,0 +1,803 @@
+openapi: 3.1.0
+info:
+  title: Clario360 Licensing and Entitlement API
+  version: 1.0.0
+  summary: Licensing enforcement, metering, plan lifecycle, and offline activation.
+  description: |
+    Phase 1 contract foundation for the existing licensing service API. The
+    gateway exposes this service at `/api/v1/licensing`; the route is
+    authenticated but intentionally not plan-gated so entitlement checks remain
+    reachable before a tenant has a valid license. License mutations that can
+    make cached route-level entitlement decisions stale also emit tenant-scoped
+    `com.clario360.license.entitlements_changed` events on
+    `platform.license.events`.
+  x-contract-phase: phase-1-foundation
+  x-gateway-contract:
+    id: license-entitlement
+    version: 1.0.0
+    api_version: v1
+    fail_closed: false
+  x-route-sources:
+    - backend/cmd/license-service/main.go
+    - backend/internal/license/handler/handler.go
+  x-write-path-standard:
+    package: backend/internal/events/outbox
+    event_topics:
+      - platform.license.events
+    entitlement_cache_invalidation_event: com.clario360.license.entitlements_changed
+servers:
+  - url: /api/v1/licensing
+security:
+  - bearerAuth: []
+    tenantContext: []
+tags:
+  - name: Enforcement
+  - name: Metering
+  - name: Plans
+  - name: TenantLicenses
+  - name: OfflineLicenses
+paths:
+  /check:
+    get:
+      tags: [Enforcement]
+      operationId: checkEntitlement
+      summary: Resolve one entitlement decision for the authenticated tenant.
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+          example: suite.datastream
+      responses:
+        "200":
+          description: Entitlement decision.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /entitlements:
+    get:
+      tags: [Enforcement]
+      operationId: listEntitlements
+      summary: Return the authenticated tenant's resolved entitlement set.
+      responses:
+        "200":
+          description: Resolved entitlement set.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntitlementSetEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /usage:
+    post:
+      tags: [Metering]
+      operationId: consumeUsage
+      summary: Consume metered usage for one entitlement key.
+      description: |
+        Enforced consumption returns 429 if the requested amount would exceed
+        the current monthly limit. Trusted bus-side metering uses the same
+        service path internally and stages `license.entitlement.limit_reached`
+        when a counter crosses a limit.
+      x-outbox:
+        topic: platform.license.events
+        event_type: com.clario360.license.entitlement.limit_reached
+        conditional: threshold-crossing only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UsageRequest"
+      responses:
+        "200":
+          description: Usage consumed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          description: Entitlement limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionEnvelope"
+  /offline-license/activate:
+    post:
+      tags: [OfflineLicenses]
+      operationId: activateOfflineLicense
+      summary: Activate a signed offline license file.
+      x-outbox:
+        topic: platform.license.events
+        event_types:
+          - com.clario360.license.offline_activated
+          - com.clario360.license.entitlements_changed
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActivateOfflineLicenseRequest"
+      responses:
+        "200":
+          description: Offline license activated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantLicenseEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "501":
+          $ref: "#/components/responses/NotImplemented"
+  /admin/plans:
+    get:
+      tags: [Plans]
+      operationId: listLicensePlans
+      summary: List active assignable catalog plans.
+      x-required-permission: licensing:admin
+      responses:
+        "200":
+          description: Plan catalog.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanListEnvelope"
+    post:
+      tags: [Plans]
+      operationId: createLicensePlan
+      summary: Create a catalog plan and entitlement set.
+      x-required-permission: licensing:admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePlanRequest"
+      responses:
+        "201":
+          description: Plan created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /admin/plans/{key}:
+    get:
+      tags: [Plans]
+      operationId: getLicensePlan
+      summary: Get one catalog plan by key, including retired plans.
+      x-required-permission: licensing:admin
+      parameters:
+        - $ref: "#/components/parameters/PlanKey"
+      responses:
+        "200":
+          description: License plan.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanEnvelope"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Plans]
+      operationId: updateLicensePlan
+      summary: Update catalog plan metadata.
+      x-required-permission: licensing:admin
+      parameters:
+        - $ref: "#/components/parameters/PlanKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePlanRequest"
+      responses:
+        "200":
+          description: License plan updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /admin/plans/{key}/retire:
+    post:
+      tags: [Plans]
+      operationId: retireLicensePlan
+      summary: Retire a catalog plan from new assignments.
+      description: Existing tenant licenses that already reference the plan remain enforceable.
+      x-required-permission: licensing:admin
+      parameters:
+        - $ref: "#/components/parameters/PlanKey"
+      responses:
+        "200":
+          description: License plan retired.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanEnvelope"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /admin/plans/{key}/reactivate:
+    post:
+      tags: [Plans]
+      operationId: reactivateLicensePlan
+      summary: Reactivate a retired catalog plan for new assignments.
+      x-required-permission: licensing:admin
+      parameters:
+        - $ref: "#/components/parameters/PlanKey"
+      responses:
+        "200":
+          description: License plan reactivated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanEnvelope"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /admin/plans/{key}/entitlements:
+    put:
+      tags: [Plans]
+      operationId: replacePlanEntitlements
+      summary: Replace the entitlement set for a catalog plan.
+      x-required-permission: licensing:admin
+      x-outbox:
+        topic: platform.license.events
+        event_type: com.clario360.license.entitlements_changed
+        fan_out: one event per tenant currently assigned to the plan
+      parameters:
+        - $ref: "#/components/parameters/PlanKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EntitlementsRequest"
+      responses:
+        "200":
+          description: Plan entitlements replaced.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanEnvelope"
+  /admin/tenants/{tenantID}/license:
+    get:
+      tags: [TenantLicenses]
+      operationId: getTenantLicense
+      summary: Inspect a tenant license and its computed state.
+      x-required-permission: licensing:admin
+      parameters:
+        - $ref: "#/components/parameters/TenantID"
+      responses:
+        "200":
+          description: Tenant license with computed state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantLicenseStateEnvelope"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [TenantLicenses]
+      operationId: assignTenantLicense
+      summary: Assign or change a tenant license.
+      x-required-permission: licensing:admin
+      x-outbox:
+        topic: platform.license.events
+        event_types:
+          - com.clario360.license.assigned
+          - com.clario360.license.entitlements_changed
+      parameters:
+        - $ref: "#/components/parameters/TenantID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignLicenseRequest"
+      responses:
+        "201":
+          description: Tenant license assigned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantLicenseEnvelope"
+  /admin/tenants/{tenantID}/license/suspend:
+    post:
+      tags: [TenantLicenses]
+      operationId: suspendTenantLicense
+      summary: Suspend a tenant license.
+      x-required-permission: licensing:admin
+      x-outbox:
+        topic: platform.license.events
+        event_types:
+          - com.clario360.license.suspended
+          - com.clario360.license.entitlements_changed
+      parameters:
+        - $ref: "#/components/parameters/TenantID"
+      responses:
+        "200":
+          $ref: "#/components/responses/StatusOK"
+  /admin/tenants/{tenantID}/license/resume:
+    post:
+      tags: [TenantLicenses]
+      operationId: resumeTenantLicense
+      summary: Resume a suspended tenant license.
+      x-required-permission: licensing:admin
+      x-outbox:
+        topic: platform.license.events
+        event_types:
+          - com.clario360.license.resumed
+          - com.clario360.license.entitlements_changed
+      parameters:
+        - $ref: "#/components/parameters/TenantID"
+      responses:
+        "200":
+          $ref: "#/components/responses/StatusOK"
+  /admin/tenants/{tenantID}/overrides/{key}:
+    put:
+      tags: [TenantLicenses]
+      operationId: setTenantEntitlementOverride
+      summary: Set a per-tenant entitlement override.
+      x-required-permission: licensing:admin
+      x-outbox:
+        topic: platform.license.events
+        event_types:
+          - com.clario360.license.override_set
+          - com.clario360.license.entitlements_changed
+      parameters:
+        - $ref: "#/components/parameters/TenantID"
+        - $ref: "#/components/parameters/EntitlementKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OverrideRequest"
+      responses:
+        "200":
+          description: Override set.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OverrideEnvelope"
+    delete:
+      tags: [TenantLicenses]
+      operationId: removeTenantEntitlementOverride
+      summary: Remove a per-tenant entitlement override.
+      x-required-permission: licensing:admin
+      x-outbox:
+        topic: platform.license.events
+        event_types:
+          - com.clario360.license.override_removed
+          - com.clario360.license.entitlements_changed
+      parameters:
+        - $ref: "#/components/parameters/TenantID"
+        - $ref: "#/components/parameters/EntitlementKey"
+      responses:
+        "200":
+          $ref: "#/components/responses/StatusOK"
+  /admin/tenants/{tenantID}/offline-license:
+    post:
+      tags: [OfflineLicenses]
+      operationId: issueOfflineLicense
+      summary: Issue a signed offline license file for a tenant.
+      x-required-permission: licensing:admin
+      parameters:
+        - $ref: "#/components/parameters/TenantID"
+      responses:
+        "200":
+          description: Signed offline license file.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfflineLicenseFileEnvelope"
+        "501":
+          $ref: "#/components/responses/NotImplemented"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    tenantContext:
+      type: apiKey
+      in: header
+      name: X-Tenant-ID
+      description: Optional fallback when tenant context is not present in the JWT.
+  parameters:
+    EntitlementKey:
+      name: key
+      in: path
+      required: true
+      schema:
+        type: string
+    PlanKey:
+      name: key
+      in: path
+      required: true
+      schema:
+        type: string
+    TenantID:
+      name: tenantID
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Authentication or tenant context missing.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: Caller is authenticated but not allowed or not entitled.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: Resource conflict.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotImplemented:
+      description: Offline license signing or verification is not configured.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    StatusOK:
+      description: Status response.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/StatusEnvelope"
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        status:
+          type: integer
+        code:
+          type: string
+        message:
+          type: string
+        details: true
+        request_id:
+          type: string
+    StatusEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [status]
+          properties:
+            status:
+              type: string
+              example: ok
+    Timestamp:
+      type: string
+      format: date-time
+    Entitlement:
+      type: object
+      required: [key]
+      properties:
+        key:
+          type: string
+          examples: [suite.cyber, suite.data, suite.datastream, suite.siem, app.acta, app.watheeq, app.bosalah, seats.users]
+        limit:
+          type: [integer, "null"]
+          format: int64
+          description: Null grants without quota, positive values meter quota, zero revokes in overrides.
+    Plan:
+      type: object
+      required: [id, key, name, description, source, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        key:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        source:
+          type: string
+          enum: [catalog, offline]
+        status:
+          type: string
+          enum: [active, retired]
+          description: Retired catalog plans are readable but hidden from active catalog listing and blocked for new tenant assignments.
+        entitlements:
+          type: array
+          items:
+            $ref: "#/components/schemas/Entitlement"
+        created_at:
+          $ref: "#/components/schemas/Timestamp"
+        updated_at:
+          $ref: "#/components/schemas/Timestamp"
+    TenantLicense:
+      type: object
+      required: [id, tenant_id, plan_id, plan_key, status, seats, starts_at, expires_at, grace_days, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        plan_id:
+          type: string
+          format: uuid
+        plan_key:
+          type: string
+        status:
+          type: string
+          enum: [active, suspended]
+        seats:
+          type: integer
+          format: int64
+        starts_at:
+          $ref: "#/components/schemas/Timestamp"
+        expires_at:
+          $ref: "#/components/schemas/Timestamp"
+        grace_days:
+          type: integer
+        offline_license_id:
+          type: string
+          format: uuid
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          $ref: "#/components/schemas/Timestamp"
+        updated_at:
+          $ref: "#/components/schemas/Timestamp"
+    Decision:
+      type: object
+      required: [allowed, key, license_state, used]
+      properties:
+        allowed:
+          type: boolean
+        key:
+          type: string
+        reason:
+          type: string
+        license_state:
+          type: string
+          enum: [active, in_grace, expired, suspended]
+        plan_key:
+          type: string
+        limit:
+          type: [integer, "null"]
+          format: int64
+        used:
+          type: integer
+          format: int64
+        remaining:
+          type: [integer, "null"]
+          format: int64
+        expires_at:
+          $ref: "#/components/schemas/Timestamp"
+    Override:
+      type: object
+      required: [tenant_id, key, reason]
+      properties:
+        tenant_id:
+          type: string
+          format: uuid
+        key:
+          type: string
+        limit:
+          type: [integer, "null"]
+          format: int64
+        reason:
+          type: string
+        updated_at:
+          $ref: "#/components/schemas/Timestamp"
+    CreatePlanRequest:
+      type: object
+      required: [key, name]
+      additionalProperties: false
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        entitlements:
+          type: array
+          items:
+            $ref: "#/components/schemas/Entitlement"
+    UpdatePlanRequest:
+      type: object
+      required: [name]
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    EntitlementsRequest:
+      type: object
+      required: [entitlements]
+      additionalProperties: false
+      properties:
+        entitlements:
+          type: array
+          items:
+            $ref: "#/components/schemas/Entitlement"
+    EntitlementsChangedEvent:
+      type: object
+      description: |
+        Data payload for `com.clario360.license.entitlements_changed`.
+        Cache invalidators should clear all cached route entitlement decisions
+        for the event tenant when `invalidate_all` is true; otherwise they may
+        clear only `entitlement_key`.
+      required: [reason, invalidate_all]
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          enum:
+            - license_assigned
+            - license_suspended
+            - license_resumed
+            - override_set
+            - override_removed
+            - plan_entitlements_updated
+            - offline_license_activated
+        plan_key:
+          type: string
+        entitlement_key:
+          type: string
+        invalidate_all:
+          type: boolean
+    AssignLicenseRequest:
+      type: object
+      required: [plan_key, seats, expires_at]
+      additionalProperties: false
+      properties:
+        plan_key:
+          type: string
+        seats:
+          type: integer
+          format: int64
+          minimum: 0
+        expires_at:
+          $ref: "#/components/schemas/Timestamp"
+        grace_days:
+          type: integer
+          minimum: 0
+    OverrideRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        limit:
+          type: [integer, "null"]
+          format: int64
+        reason:
+          type: string
+    UsageRequest:
+      type: object
+      required: [key, amount]
+      additionalProperties: false
+      properties:
+        key:
+          type: string
+        amount:
+          type: integer
+          format: int64
+          minimum: 1
+    ActivateOfflineLicenseRequest:
+      type: object
+      required: [license_file]
+      additionalProperties: false
+      properties:
+        license_file:
+          type: string
+          description: Compact JWS license file content.
+    DecisionEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/Decision"
+    EntitlementSetEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [license_state, entitlements]
+          properties:
+            license_state:
+              type: string
+              enum: [active, in_grace, expired, suspended]
+            entitlements:
+              type: array
+              items:
+                $ref: "#/components/schemas/Decision"
+    PlanEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/Plan"
+    PlanListEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Plan"
+    TenantLicenseEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/TenantLicense"
+    TenantLicenseStateEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [license, state]
+          properties:
+            license:
+              $ref: "#/components/schemas/TenantLicense"
+            state:
+              type: string
+              enum: [active, in_grace, expired, suspended]
+    OverrideEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/Override"
+    OfflineLicenseFileEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [license_file]
+          properties:
+            license_file:
+              type: string

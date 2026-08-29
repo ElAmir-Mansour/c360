@@ -1,0 +1,1160 @@
+[
+  {
+    "id": "tmpl-matter-opening-conflict-check",
+    "category": "legal",
+    "icon": "folder-plus",
+    "tags": ["legal", "matter", "intake", "conflict-check", "ksa"],
+    "name_i18n": {
+      "en": "Matter Opening & Conflict Check",
+      "ar": "فتح القضية وفحص تعارض المصالح"
+    },
+    "description_i18n": {
+      "en": "Opens a new legal matter, captures parties and scope, runs an automated conflict-of-interest check, escalates to a waiver decision when conflicts are found, and confirms the matter file with a budget code.",
+      "ar": "يفتح قضية قانونية جديدة، ويوثّق الأطراف والنطاق، ويُجري فحصاً آلياً لتعارض المصالح، ويصعّد إلى قرار تنازل عند وجود تعارض، ثم يعتمد ملف القضية مع رمز الميزانية."
+    },
+    "definition": {
+      "name": "Matter Opening & Conflict Check",
+      "description": "Open a matter, capture parties/scope, run conflict check, resolve waivers, and confirm the matter file.",
+      "trigger_config": { "type": "manual" },
+      "variables": {
+        "matter_id": { "type": "string" },
+        "client_entity": { "type": "string" },
+        "matter_type": { "type": "string", "default": "advisory" },
+        "conflict_cleared": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "capture_matter",
+          "type": "human_task",
+          "name": "Capture Matter Details & Parties",
+          "config": {
+            "assignee_role": "legal_intake_officer",
+            "sla_hours": 4,
+            "form_fields": [
+              { "name": "matter_title", "type": "text", "label": "Matter Title", "required": true },
+              { "name": "matter_type", "type": "select", "label": "Matter Type", "required": true, "options": ["advisory", "litigation", "contract", "regulatory", "investigation"] },
+              { "name": "client_entity", "type": "text", "label": "Client / Beneficiary Entity", "required": true },
+              { "name": "opposing_parties", "type": "textarea", "label": "Opposing / Related Parties", "required": true },
+              { "name": "scope_summary", "type": "textarea", "label": "Scope Summary", "required": true }
+            ]
+          },
+          "transitions": [ { "target": "run_conflict_check" } ]
+        },
+        {
+          "id": "run_conflict_check",
+          "type": "service_task",
+          "name": "Run Conflict-of-Interest Check",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/legal-cases/${variables.matter_id}/conflict-check",
+            "body": {
+              "client_entity": "${steps.capture_matter.output.client_entity}",
+              "opposing_parties": "${steps.capture_matter.output.opposing_parties}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "condition": "steps.run_conflict_check.output.cleared == true", "target": "confirm_matter_file" },
+            { "target": "resolve_conflict" }
+          ]
+        },
+        {
+          "id": "resolve_conflict",
+          "type": "human_task",
+          "name": "Resolve Conflict / Waiver Decision",
+          "config": {
+            "assignee_role": "legal_director",
+            "sla_hours": 24,
+            "escalation_role": "general_counsel",
+            "form_fields": [
+              { "name": "waiver_granted", "type": "boolean", "label": "Waiver Granted?", "required": true },
+              { "name": "conflict_notes", "type": "textarea", "label": "Conflict Resolution Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.resolve_conflict.output.waiver_granted == true", "target": "confirm_matter_file" },
+            { "target": "decline_matter" }
+          ]
+        },
+        {
+          "id": "decline_matter",
+          "type": "service_task",
+          "name": "Decline & Notify (Unresolved Conflict)",
+          "config": {
+            "service": "notification",
+            "method": "POST",
+            "url": "/api/v1/notifications",
+            "body": { "template": "matter_declined_conflict", "matter_id": "${variables.matter_id}" }
+          },
+          "transitions": [ { "target": "end" } ]
+        },
+        {
+          "id": "confirm_matter_file",
+          "type": "human_task",
+          "name": "Confirm Matter File & Assign Budget Code",
+          "config": {
+            "assignee_role": "legal_section_head",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "budget_code", "type": "text", "label": "Budget / Cost Center Code", "required": true },
+              { "name": "responsible_lawyer", "type": "text", "label": "Responsible Lawyer", "required": true },
+              { "name": "open_notes", "type": "textarea", "label": "Opening Notes", "required": false }
+            ]
+          },
+          "transitions": [ { "target": "end" } ]
+        },
+        { "id": "end", "type": "end", "name": "End" }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-matter-reassignment-handover",
+    "category": "legal",
+    "icon": "user-cog",
+    "tags": ["legal", "matter", "reassignment", "handover"],
+    "name_i18n": {
+      "en": "Matter Reassignment / Handover",
+      "ar": "إعادة إسناد القضية وتسليمها"
+    },
+    "description_i18n": {
+      "en": "Reassigns an open matter from one lawyer to another, captures the handover memo, obtains supervisor approval, transfers ownership in the system, and notifies stakeholders.",
+      "ar": "يُعيد إسناد قضية مفتوحة من محامٍ إلى آخر، ويوثّق مذكرة التسليم، ويحصل على اعتماد المشرف، وينقل الملكية في النظام، ويُخطر أصحاب العلاقة."
+    },
+    "definition": {
+      "name": "Matter Reassignment / Handover",
+      "description": "Capture handover memo, approve reassignment, transfer ownership, and notify stakeholders.",
+      "trigger_config": { "type": "manual" },
+      "variables": {
+        "matter_id": { "type": "string" },
+        "from_lawyer": { "type": "string" },
+        "to_lawyer": { "type": "string" },
+        "approved": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "handover_memo",
+          "type": "human_task",
+          "name": "Prepare Handover Memo",
+          "config": {
+            "assignee_role": "assigned_lawyer",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "to_lawyer", "type": "text", "label": "Receiving Lawyer", "required": true },
+              { "name": "reassignment_reason", "type": "select", "label": "Reason", "required": true, "options": ["workload", "leave", "expertise", "conflict", "departure", "other"] },
+              { "name": "open_tasks", "type": "textarea", "label": "Open Tasks & Deadlines", "required": true },
+              { "name": "handover_notes", "type": "textarea", "label": "Handover Notes", "required": true }
+            ]
+          },
+          "transitions": [ { "target": "supervisor_approval" } ]
+        },
+        {
+          "id": "supervisor_approval",
+          "type": "approval_chain",
+          "name": "Supervisor Reassignment Approval",
+          "config": {
+            "approvers": [ { "role": "legal_section_head" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 24
+          },
+          "transitions": [ { "target": "accept_handover" } ]
+        },
+        {
+          "id": "accept_handover",
+          "type": "human_task",
+          "name": "Receiving Lawyer Accepts Handover",
+          "config": {
+            "assignee_role": "receiving_lawyer",
+            "sla_hours": 24,
+            "escalation_role": "legal_section_head",
+            "form_fields": [
+              { "name": "accepted", "type": "boolean", "label": "Handover Accepted?", "required": true },
+              { "name": "acceptance_notes", "type": "textarea", "label": "Acceptance / Queries", "required": false }
+            ]
+          },
+          "transitions": [ { "target": "transfer_ownership" } ]
+        },
+        {
+          "id": "transfer_ownership",
+          "type": "service_task",
+          "name": "Transfer Matter Ownership",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/legal-cases/${variables.matter_id}/reassign",
+            "body": {
+              "from_lawyer": "${variables.from_lawyer}",
+              "to_lawyer": "${steps.handover_memo.output.to_lawyer}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [ { "target": "notify_stakeholders" } ]
+        },
+        {
+          "id": "notify_stakeholders",
+          "type": "service_task",
+          "name": "Notify Stakeholders",
+          "config": {
+            "service": "notification",
+            "method": "POST",
+            "url": "/api/v1/notifications",
+            "body": { "template": "matter_reassigned", "matter_id": "${variables.matter_id}" }
+          },
+          "transitions": [ { "target": "end" } ]
+        },
+        { "id": "end", "type": "end", "name": "End" }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-matter-closure-archival",
+    "category": "legal",
+    "icon": "archive",
+    "tags": ["legal", "matter", "closure", "archival", "ksa"],
+    "name_i18n": {
+      "en": "Matter Closure & Archival",
+      "ar": "إغلاق القضية وأرشفتها"
+    },
+    "description_i18n": {
+      "en": "Closes a completed matter, captures the closure summary and outcome, releases any legal hold, obtains closure approval, and archives the file to the e-archive with the statutory retention period.",
+      "ar": "يُغلق قضية مكتملة، ويوثّق ملخص الإغلاق والنتيجة، ويرفع أي حجز قانوني، ويحصل على اعتماد الإغلاق، ثم يؤرشف الملف في الأرشيف الإلكتروني وفق مدة الاحتفاظ النظامية."
+    },
+    "definition": {
+      "name": "Matter Closure & Archival",
+      "description": "Capture closure summary, release legal hold, approve closure, and archive to e-archive.",
+      "trigger_config": { "type": "manual" },
+      "variables": {
+        "matter_id": { "type": "string" },
+        "outcome": { "type": "string", "default": "resolved" },
+        "retention_years": { "type": "number", "default": 10 }
+      },
+      "steps": [
+        {
+          "id": "closure_summary",
+          "type": "human_task",
+          "name": "Capture Closure Summary & Outcome",
+          "config": {
+            "assignee_role": "assigned_lawyer",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "outcome", "type": "select", "label": "Outcome", "required": true, "options": ["resolved", "settled", "won", "lost", "withdrawn", "transferred"] },
+              { "name": "closure_summary", "type": "textarea", "label": "Closure Summary", "required": true },
+              { "name": "lessons_learned", "type": "textarea", "label": "Lessons Learned", "required": false },
+              { "name": "retention_years", "type": "number", "label": "Retention Period (years)", "required": true }
+            ]
+          },
+          "transitions": [ { "target": "release_hold" } ]
+        },
+        {
+          "id": "release_hold",
+          "type": "service_task",
+          "name": "Release Legal Hold",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/legal-cases/${variables.matter_id}/legal-hold/release",
+            "body": { "matter_id": "${variables.matter_id}" },
+            "max_retries": 2
+          },
+          "transitions": [ { "target": "closure_approval" } ]
+        },
+        {
+          "id": "closure_approval",
+          "type": "approval_chain",
+          "name": "Closure Approval",
+          "config": {
+            "approvers": [ { "role": "legal_section_head" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 48
+          },
+          "transitions": [ { "target": "archive_file" } ]
+        },
+        {
+          "id": "archive_file",
+          "type": "service_task",
+          "name": "Archive to E-Archive (Retention)",
+          "config": {
+            "service": "earchive",
+            "method": "POST",
+            "url": "/api/v1/integrations/earchive/matters/${variables.matter_id}/archive",
+            "body": {
+              "matter_id": "${variables.matter_id}",
+              "retention_years": "${steps.closure_summary.output.retention_years}",
+              "outcome": "${steps.closure_summary.output.outcome}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [ { "target": "notify_closure" } ]
+        },
+        {
+          "id": "notify_closure",
+          "type": "service_task",
+          "name": "Notify Closure",
+          "config": {
+            "service": "notification",
+            "method": "POST",
+            "url": "/api/v1/notifications",
+            "body": { "template": "matter_closed", "matter_id": "${variables.matter_id}" }
+          },
+          "transitions": [ { "target": "end" } ]
+        },
+        { "id": "end", "type": "end", "name": "End" }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-deficiency-return-incomplete-notice",
+    "category": "legal",
+    "icon": "file-warning",
+    "tags": ["legal", "intake", "deficiency", "service-desk"],
+    "name_i18n": {
+      "en": "Deficiency / Return-Incomplete Notice",
+      "ar": "إشعار النقص وإعادة الطلب غير المكتمل"
+    },
+    "description_i18n": {
+      "en": "Flags an incomplete legal request, issues a deficiency notice listing the missing items, waits for the requester to resubmit within an SLA timer, and auto-closes or re-triages based on the response.",
+      "ar": "يُحدد طلباً قانونياً غير مكتمل، ويُصدر إشعار نقص يبيّن العناصر المفقودة، وينتظر إعادة تقديم مقدّم الطلب ضمن مهلة زمنية، ثم يُغلق آلياً أو يُعيد الفرز بناءً على الاستجابة."
+    },
+    "definition": {
+      "name": "Deficiency / Return-Incomplete Notice",
+      "description": "Issue a deficiency notice, wait for resubmission within SLA, and close or re-triage.",
+      "trigger_config": { "type": "manual" },
+      "variables": {
+        "request_id": { "type": "string" },
+        "resubmitted": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "flag_deficiency",
+          "type": "human_task",
+          "name": "Flag Deficiency & List Missing Items",
+          "config": {
+            "assignee_role": "legal_intake_officer",
+            "sla_hours": 2,
+            "form_fields": [
+              { "name": "missing_items", "type": "textarea", "label": "Missing Items / Documents", "required": true },
+              { "name": "deficiency_reason", "type": "select", "label": "Reason", "required": true, "options": ["missing_documents", "incomplete_form", "out_of_scope", "wrong_beneficiary", "insufficient_detail"] },
+              { "name": "resubmit_deadline_days", "type": "number", "label": "Resubmission Deadline (days)", "required": true }
+            ]
+          },
+          "transitions": [ { "target": "issue_notice" } ]
+        },
+        {
+          "id": "issue_notice",
+          "type": "service_task",
+          "name": "Issue Deficiency Notice",
+          "config": {
+            "service": "notification",
+            "method": "POST",
+            "url": "/api/v1/notifications",
+            "body": {
+              "template": "legal_request_deficiency_notice",
+              "request_id": "${variables.request_id}",
+              "missing_items": "${steps.flag_deficiency.output.missing_items}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [ { "target": "await_resubmission" } ]
+        },
+        {
+          "id": "await_resubmission",
+          "type": "timer",
+          "name": "Await Resubmission (SLA Window)",
+          "config": {
+            "duration": "120h",
+            "description": "5-day SLA window for the requester to resubmit the corrected request."
+          },
+          "transitions": [ { "target": "evaluate_resubmission" } ]
+        },
+        {
+          "id": "evaluate_resubmission",
+          "type": "condition",
+          "name": "Evaluate Resubmission",
+          "config": { "expression": "variables.resubmitted == true" },
+          "transitions": [
+            { "condition": "variables.resubmitted == true", "target": "retriage" },
+            { "target": "auto_close" }
+          ]
+        },
+        {
+          "id": "retriage",
+          "type": "service_task",
+          "name": "Re-Triage Resubmitted Request",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/legal-requests/${variables.request_id}/retriage",
+            "body": { "request_id": "${variables.request_id}" },
+            "max_retries": 2
+          },
+          "transitions": [ { "target": "end" } ]
+        },
+        {
+          "id": "auto_close",
+          "type": "service_task",
+          "name": "Auto-Close (No Resubmission)",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/legal-requests/${variables.request_id}/close",
+            "body": { "request_id": "${variables.request_id}", "reason": "no_resubmission" },
+            "max_retries": 2
+          },
+          "transitions": [ { "target": "end" } ]
+        },
+        { "id": "end", "type": "end", "name": "End" }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-urgent-expedited-request",
+    "category": "legal",
+    "icon": "zap",
+    "tags": ["legal", "intake", "urgent", "expedited", "escalation"],
+    "name_i18n": {
+      "en": "Urgent / Expedited Request Handling",
+      "ar": "معالجة الطلبات العاجلة والمستعجلة"
+    },
+    "description_i18n": {
+      "en": "Fast-tracks an urgent legal request: validates the urgency justification, obtains expedite approval, immediately assigns senior counsel, and starts a tight SLA timer with auto-escalation.",
+      "ar": "يُسرّع معالجة طلب قانوني عاجل: يتحقق من تبرير الاستعجال، ويحصل على اعتماد التعجيل، ويُسند فوراً محامياً أول، ويبدأ مهلة قصيرة مع تصعيد آلي."
+    },
+    "definition": {
+      "name": "Urgent / Expedited Request Handling",
+      "description": "Validate urgency, approve expedite, assign senior counsel, and run a tight SLA timer.",
+      "trigger_config": { "type": "manual" },
+      "variables": {
+        "request_id": { "type": "string" },
+        "urgency_approved": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "validate_urgency",
+          "type": "human_task",
+          "name": "Validate Urgency Justification",
+          "config": {
+            "assignee_role": "legal_section_head",
+            "sla_hours": 1,
+            "escalation_role": "legal_manager",
+            "form_fields": [
+              { "name": "urgency_reason", "type": "select", "label": "Urgency Reason", "required": true, "options": ["court_deadline", "regulatory_deadline", "executive_directive", "business_critical", "media_reputational"] },
+              { "name": "deadline_at", "type": "date", "label": "Hard Deadline", "required": true },
+              { "name": "urgency_justification", "type": "textarea", "label": "Justification", "required": true }
+            ]
+          },
+          "transitions": [ { "target": "expedite_approval" } ]
+        },
+        {
+          "id": "expedite_approval",
+          "type": "approval_chain",
+          "name": "Expedite Approval",
+          "config": {
+            "approvers": [ { "role": "legal_manager" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 2
+          },
+          "transitions": [ { "target": "assign_senior_counsel" } ]
+        },
+        {
+          "id": "assign_senior_counsel",
+          "type": "human_task",
+          "name": "Assign Senior Counsel (Priority)",
+          "config": {
+            "assignee_role": "legal_manager",
+            "sla_hours": 2,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "senior_counsel", "type": "text", "label": "Senior Counsel", "required": true },
+              { "name": "assignment_notes", "type": "textarea", "label": "Assignment Notes", "required": false }
+            ]
+          },
+          "transitions": [ { "target": "sla_timer" } ]
+        },
+        {
+          "id": "sla_timer",
+          "type": "timer",
+          "name": "Expedited SLA Timer",
+          "config": {
+            "duration": "4h",
+            "description": "Tight 4-hour expedited SLA window before escalation reminder."
+          },
+          "transitions": [ { "target": "escalation_reminder" } ]
+        },
+        {
+          "id": "escalation_reminder",
+          "type": "service_task",
+          "name": "SLA Escalation Reminder",
+          "config": {
+            "service": "notification",
+            "method": "POST",
+            "url": "/api/v1/notifications",
+            "body": { "template": "expedited_sla_reminder", "request_id": "${variables.request_id}" }
+          },
+          "transitions": [ { "target": "end" } ]
+        },
+        { "id": "end", "type": "end", "name": "End" }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-external-counsel-engagement",
+    "category": "legal",
+    "icon": "briefcase",
+    "tags": ["legal", "external-counsel", "onboarding", "procurement", "doa"],
+    "name_i18n": {
+      "en": "External Counsel Engagement & Onboarding",
+      "ar": "تكليف المحامي الخارجي وإعداده"
+    },
+    "description_i18n": {
+      "en": "Engages an external law firm: captures the engagement scope and fee model, runs a conflict and due-diligence check, routes the engagement letter through DoA approval, executes via e-signature, and onboards the firm into the matter.",
+      "ar": "يُكلّف مكتب محاماة خارجي: يوثّق نطاق التكليف ونموذج الأتعاب، ويُجري فحص تعارض وعناية واجبة، ويوجّه خطاب التكليف عبر اعتماد تفويض الصلاحيات، وينفّذه بالتوقيع الإلكتروني، ثم يُدرج المكتب في القضية."
+    },
+    "definition": {
+      "name": "External Counsel Engagement & Onboarding",
+      "description": "Capture engagement, run due diligence, DoA-approve and e-sign the engagement letter, and onboard the firm.",
+      "trigger_config": { "type": "manual" },
+      "variables": {
+        "matter_id": { "type": "string" },
+        "firm_name": { "type": "string" },
+        "engagement_value": { "type": "number", "default": 0 },
+        "due_diligence_cleared": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "capture_engagement",
+          "type": "human_task",
+          "name": "Capture Engagement Scope & Fee Model",
+          "config": {
+            "assignee_role": "legal_section_head",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "firm_name", "type": "text", "label": "Law Firm", "required": true },
+              { "name": "scope", "type": "textarea", "label": "Engagement Scope", "required": true },
+              { "name": "fee_model", "type": "select", "label": "Fee Model", "required": true, "options": ["hourly", "fixed", "capped", "contingency", "retainer"] },
+              { "name": "engagement_value", "type": "number", "label": "Estimated Value (SAR)", "required": true }
+            ]
+          },
+          "transitions": [ { "target": "due_diligence" } ]
+        },
+        {
+          "id": "due_diligence",
+          "type": "service_task",
+          "name": "Conflict & Due-Diligence Check",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/external-counsel/due-diligence",
+            "body": {
+              "firm_name": "${steps.capture_engagement.output.firm_name}",
+              "matter_id": "${variables.matter_id}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "condition": "steps.due_diligence.output.cleared == true", "target": "doa_gate" },
+            { "target": "due_diligence_review" }
+          ]
+        },
+        {
+          "id": "due_diligence_review",
+          "type": "human_task",
+          "name": "Manual Due-Diligence Review",
+          "config": {
+            "assignee_role": "legal_director",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "dd_cleared", "type": "boolean", "label": "Cleared to Engage?", "required": true },
+              { "name": "dd_notes", "type": "textarea", "label": "Due-Diligence Notes", "required": true }
+            ]
+          },
+          "transitions": [ { "target": "doa_gate" } ]
+        },
+        {
+          "id": "doa_gate",
+          "type": "condition",
+          "name": "DoA Threshold Gate",
+          "config": { "expression": "variables.engagement_value > 500000" },
+          "transitions": [
+            { "condition": "variables.engagement_value > 500000", "target": "executive_approval" },
+            { "target": "manager_approval" }
+          ]
+        },
+        {
+          "id": "manager_approval",
+          "type": "approval_chain",
+          "name": "Manager Engagement Approval (within DoA)",
+          "config": {
+            "approvers": [ { "role": "legal_manager" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 24
+          },
+          "transitions": [ { "target": "esign_engagement_letter" } ]
+        },
+        {
+          "id": "executive_approval",
+          "type": "approval_chain",
+          "name": "Executive Engagement Approval (above DoA)",
+          "config": {
+            "approvers": [ { "role": "legal_director" }, { "role": "general_counsel" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 72
+          },
+          "transitions": [ { "target": "esign_engagement_letter" } ]
+        },
+        {
+          "id": "esign_engagement_letter",
+          "type": "service_task",
+          "name": "E-Sign Engagement Letter & Onboard Firm",
+          "config": {
+            "service": "esign",
+            "method": "POST",
+            "url": "/api/v1/lex/external-counsel/${variables.matter_id}/engage",
+            "body": {
+              "firm_name": "${steps.capture_engagement.output.firm_name}",
+              "status": "engaged"
+            },
+            "max_retries": 3
+          },
+          "transitions": [ { "target": "end" } ]
+        },
+        { "id": "end", "type": "end", "name": "End" }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-outside-counsel-invoice-review",
+    "category": "legal",
+    "icon": "receipt",
+    "tags": ["legal", "external-counsel", "invoice", "approval", "doa", "ksa", "zatca"],
+    "name_i18n": {
+      "en": "Outside-Counsel Invoice Review & Approval",
+      "ar": "مراجعة واعتماد فواتير المحامي الخارجي"
+    },
+    "description_i18n": {
+      "en": "Reviews an outside-counsel invoice against the engagement and budget, validates the ZATCA e-invoice, routes the approved amount through value-based DoA approval, and releases it to finance for payment.",
+      "ar": "يراجع فاتورة المحامي الخارجي مقابل التكليف والميزانية، ويتحقق من الفاتورة الإلكترونية لدى هيئة الزكاة والضريبة والجمارك، ويوجّه المبلغ المعتمد عبر تفويض الصلاحيات المبني على القيمة، ثم يحوّلها للمالية للسداد."
+    },
+    "definition": {
+      "name": "Outside-Counsel Invoice Review & Approval",
+      "description": "Review invoice vs budget, validate ZATCA e-invoice, DoA-approve, and release to finance.",
+      "trigger_config": { "type": "manual" },
+      "variables": {
+        "invoice_id": { "type": "string" },
+        "matter_id": { "type": "string" },
+        "invoice_amount": { "type": "number", "default": 0 },
+        "zatca_valid": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "validate_zatca",
+          "type": "service_task",
+          "name": "Validate ZATCA E-Invoice",
+          "config": {
+            "service": "zatca",
+            "method": "POST",
+            "url": "/api/v1/integrations/zatca/invoices/${variables.invoice_id}/validate",
+            "body": { "invoice_id": "${variables.invoice_id}" },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "condition": "steps.validate_zatca.output.valid == true", "target": "review_invoice" },
+            { "target": "reject_invoice" }
+          ]
+        },
+        {
+          "id": "review_invoice",
+          "type": "human_task",
+          "name": "Review Invoice vs Engagement & Budget",
+          "config": {
+            "assignee_role": "legal_section_head",
+            "sla_hours": 48,
+            "escalation_role": "legal_manager",
+            "form_fields": [
+              { "name": "approved_amount", "type": "number", "label": "Approved Amount (SAR)", "required": true },
+              { "name": "within_budget", "type": "boolean", "label": "Within Budget?", "required": true },
+              { "name": "review_notes", "type": "textarea", "label": "Review / Disputed Lines", "required": false }
+            ]
+          },
+          "transitions": [ { "target": "doa_gate" } ]
+        },
+        {
+          "id": "doa_gate",
+          "type": "condition",
+          "name": "Invoice DoA Threshold Gate",
+          "config": { "expression": "variables.invoice_amount > 250000" },
+          "transitions": [
+            { "condition": "variables.invoice_amount > 250000", "target": "director_approval" },
+            { "target": "manager_approval" }
+          ]
+        },
+        {
+          "id": "manager_approval",
+          "type": "approval_chain",
+          "name": "Manager Invoice Approval (within DoA)",
+          "config": {
+            "approvers": [ { "role": "legal_manager" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 24
+          },
+          "transitions": [ { "target": "release_to_finance" } ]
+        },
+        {
+          "id": "director_approval",
+          "type": "approval_chain",
+          "name": "Director Invoice Approval (above DoA)",
+          "config": {
+            "approvers": [ { "role": "legal_director" }, { "role": "finance_controller" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 48
+          },
+          "transitions": [ { "target": "release_to_finance" } ]
+        },
+        {
+          "id": "release_to_finance",
+          "type": "service_task",
+          "name": "Release to Finance for Payment",
+          "config": {
+            "service": "finance",
+            "method": "POST",
+            "url": "/api/v1/integrations/finance/invoices/${variables.invoice_id}/release",
+            "body": {
+              "invoice_id": "${variables.invoice_id}",
+              "approved_amount": "${steps.review_invoice.output.approved_amount}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [ { "target": "end" } ]
+        },
+        {
+          "id": "reject_invoice",
+          "type": "service_task",
+          "name": "Reject Invoice (ZATCA Invalid)",
+          "config": {
+            "service": "notification",
+            "method": "POST",
+            "url": "/api/v1/notifications",
+            "body": { "template": "invoice_rejected_zatca", "invoice_id": "${variables.invoice_id}" }
+          },
+          "transitions": [ { "target": "end" } ]
+        },
+        { "id": "end", "type": "end", "name": "End" }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-najiz-case-sync-reconciliation",
+    "category": "legal",
+    "icon": "refresh-cw",
+    "tags": ["legal", "ksa", "najiz", "litigation", "integration", "reconciliation"],
+    "name_i18n": {
+      "en": "Najiz Case Sync & Reconciliation",
+      "ar": "مزامنة ومطابقة القضايا مع ناجز"
+    },
+    "description_i18n": {
+      "en": "Pulls case status, hearings, and judgments from the Najiz portal, reconciles them against the internal matter record, raises a human review when discrepancies are found, applies updates, and schedules the next sync.",
+      "ar": "يسحب حالة القضايا والجلسات والأحكام من بوابة ناجز، ويطابقها مع سجل القضية الداخلي، ويرفع مراجعة بشرية عند وجود فروقات، ويطبّق التحديثات، ثم يجدول المزامنة التالية."
+    },
+    "definition": {
+      "name": "Najiz Case Sync & Reconciliation",
+      "description": "Pull from Najiz, reconcile against the internal record, review discrepancies, apply updates, and reschedule.",
+      "trigger_config": {
+        "type": "schedule",
+        "cron": "0 6 * * *"
+      },
+      "variables": {
+        "case_id": { "type": "string" },
+        "najiz_reference": { "type": "string" },
+        "discrepancies_found": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "pull_najiz",
+          "type": "service_task",
+          "name": "Pull Case Data from Najiz",
+          "config": {
+            "service": "najiz",
+            "method": "GET",
+            "url": "/api/v1/integrations/najiz/cases/${variables.najiz_reference}",
+            "max_retries": 3
+          },
+          "transitions": [ { "target": "reconcile" } ]
+        },
+        {
+          "id": "reconcile",
+          "type": "service_task",
+          "name": "Reconcile Against Internal Record",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/legal-cases/${variables.case_id}/reconcile",
+            "body": {
+              "najiz_payload": "${steps.pull_najiz.output}",
+              "case_id": "${variables.case_id}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "condition": "steps.reconcile.output.discrepancies_found == true", "target": "review_discrepancies" },
+            { "target": "apply_updates" }
+          ]
+        },
+        {
+          "id": "review_discrepancies",
+          "type": "human_task",
+          "name": "Review Reconciliation Discrepancies",
+          "config": {
+            "assignee_role": "litigation_lead",
+            "sla_hours": 24,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "resolution", "type": "select", "label": "Resolution", "required": true, "options": ["accept_najiz", "keep_internal", "manual_merge"] },
+              { "name": "discrepancy_notes", "type": "textarea", "label": "Discrepancy Notes", "required": true }
+            ]
+          },
+          "transitions": [ { "target": "apply_updates" } ]
+        },
+        {
+          "id": "apply_updates",
+          "type": "service_task",
+          "name": "Apply Reconciled Updates",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/legal-cases/${variables.case_id}/apply-najiz-updates",
+            "body": { "case_id": "${variables.case_id}" },
+            "max_retries": 2
+          },
+          "transitions": [ { "target": "schedule_next_sync" } ]
+        },
+        {
+          "id": "schedule_next_sync",
+          "type": "timer",
+          "name": "Schedule Next Sync Window",
+          "config": {
+            "duration": "24h",
+            "description": "Cool-down before the next daily Najiz reconciliation window."
+          },
+          "transitions": [ { "target": "end" } ]
+        },
+        { "id": "end", "type": "end", "name": "End" }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-nafath-identity-verification-esign",
+    "category": "legal",
+    "icon": "fingerprint",
+    "tags": ["legal", "ksa", "nafath", "identity", "e-sign", "integration"],
+    "name_i18n": {
+      "en": "Nafath Identity Verification & E-Sign",
+      "ar": "التحقق من الهوية عبر نفاذ والتوقيع الإلكتروني"
+    },
+    "description_i18n": {
+      "en": "Initiates a Nafath identity verification, waits for the citizen's mobile-app authorization, on success captures the e-signature for the legal document, and records the verified signing; on timeout it falls back to manual verification.",
+      "ar": "يبدأ التحقق من الهوية عبر نفاذ، وينتظر موافقة المستفيد من تطبيق الجوال، وعند النجاح يلتقط التوقيع الإلكتروني للمستند القانوني، ويسجّل التوقيع الموثّق؛ وعند انتهاء المهلة يتحوّل إلى التحقق اليدوي."
+    },
+    "definition": {
+      "name": "Nafath Identity Verification & E-Sign",
+      "description": "Initiate Nafath verification, await app authorization, e-sign on success, or fall back to manual.",
+      "trigger_config": { "type": "manual" },
+      "variables": {
+        "national_id": { "type": "string" },
+        "document_id": { "type": "string" },
+        "verified": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "initiate_nafath",
+          "type": "service_task",
+          "name": "Initiate Nafath Verification",
+          "config": {
+            "service": "nafath",
+            "method": "POST",
+            "url": "/api/v1/integrations/nafath/verify",
+            "body": {
+              "national_id": "${variables.national_id}",
+              "document_id": "${variables.document_id}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [ { "target": "await_authorization" } ]
+        },
+        {
+          "id": "await_authorization",
+          "type": "event_task",
+          "name": "Await Nafath App Authorization",
+          "config": {
+            "topic": "nafath.verification.completed",
+            "mode": "wait",
+            "correlation_field": "national_id",
+            "timeout_seconds": 300
+          },
+          "transitions": [ { "target": "evaluate_verification" } ]
+        },
+        {
+          "id": "evaluate_verification",
+          "type": "condition",
+          "name": "Evaluate Verification Result",
+          "config": { "expression": "steps.await_authorization.output.verified == true" },
+          "transitions": [
+            { "condition": "steps.await_authorization.output.verified == true", "target": "capture_esign" },
+            { "target": "manual_verification" }
+          ]
+        },
+        {
+          "id": "manual_verification",
+          "type": "human_task",
+          "name": "Manual Identity Verification (Fallback)",
+          "config": {
+            "assignee_role": "legal_intake_officer",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "manual_method", "type": "select", "label": "Verification Method", "required": true, "options": ["national_id_copy", "in_person", "absher_proof"] },
+              { "name": "verification_notes", "type": "textarea", "label": "Verification Notes", "required": true }
+            ]
+          },
+          "transitions": [ { "target": "capture_esign" } ]
+        },
+        {
+          "id": "capture_esign",
+          "type": "service_task",
+          "name": "Capture E-Signature & Record",
+          "config": {
+            "service": "esign",
+            "method": "POST",
+            "url": "/api/v1/lex/documents/${variables.document_id}/esign",
+            "body": {
+              "national_id": "${variables.national_id}",
+              "verification_source": "nafath"
+            },
+            "max_retries": 3
+          },
+          "transitions": [ { "target": "end" } ]
+        },
+        { "id": "end", "type": "end", "name": "End" }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-zatca-zakat-tax-filing-support",
+    "category": "legal",
+    "icon": "calculator",
+    "tags": ["legal", "ksa", "zatca", "zakat", "tax", "compliance"],
+    "name_i18n": {
+      "en": "ZATCA Zakat / Tax Filing Legal Support",
+      "ar": "الدعم القانوني للإقرار الزكوي والضريبي لدى هيئة الزكاة والضريبة والجمارك"
+    },
+    "description_i18n": {
+      "en": "Provides legal support for a ZATCA zakat/tax filing: reviews the draft return for legal positions, obtains legal sign-off, submits to ZATCA, and tracks any assessment or objection deadline with an SLA timer.",
+      "ar": "يقدّم الدعم القانوني للإقرار الزكوي/الضريبي لدى هيئة الزكاة والضريبة والجمارك: يراجع مسودة الإقرار من حيث المواقف القانونية، ويحصل على الاعتماد القانوني، ويقدّمه للهيئة، ويتابع أي مهلة ربط أو اعتراض عبر مؤقّت زمني."
+    },
+    "definition": {
+      "name": "ZATCA Zakat / Tax Filing Legal Support",
+      "description": "Review draft return, legal sign-off, submit to ZATCA, and track assessment/objection deadline.",
+      "trigger_config": { "type": "manual" },
+      "variables": {
+        "filing_id": { "type": "string" },
+        "filing_period": { "type": "string" },
+        "filing_type": { "type": "string", "default": "zakat" }
+      },
+      "steps": [
+        {
+          "id": "legal_review",
+          "type": "human_task",
+          "name": "Legal Review of Draft Return",
+          "config": {
+            "assignee_role": "tax_counsel",
+            "sla_hours": 72,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "filing_type", "type": "select", "label": "Filing Type", "required": true, "options": ["zakat", "vat", "corporate_income_tax", "withholding_tax", "transfer_pricing"] },
+              { "name": "legal_positions", "type": "textarea", "label": "Legal Positions / Risk Notes", "required": true },
+              { "name": "cleared_to_file", "type": "boolean", "label": "Cleared to File?", "required": true }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.legal_review.output.cleared_to_file == true", "target": "legal_signoff" },
+            { "target": "revise_return" }
+          ]
+        },
+        {
+          "id": "revise_return",
+          "type": "human_task",
+          "name": "Request Return Revision",
+          "config": {
+            "assignee_role": "tax_specialist",
+            "sla_hours": 48,
+            "form_fields": [
+              { "name": "revision_notes", "type": "textarea", "label": "Revision Notes", "required": true }
+            ]
+          },
+          "transitions": [ { "target": "legal_review" } ]
+        },
+        {
+          "id": "legal_signoff",
+          "type": "approval_chain",
+          "name": "Legal Sign-Off",
+          "config": {
+            "approvers": [ { "role": "legal_director" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 48
+          },
+          "transitions": [ { "target": "submit_zatca" } ]
+        },
+        {
+          "id": "submit_zatca",
+          "type": "service_task",
+          "name": "Submit Filing to ZATCA",
+          "config": {
+            "service": "zatca",
+            "method": "POST",
+            "url": "/api/v1/integrations/zatca/filings/${variables.filing_id}/submit",
+            "body": {
+              "filing_id": "${variables.filing_id}",
+              "filing_period": "${variables.filing_period}",
+              "filing_type": "${steps.legal_review.output.filing_type}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [ { "target": "track_deadline" } ]
+        },
+        {
+          "id": "track_deadline",
+          "type": "timer",
+          "name": "Track Assessment / Objection Deadline",
+          "config": {
+            "duration": "1440h",
+            "description": "60-day window to monitor ZATCA assessment or file an objection."
+          },
+          "transitions": [ { "target": "deadline_reminder" } ]
+        },
+        {
+          "id": "deadline_reminder",
+          "type": "service_task",
+          "name": "Assessment / Objection Deadline Reminder",
+          "config": {
+            "service": "notification",
+            "method": "POST",
+            "url": "/api/v1/notifications",
+            "body": { "template": "zatca_objection_deadline", "filing_id": "${variables.filing_id}" }
+          },
+          "transitions": [ { "target": "end" } ]
+        },
+        { "id": "end", "type": "end", "name": "End" }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-gov-portal-registration-renewal",
+    "category": "legal",
+    "icon": "building-2",
+    "tags": ["legal", "ksa", "qiwa", "gosi", "moc", "sadad", "registration", "renewal", "compliance"],
+    "name_i18n": {
+      "en": "Government Portal Registration & Renewal (Qiwa/GOSI/MoC/SADAD)",
+      "ar": "التسجيل والتجديد في البوابات الحكومية (قوى/التأمينات/التجارة/سداد)"
+    },
+    "description_i18n": {
+      "en": "Manages registration or renewal across Saudi government portals (Qiwa, GOSI, Ministry of Commerce), verifies eligibility and documents, generates the SADAD payment, waits for payment confirmation, completes the portal submission, and archives the certificate.",
+      "ar": "يدير التسجيل أو التجديد عبر البوابات الحكومية السعودية (قوى، التأمينات الاجتماعية، وزارة التجارة)، ويتحقق من الأهلية والمستندات، ويُنشئ فاتورة سداد، وينتظر تأكيد الدفع، ويُكمل الإجراء في البوابة، ثم يؤرشف الشهادة."
+    },
+    "definition": {
+      "name": "Government Portal Registration & Renewal",
+      "description": "Verify eligibility/documents, generate SADAD bill, await payment, complete portal submission, and archive certificate.",
+      "trigger_config": { "type": "manual" },
+      "variables": {
+        "entity_id": { "type": "string" },
+        "portal": { "type": "string", "default": "qiwa" },
+        "action": { "type": "string", "default": "renewal" },
+        "paid": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "verify_eligibility",
+          "type": "human_task",
+          "name": "Verify Eligibility & Documents",
+          "config": {
+            "assignee_role": "legal_compliance_officer",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "portal", "type": "select", "label": "Government Portal", "required": true, "options": ["qiwa", "gosi", "moc", "balady", "absher_business"] },
+              { "name": "action", "type": "select", "label": "Action", "required": true, "options": ["registration", "renewal", "amendment"] },
+              { "name": "documents_complete", "type": "boolean", "label": "Documents Complete?", "required": true },
+              { "name": "notes", "type": "textarea", "label": "Notes", "required": false }
+            ]
+          },
+          "transitions": [ { "target": "generate_sadad" } ]
+        },
+        {
+          "id": "generate_sadad",
+          "type": "service_task",
+          "name": "Generate SADAD Payment Bill",
+          "config": {
+            "service": "sadad",
+            "method": "POST",
+            "url": "/api/v1/integrations/sadad/bills",
+            "body": {
+              "entity_id": "${variables.entity_id}",
+              "portal": "${steps.verify_eligibility.output.portal}",
+              "action": "${steps.verify_eligibility.output.action}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [ { "target": "await_payment" } ]
+        },
+        {
+          "id": "await_payment",
+          "type": "event_task",
+          "name": "Await SADAD Payment Confirmation",
+          "config": {
+            "topic": "sadad.payment.confirmed",
+            "mode": "wait",
+            "correlation_field": "entity_id",
+            "timeout_seconds": 259200
+          },
+          "transitions": [ { "target": "complete_submission" } ]
+        },
+        {
+          "id": "complete_submission",
+          "type": "service_task",
+          "name": "Complete Portal Submission",
+          "config": {
+            "service": "gov_portal",
+            "method": "POST",
+            "url": "/api/v1/integrations/gov-portal/${variables.portal}/submit",
+            "body": {
+              "entity_id": "${variables.entity_id}",
+              "action": "${steps.verify_eligibility.output.action}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [ { "target": "archive_certificate" } ]
+        },
+        {
+          "id": "archive_certificate",
+          "type": "service_task",
+          "name": "Archive Certificate to E-Archive",
+          "config": {
+            "service": "earchive",
+            "method": "POST",
+            "url": "/api/v1/integrations/earchive/entities/${variables.entity_id}/certificate",
+            "body": {
+              "entity_id": "${variables.entity_id}",
+              "portal": "${variables.portal}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [ { "target": "end" } ]
+        },
+        { "id": "end", "type": "end", "name": "End" }
+      ]
+    }
+  }
+]

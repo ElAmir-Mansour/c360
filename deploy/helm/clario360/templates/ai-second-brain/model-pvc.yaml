@@ -1,0 +1,23 @@
+{{- if and .Values.aiSecondBrain.enabled .Values.aiSecondBrain.modelCache.persistent }}
+{{/*
+  Persists the ~2 GB embedding model (HF_HOME=/models) across pod restarts so it
+  is not re-downloaded on every start. ReadWriteOnce → keep aiSecondBrain.replicas
+  at 1 (or switch to an RWX class) when this is enabled.
+*/}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "clario360.componentName" (dict "root" . "component" "ai-second-brain") }}-models
+  namespace: {{ include "clario360.namespace" . }}
+  labels:
+    {{- include "clario360.componentLabels" (dict "root" . "component" "ai-second-brain") | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if .Values.aiSecondBrain.modelCache.storageClass }}
+  storageClassName: {{ .Values.aiSecondBrain.modelCache.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.aiSecondBrain.modelCache.size | default "5Gi" }}
+{{- end }}

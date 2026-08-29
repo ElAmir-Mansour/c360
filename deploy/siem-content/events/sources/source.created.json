@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clario360.io/siem/events/sources/source.created.json",
+  "title": "siem.source.created",
+  "description": "Data payload of the siem.source.created CloudEvent. Emitted when an admin onboards a new source; status starts at 'provisioning'.",
+  "type": "object",
+  "required": ["source_id", "tenant_id", "source_name", "transport", "expected_eps", "status", "created_by", "created_at"],
+  "properties": {
+    "source_id":     {"type": "string", "format": "uuid"},
+    "tenant_id":     {"type": "string", "format": "uuid"},
+    "source_name":   {"type": "string"},
+    "type":          {"type": "string"},
+    "transport":     {"type": "string"},
+    "address":       {"type": "string"},
+    "expected_eps":  {"type": "integer", "minimum": 0},
+    "status":        {"type": "string", "enum": ["provisioning"]},
+    "tags":          {"type": "object"},
+    "created_by":    {"type": "string", "format": "uuid"},
+    "created_at":    {"type": "string", "format": "date-time"}
+  }
+}

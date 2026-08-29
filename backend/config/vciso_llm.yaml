@@ -1,0 +1,33 @@
+# =============================================================================
+# vciso / lex-drafting LLM provider configuration
+# -----------------------------------------------------------------------------
+# Loaded by internal/cyber/vciso/llm.LoadConfig() and consumed by the lex AI
+# drafting + clause/obligation enrichment path (cmd/lex-service).
+#
+# Referenced on the VPS box via VCISO_LLM_CONFIG_PATH, which
+# deploy/vps/ecosystem.prod.config.js points at ${REMOTE_ROOT}/vciso-llm.yaml.
+# deploy/vps/deploy.sh (cmd_sync) materializes THIS committed file to that path
+# on every sync, so the box never silently reverts to the built-in defaults
+# (claude-opus-4-8 + a 15s provider timeout, which overran interactive/buffered
+# drafting — see audit finding F39).
+#
+# Contains NO secrets: the API key is referenced by env-var NAME only
+# (api_key_env => ANTHROPIC_API_KEY, sourced from the box-only clario360.env).
+# These keys override the SetDefault() values in llm/config.go; only the fields
+# that differ from the defaults are set here (viper merges the rest).
+# =============================================================================
+enabled: true
+default_provider: anthropic
+fallback_to_rule_based: true
+
+providers:
+  anthropic:
+    api_key_env: ANTHROPIC_API_KEY
+    # Keep the strongest model as the shared default for review, extraction, and
+    # other high-reasoning work. Latency-sensitive pleading generation overrides
+    # this per request via LEX_LLM_INTERACTIVE_DRAFTING_MODEL (default:
+    # claude-sonnet-5) without weakening these review paths.
+    model: claude-opus-4-8
+    base_url: https://api.anthropic.com
+    max_tokens: 4096
+    timeout_seconds: 60

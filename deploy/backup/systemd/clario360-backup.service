@@ -1,0 +1,52 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# Clario 360 — On-Box Backup (systemd service)
+# ═══════════════════════════════════════════════════════════════════════════════
+# NOT INSTALLED / NOT ENABLED by this repo. This is a reference unit only.
+# Installing and enabling it on a real host is an external, sign-off-gated step
+# (a provisioned host + persistent BACKUP_DIR volume + ops approval).
+#
+# Install (manual, when approved):
+#   sudo cp deploy/backup/clario360-backup.sh        /usr/local/bin/
+#   sudo cp deploy/backup/clario360-backup-verify.sh /usr/local/bin/
+#   sudo install -d -m 0750 /etc/clario360
+#   sudo cp deploy/backup/clario360-backup.env       /etc/clario360/   # 0600, real creds
+#   sudo cp deploy/backup/systemd/clario360-backup.* /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now clario360-backup.timer
+# ═══════════════════════════════════════════════════════════════════════════════
+[Unit]
+Description=Clario 360 on-box PostgreSQL backup
+Documentation=file:/opt/clario360/deploy/backup/README.md
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+# Run as a dedicated low-privilege user that is a member of the docker group.
+User=clario360-backup
+Group=clario360-backup
+SupplementaryGroups=docker
+EnvironmentFile=-/etc/clario360/clario360-backup.env
+Environment=BACKUP_DIR=/var/backups/clario360
+ExecStart=/usr/local/bin/clario360-backup.sh
+UMask=0077
+
+# Hardening (mirrors deploy/systemd/clario-dr-agent.service).
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/backups/clario360
+LockPersonality=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallArchitectures=native
+
+# Do not thrash a busy DB — cap IO/CPU weight.
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,63 @@
+.root {
+  /*
+   * Watheeq landing palette — explicit, route-scoped semantic tokens.
+   *
+   * Route semantics alias the generated WLS-UI-SPEC-LD-001 contract. The HSL
+   * triplets below adapt the same approved anchors to the shadcn/Tailwind
+   * `hsl(var(--token))` contract used by the existing landing primitives.
+   */
+  --lex-landing-primary: var(--wt-teal-700);
+  --lex-landing-dark-teal: var(--wt-teal-900);
+  --lex-landing-accent: var(--wt-lime-500);
+  --lex-landing-spring-teal: rgb(var(--ds-clario-spring-teal));
+  --lex-landing-canvas: var(--wt-canvas);
+  --lex-landing-tint: var(--wt-teal-300);
+  --lex-landing-border: var(--wt-teal-300);
+  --lex-landing-ink: var(--wt-teal-900);
+  --lex-landing-muted: rgb(var(--ds-clario-muted));
+
+  /* The approved muted anchor clears AA for normal text on the cream canvas. */
+  --lex-landing-muted-readable: rgb(var(--ds-clario-muted));
+
+  --background: 73.3333 100% 98.2353%;
+  --foreground: 172.3404 79.6610% 11.5686%;
+  --card: 0 0% 100%;
+  --card-foreground: 172.3404 79.6610% 11.5686%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 172.3404 79.6610% 11.5686%;
+  --primary: 180 100% 18.4314%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 154.2857 8.2353% 83.3333%;
+  --secondary-foreground: 172.3404 79.6610% 11.5686%;
+  --muted: 154.2857 8.2353% 83.3333%;
+  --muted-foreground: 160 5.2632% 44.7059%;
+  --accent: 154.2857 8.2353% 83.3333%;
+  --accent-foreground: 172.3404 79.6610% 11.5686%;
+  --border: 154.2857 8.2353% 83.3333%;
+  --input: 154.2857 8.2353% 83.3333%;
+  --ring: 180 100% 18.4314%;
+
+  --ds-bg-page: 73.3333 100% 98.2353%;
+  --ds-bg-subtle: 154.2857 8.2353% 83.3333%;
+  --ds-bg-inset: 154.2857 8.2353% 83.3333%;
+  --ds-text-primary: 172.3404 79.6610% 11.5686%;
+  --ds-text-secondary: 172.3404 79.6610% 11.5686%;
+  --ds-text-muted: 160 5.2632% 44.7059%;
+  --ds-border-subtle: 154.2857 8.2353% 83.3333%;
+  --ds-border-default: 154.2857 8.2353% 83.3333%;
+  --ds-border-strong: 154.2857 8.2353% 83.3333%;
+  --ds-border-input: 154.2857 8.2353% 83.3333%;
+  --ds-border-focus: 180 100% 18.4314%;
+  --ds-brand-primary: 180 100% 18.4314%;
+  --ds-brand-primary-hover: 172.3404 79.6610% 11.5686%;
+  --ds-brand-primary-active: 172.3404 79.6610% 11.5686%;
+  --ds-brand-accent: 64.0449 94.6809% 36.8627%;
+  --ds-accent: 64.0449 94.6809% 36.8627%;
+  --ds-primary-accent: 64.0449 94.6809% 36.8627%;
+  --ds-on-accent: 172.3404 79.6610% 11.5686%;
+  --ds-brand-teal: 180.3871 85.6354% 35.4902%;
+
+  min-height: 100%;
+  background-color: var(--lex-landing-canvas);
+  color: var(--lex-landing-ink);
+}

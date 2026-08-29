@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS contract_clause_deviation_reviews;

@@ -1,0 +1,21 @@
+{{- if .Values.automationService.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "clario360.componentName" (dict "root" . "component" "automation-service") }}-config
+  namespace: {{ include "clario360.namespace" . }}
+  labels:
+    {{- include "clario360.componentLabels" (dict "root" . "component" "automation-service") | nindent 4 }}
+data:
+  AUTO_HTTP_PORT: "8098"
+  AUTO_ADMIN_PORT: "9098"
+  AUTO_KAFKA_GROUP_ID: {{ .Values.automationService.kafkaGroupId | default "automation-service" | quote }}
+  # The action executors reach workflow / dr_runbook / http_call targets through
+  # the in-cluster API gateway; integration / notification publish to the bus.
+  GW_SVC_URL_GATEWAY: {{ .Values.automationService.gatewayUrl | default (printf "http://%s-api-gateway:8092" (include "clario360.fullname" .)) | quote }}
+  GW_SVC_URL_WORKFLOW: {{ .Values.automationService.workflowGatewayUrl | default .Values.automationService.gatewayUrl | default (printf "http://%s-api-gateway:8092" (include "clario360.fullname" .)) | quote }}
+  GW_SVC_URL_DR: {{ .Values.automationService.drGatewayUrl | default .Values.automationService.gatewayUrl | default (printf "http://%s-api-gateway:8092" (include "clario360.fullname" .)) | quote }}
+  {{- with .Values.automationService.config }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+{{- end }}

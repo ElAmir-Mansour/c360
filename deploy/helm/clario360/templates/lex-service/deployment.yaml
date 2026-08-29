@@ -1,0 +1,221 @@
+{{- if .Values.lexService.enabled }}
+{{- /*
+  WatheeqTech Reference Library byte-storage backend (Workstream D).
+  storageMode selects HOW /reference-library/{id}/download gets its PDF bytes:
+    - volume       (default): stream from a mounted read-only corpus dir. No
+                   object store needed — an out-of-the-box install works.
+    - file-service (production): fetch bytes from the platform file-service /
+                   MinIO as the canonical library tenant. lex MINTS that
+                   tenant's JWT, so it needs the RS256 PRIVATE key + a
+                   libraryTenantId + a reachable file-service. Missing any of
+                   these FAILS THE RENDER loudly — never a silent 502 default.
+*/}}
+{{- $refLib := .Values.lexService.referenceLibrary | default dict }}
+{{- $storageMode := $refLib.storageMode | default "volume" }}
+{{- $environment := lower (.Values.global.environment | default "development") }}
+{{- $isDevProfile := has $environment (list "" "development" "dev" "local" "test") }}
+{{- $approvalAuthority := .Values.lexService.approvalAuthority | default dict }}
+{{- $trustedRootsSecret := $approvalAuthority.trustedRootsSecret | default dict }}
+{{- $trustedRootsSecretName := $trustedRootsSecret.name | default "" }}
+{{- $databaseSecretName := .Values.secrets.database.existingSecret | default (printf "%s-database-credentials" (include "clario360.fullname" .)) }}
+{{- $redisSecretName := .Values.secrets.redis.existingSecret | default (printf "%s-redis-credentials" (include "clario360.fullname" .)) }}
+{{- $jwtSecretName := .Values.secrets.jwt.existingSecret | default (printf "%s-jwt-keys" (include "clario360.fullname" .)) }}
+{{- $encryptionSecretName := .Values.secrets.encryption.existingSecret | default (printf "%s-encryption-key" (include "clario360.fullname" .)) }}
+{{- if and (not $isDevProfile) (not $trustedRootsSecretName) }}
+{{-   fail "lexService.approvalAuthority.trustedRootsSecret.name is REQUIRED outside development — Watheeq Delegation-of-Authority evidence must have a PKI trust anchor" }}
+{{- end }}
+{{- if not (has $storageMode (list "volume" "file-service")) }}
+{{-   fail (printf "lexService.referenceLibrary.storageMode must be \"volume\" or \"file-service\" (got %q)" $storageMode) }}
+{{- end }}
+{{- $fsUrl := "" }}
+{{- if eq $storageMode "file-service" }}
+{{-   $fsUrl = $refLib.fileServiceUrl | default "" }}
+{{-   if and (not $fsUrl) .Values.fileService.enabled }}
+{{-     $fsUrl = printf "http://%s:%v" (include "clario360.componentName" (dict "root" . "component" "file-service")) (int (.Values.fileService.port | default 8092)) }}
+{{-   end }}
+{{-   if not $fsUrl }}
+{{-     fail "lexService.referenceLibrary: storageMode=file-service needs a reachable file-service — set lexService.referenceLibrary.fileServiceUrl (fileService.enabled is false, so it cannot be derived)" }}
+{{-   end }}
+{{- end }}
+{{- $requestFsUrl := .Values.lexService.requestFileServiceUrl | default "" }}
+{{- if and (not $requestFsUrl) .Values.fileService.enabled }}
+{{-   $requestFsUrl = printf "http://%s:%v" (include "clario360.componentName" (dict "root" . "component" "file-service")) (int (.Values.fileService.port | default 8092)) }}
+{{- end }}
+{{- if and (not $requestFsUrl) $refLib.fileServiceUrl }}
+{{-   $requestFsUrl = $refLib.fileServiceUrl }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "clario360.componentName" (dict "root" . "component" "lex-service") }}
+  namespace: {{ include "clario360.namespace" . }}
+  labels:
+    {{- include "clario360.componentLabels" (dict "root" . "component" "lex-service") | nindent 4 }}
+spec:
+  replicas: {{ .Values.lexService.replicaCount | default 2 }}
+  revisionHistoryLimit: {{ .Values.lexService.revisionHistoryLimit | default 5 }}
+  selector:
+    matchLabels:
+      {{- include "clario360.componentSelectorLabels" (dict "root" . "component" "lex-service") | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/lex-service/configmap.yaml") . | sha256sum }}
+        {{- include "clario360.prometheusAnnotations" (dict "metricsPort" "9087") | nindent 8 }}
+        {{- with .Values.lexService.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "clario360.componentSelectorLabels" (dict "root" . "component" "lex-service") | nindent 8 }}
+        {{- with .Values.lexService.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "clario360.serviceAccountName" (dict "root" . "component" "lex-service" "svcConfig" .Values.lexService) }}
+      securityContext:
+        {{- include "clario360.podSecurityContext" . | nindent 8 }}
+      terminationGracePeriodSeconds: {{ .Values.lexService.terminationGracePeriodSeconds | default 30 }}
+      containers:
+        - name: lex-service
+          image: {{ include "clario360.image" (dict "imageConfig" .Values.lexService.image "root" . "defaultRepo" "clario360/lex-service") }}
+          imagePullPolicy: {{ .Values.lexService.image.pullPolicy | default "IfNotPresent" }}
+          securityContext:
+            {{- include "clario360.containerSecurityContext" . | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 8087
+              protocol: TCP
+            - name: admin
+              containerPort: 9087
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "clario360.sharedConfigMapName" . }}
+            - configMapRef:
+                name: {{ include "clario360.componentName" (dict "root" . "component" "lex-service") }}-config
+          env:
+            - name: LEX_DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $databaseSecretName }}
+                  key: LEX_DB_URL
+            - name: LEX_REDIS_ADDR
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "clario360.sharedConfigMapName" . }}
+                  key: REDIS_ADDR
+            - name: LEX_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $redisSecretName }}
+                  key: REDIS_PASSWORD
+            - name: LEX_KAFKA_BROKERS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "clario360.sharedConfigMapName" . }}
+                  key: KAFKA_BROKERS
+            - name: AUTH_RSA_PUBLIC_KEY_PEM
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $jwtSecretName }}
+                  key: AUTH_RSA_PUBLIC_KEY_PEM
+            {{- if $requestFsUrl }}
+            - name: LEX_REQUEST_FILE_SERVICE_URL
+              value: {{ $requestFsUrl | quote }}
+            {{- end }}
+            {{- if or $requestFsUrl (eq $storageMode "file-service") }}
+            - name: AUTH_RSA_PRIVATE_KEY_PEM
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $jwtSecretName }}
+                  key: AUTH_RSA_PRIVATE_KEY_PEM
+            {{- end }}
+            - name: LEX_CONTRACT_FIELD_ENCRYPTION_MODE
+              value: "software"
+            - name: LEX_CONTRACT_FIELD_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $encryptionSecretName }}
+                  key: ENCRYPTION_KEY
+            {{- if $trustedRootsSecretName }}
+            - name: LEX_APPROVAL_AUTHORITY_TRUSTED_ROOTS_PEM
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $trustedRootsSecretName }}
+                  key: {{ $trustedRootsSecret.key | default "LEX_APPROVAL_AUTHORITY_TRUSTED_ROOTS_PEM" }}
+            {{- end }}
+            - name: OTEL_SERVICE_NAME
+              value: "lex-service"
+            {{- /* WatheeqTech Reference Library + Second Brain (Workstream D). */}}
+            {{- if eq $storageMode "file-service" }}
+            {{- /* Production byte path (design §2.3 Option A): bytes come from the */}}
+            {{- /* file-service as the library tenant. lex MINTS that tenant's JWT, */}}
+            {{- /* so the RS256 PRIVATE key must be present (validation-only lex */}}
+            {{- /* cannot mint). No corpus volume is mounted in this mode. */}}
+            - name: LEX_FILE_SERVICE_URL
+              value: {{ $fsUrl | quote }}
+            - name: LEX_REFERENCE_LIBRARY_TENANT_ID
+              value: {{ required "lexService.referenceLibrary.libraryTenantId is REQUIRED when storageMode=file-service — lex mints the library-tenant JWT to read corpus bytes from file-service (set it at install or in a prod overrides file)" $refLib.libraryTenantId | quote }}
+            {{- else }}
+            {{- if $refLib.dir }}
+            - name: LEX_REFERENCE_LIBRARY_DIR
+              value: {{ $refLib.dir | quote }}
+            {{- end }}
+            {{- end }}
+            {{- if $refLib.aiServiceUrl }}
+            - name: LEX_AI_SERVICE_URL
+              value: {{ $refLib.aiServiceUrl | quote }}
+            {{- else if $.Values.aiSecondBrain.enabled }}
+            - name: LEX_AI_SERVICE_URL
+              value: {{ printf "http://%s:%v" (include "clario360.componentName" (dict "root" $ "component" "ai-second-brain")) (int $.Values.aiSecondBrain.port) | quote }}
+            {{- end }}
+            {{- with .Values.lexService.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- include "clario360.healthProbes" (dict "portName" "http" "healthPath" "/healthz" "readyPath" "/readyz") | nindent 10 }}
+          resources:
+            {{- toYaml .Values.lexService.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            {{- if and (eq $storageMode "volume") $refLib.volume $refLib.dir }}
+            - name: reference-library
+              mountPath: {{ $refLib.dir | quote }}
+              readOnly: true
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        {{- if and (eq $storageMode "volume") $refLib.volume $refLib.dir }}
+        - name: reference-library
+          {{- toYaml $refLib.volume | nindent 10 }}
+        {{- end }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              {{- include "clario360.componentSelectorLabels" (dict "root" . "component" "lex-service") | nindent 14 }}
+      {{- with .Values.lexService.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.lexService.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.lexService.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

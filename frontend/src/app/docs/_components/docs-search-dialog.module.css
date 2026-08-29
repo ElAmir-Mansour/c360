@@ -1,0 +1,345 @@
+.overlay {
+  --search-ink: #102825;
+  --search-muted: #667a76;
+  --search-line: #dce8e3;
+  --search-accent: #006b5e;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: start center;
+  overflow-y: auto;
+  padding: max(7vh, 48px) 20px 32px;
+  background: rgb(3 28 29 / 68%);
+  backdrop-filter: blur(8px);
+  color: var(--search-ink);
+  direction: ltr;
+}
+
+.dialog {
+  width: min(700px, 100%);
+  max-height: min(78dvh, 760px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 45%);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow:
+    0 30px 90px rgb(0 20 20 / 30%),
+    0 2px 8px rgb(0 20 20 / 12%);
+}
+
+.searchBar {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--search-line);
+  flex: 0 0 auto;
+}
+
+.searchIcon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  color: var(--search-accent);
+}
+
+.input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--search-ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.input::placeholder {
+  color: #82938f;
+}
+
+.input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.shortcut,
+.footer kbd {
+  min-width: 28px;
+  padding: 4px 6px;
+  border: 1px solid #cedbd6;
+  border-radius: 6px;
+  background: #f8fbfa;
+  box-shadow: 0 1px 1px rgb(0 40 35 / 8%);
+  color: #687a76;
+  font: 600 10px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.closeButton {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #5e716d;
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  background: #eef5f2;
+  color: var(--search-ink);
+}
+
+.closeButton:focus-visible,
+.result:focus-visible {
+  outline: 3px solid rgb(0 107 94 / 28%);
+  outline-offset: -3px;
+}
+
+.resultStatus {
+  padding: 16px 20px 8px;
+  color: #71837f;
+  font: 700 10px/1.3 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.results {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 10px 12px;
+  scroll-padding: 8px;
+}
+
+.result {
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.result[aria-selected='true'] {
+  border-color: #d9e9e3;
+  background: #eff7f4;
+}
+
+.resultIcon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid #d8e7e1;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--search-accent);
+}
+
+.resultIcon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.resultCopy {
+  min-width: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.resultMeta {
+  color: var(--search-accent);
+  font: 700 9px/1.3 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.resultCopy strong {
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resultCopy small {
+  overflow: hidden;
+  color: var(--search-muted);
+  font-size: 11px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resultArrow {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  color: #80928e;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.result[aria-selected='true'] .resultArrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.empty {
+  min-height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  flex-direction: column;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.emptyIcon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 15px;
+  border: 1px solid var(--search-line);
+  border-radius: 50%;
+  background: #f5faf8;
+  color: #728782;
+}
+
+.emptyIcon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.empty strong {
+  font-size: 15px;
+}
+
+.empty p {
+  margin-top: 5px;
+  color: var(--search-muted);
+  font-size: 12px;
+}
+
+.footer {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex: 0 0 auto;
+  padding: 0 18px;
+  border-top: 1px solid var(--search-line);
+  background: #fafcfb;
+  color: #758681;
+  font-size: 10px;
+}
+
+.footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.footer kbd {
+  min-width: 22px;
+  padding: 2px 4px;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  padding: 0;
+  margin: -1px;
+  border: 0;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .overlay {
+    place-items: stretch;
+    padding: 0;
+    background: #fff;
+    backdrop-filter: none;
+  }
+
+  .dialog {
+    width: 100%;
+    max-height: 100dvh;
+    min-height: 100dvh;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .searchBar {
+    min-height: calc(66px + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) 12px 0;
+  }
+
+  .shortcut {
+    display: none;
+  }
+
+  .closeButton {
+    display: flex;
+  }
+
+  .resultStatus {
+    padding-inline: 16px;
+  }
+
+  .results {
+    padding-inline: 8px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  .result {
+    min-height: 82px;
+    padding-inline: 10px;
+  }
+
+  .resultCopy small {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .resultArrow {
+    display: none;
+  }
+
+  .footer {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .resultArrow {
+    transition: none;
+  }
+}

@@ -1,0 +1,74 @@
+.chart {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(5rem, 100%), 1fr));
+  align-items: end;
+  gap: calc(var(--wt-space-base) * 2);
+  min-inline-size: 0;
+}
+
+.barGroup {
+  display: grid;
+  grid-template-rows: 14rem auto auto;
+  justify-items: center;
+  gap: var(--wt-space-base);
+  min-inline-size: 0;
+  padding: var(--wt-space-base);
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--wt-radius-kpi-card);
+  transition: background-color var(--ds-duration-fast) var(--ds-ease-standard);
+}
+
+.barGroup:hover {
+  background: var(--wt-canvas);
+}
+
+.barGroup:focus-visible {
+  outline: calc(var(--wt-card-border-width) * 2) solid var(--wt-teal-700);
+  outline-offset: calc(var(--wt-card-border-width) * 2);
+}
+
+.value,
+.label {
+  font-size: var(--wt-font-size-caption);
+  line-height: var(--wt-line-height-caption);
+  font-weight: 700;
+  text-align: center;
+}
+
+.value {
+  color: var(--wt-teal-900);
+  font-variant-numeric: tabular-nums;
+}
+
+.label {
+  max-inline-size: 100%;
+  color: rgb(var(--ds-clario-muted));
+  overflow-wrap: anywhere;
+}
+
+.track {
+  position: relative;
+  overflow: hidden;
+  block-size: 14rem;
+  inline-size: calc(var(--wt-space-base) * 4);
+  border-radius: var(--wt-space-base);
+  background: var(--wt-track-alt);
+}
+
+.fill {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: var(--resolution-rate-visual);
+  border-radius: var(--wt-space-base);
+  background: var(--wt-ok-400);
+  transition: block-size var(--ds-duration-normal) var(--ds-ease-standard);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barGroup,
+  .fill {
+    transition: none;
+  }
+}

@@ -1,0 +1,29 @@
+# Binaries and local builds
+.next/
+.next-dev/
+.next-verify/
+.next-*/
+node_modules/
+dist/
+out/
+*.cpuprofile
+
+# Temporary artifacts & captures
+.artifacts/
+artifacts/
+test-results-diag/
+test-results/
+playwright-report/
+e2e/.auth/
+*.png
+*.mp4
+*.mov
+
+# Preserve production UI icons, assets, and design logos
+!public/**/*.png
+!src/**/*.png
+
+# Cache and build
+*.tsbuildinfo
+.tmp/
+**/.tmp/

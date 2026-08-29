@@ -1,0 +1,13 @@
+DROP TABLE IF EXISTS lex_document_editor_analytics_rollups;
+DROP TABLE IF EXISTS lex_document_editor_provider_events;
+DROP TABLE IF EXISTS lex_document_editor_offline_recovery_snapshots;
+DROP TABLE IF EXISTS lex_document_editor_tasks;
+DROP TABLE IF EXISTS lex_document_editor_citation_bindings;
+DROP TABLE IF EXISTS lex_document_editor_approval_requests;
+DROP TABLE IF EXISTS lex_document_editor_privileged_control_requests;
+DROP TABLE IF EXISTS lex_document_editor_privileged_controls;
+DROP TABLE IF EXISTS lex_document_editor_section_assignments;
+DROP TABLE IF EXISTS lex_document_editor_negotiation_messages;
+DROP TABLE IF EXISTS lex_document_editor_legal_issues;
+DROP TABLE IF EXISTS lex_document_editor_guest_links;
+DROP TABLE IF EXISTS lex_document_editor_clause_anchors;

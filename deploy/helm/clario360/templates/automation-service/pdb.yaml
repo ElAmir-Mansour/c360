@@ -1,0 +1,22 @@
+{{- if .Values.automationService.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "clario360.componentName" (dict "root" . "component" "automation-service") }}
+  namespace: {{ include "clario360.namespace" . }}
+  labels:
+    {{- include "clario360.componentLabels" (dict "root" . "component" "automation-service") | nindent 4 }}
+spec:
+  {{- if .Values.automationService.pdb }}
+  {{- if .Values.automationService.pdb.minAvailable }}
+  minAvailable: {{ .Values.automationService.pdb.minAvailable }}
+  {{- else }}
+  maxUnavailable: {{ .Values.automationService.pdb.maxUnavailable | default 1 }}
+  {{- end }}
+  {{- else }}
+  maxUnavailable: 1
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "clario360.componentSelectorLabels" (dict "root" . "component" "automation-service") | nindent 6 }}
+{{- end }}

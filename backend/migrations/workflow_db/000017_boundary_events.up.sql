@@ -1,0 +1,47 @@
+-- =============================================================================
+-- CONTROL-FLOW (Phase 5) — INTERRUPTING BOUNDARY EVENTS + EVENT-BASED GATEWAY.
+--
+-- This wave lifts BPMN control-flow to best-in-class: a step may declare
+-- INTERRUPTING boundary events (timer | error | message) that cancel its pending
+-- work and route to a handler while it is parked, and a new event_based_gateway
+-- step waits for one of N events (timer/message) and routes to whichever fires
+-- FIRST (cancelling the rest). Both reuse the existing durable subsystems:
+--
+--   * timer boundaries / timer gateway-arms ride the SAME Redis sorted set the
+--     timer step uses (workflow:timers), with an arm id encoded into the member;
+--   * message boundaries / message gateway-arms ride the SAME event-wait Redis
+--     keys the event_task WAIT uses, with an arm id encoded into the stored value.
+--
+-- DATA MODEL. Boundary events live in workflow_definitions.steps (JSONB) as an
+-- additive per-step "boundary_events" array; the event-based gateway is a new
+-- step "type" whose arms live in the step's existing "config" (JSONB). Both are
+-- therefore fully expressible in the EXISTING JSONB columns — this migration adds
+-- NO tables and NO columns and performs NO data migration. Existing definitions
+-- carry neither field and are byte-for-byte unchanged.
+--
+-- The ONE change here is a purely OPTIONAL operator/tooling PARTIAL index that
+-- makes "list the definitions that declare a boundary event on any step" cheap
+-- (a governance / migration-planning query). It is a partial index whose
+-- predicate matches definitions whose steps JSONB text mentions the additive
+-- boundary_events key, so it stays tiny (only boundary-carrying definitions are
+-- indexed) and costs nothing for the overwhelmingly common no-boundary case.
+--
+-- Additive, reversible, idempotent (CREATE INDEX IF NOT EXISTS; the down file
+-- drops only what this adds). workflow_definitions is FORCE-RLS (migration
+-- 000008); the migration role must have BYPASSRLS to (re)create indexes on it,
+-- exactly as for the analytics/mining index migrations. This index only speeds an
+-- operator listing; it does not relax tenant isolation (queries still run
+-- tenant-scoped via repository/rls.go).
+--
+-- Kept in sync with repository/schema.go SchemaSQL (the same CREATE INDEX IF NOT
+-- EXISTS statement was added there so embedding suites get the same shape).
+-- =============================================================================
+
+-- Governance/tooling listing of definitions that attach interrupting boundary
+-- events to any step. The predicate matches only definitions whose steps JSONB
+-- serialization contains the additive "boundary_events" key, so the index is
+-- restricted to boundary-carrying definitions (tiny) and imposes no cost on the
+-- common no-boundary path.
+CREATE INDEX IF NOT EXISTS idx_workflow_definitions_boundary_events
+    ON workflow_definitions (tenant_id, status)
+    WHERE steps::text LIKE '%"boundary_events"%';

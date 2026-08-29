@@ -1,0 +1,259 @@
+# Notification-service SLO recording + alert rules (Wave E #12).
+#
+# Metrics are exported by notification-service on its admin port (:9094) under
+# the notification_* namespace (internal/notification/metrics/metrics.go) and
+# are relabelled to clario360_notification_* by the
+# "clario360-notification-service" scrape job — so every series below uses the
+# clario360_notification_ prefix, matching the other rules in this directory.
+#
+# Delivery status label values on clario360_notification_deliveries_total are
+# "delivered", "failed" and "deferred" (quiet-hours deferral is not a failure),
+# so success/failure ratios use the delivered|failed denominator.
+groups:
+  # ---------------------------------------------------------------------------
+  # Recording rules — pre-compute the notification SLO board so the dashboard
+  # and burn alerts read cheap, stable series (mirrors the DR SLO rule style).
+  # ---------------------------------------------------------------------------
+  - name: clario360-notification-slo-recording
+    interval: 1m
+    rules:
+      # Overall delivery success ratio (delivered / delivered+failed), 5m.
+      - record: clario360:notification:delivery_success_ratio:rate5m
+        expr: |
+          sum(rate(clario360_notification_deliveries_total{status="delivered"}[5m]))
+          /
+          clamp_min(sum(rate(clario360_notification_deliveries_total{status=~"delivered|failed"}[5m])), 0.001)
+
+      # Per-channel delivery success ratio, 5m.
+      - record: clario360:notification:delivery_success_ratio:by_channel:rate5m
+        expr: |
+          sum by (channel) (rate(clario360_notification_deliveries_total{status="delivered"}[5m]))
+          /
+          clamp_min(sum by (channel) (rate(clario360_notification_deliveries_total{status=~"delivered|failed"}[5m])), 0.001)
+
+      # Real-time (WebSocket) delivery success ratio across the realtime
+      # channels (websocket/in_app/push), 5m.
+      - record: clario360:notification:ws_delivery_ratio:rate5m
+        expr: |
+          sum(rate(clario360_notification_deliveries_total{channel=~"websocket|in_app|push",status="delivered"}[5m]))
+          /
+          clamp_min(sum(rate(clario360_notification_deliveries_total{channel=~"websocket|in_app|push",status=~"delivered|failed"}[5m])), 0.001)
+
+      # p95 delivery latency per channel, 5m.
+      - record: clario360:notification:delivery_latency:p95:by_channel:rate5m
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(clario360_notification_delivery_duration_seconds_bucket[5m])) by (channel, le)
+          )
+
+      # Consumer error ratio (error results / all results), 5m.
+      - record: clario360:notification:consumer_error_ratio:rate5m
+        expr: |
+          sum(rate(clario360_notification_consumer_events_processed_total{result="error"}[5m]))
+          /
+          clamp_min(sum(rate(clario360_notification_consumer_events_processed_total[5m])), 0.001)
+
+      # Current active WebSocket connections (platform-wide).
+      - record: clario360:notification:ws_connections_active:sum
+        expr: sum(clario360_notification_ws_connections_active)
+
+      # Durable dead-letter depth passthrough (pending operator action).
+      - record: clario360:notification:dlq_depth:max
+        expr: max(clario360_notification_dlq_depth)
+
+      # Delivery retry backlog passthrough (rows due for retry).
+      - record: clario360:notification:retry_backlog:max
+        expr: max(clario360_notification_delivery_retry_backlog)
+
+      # Worst (highest) Kafka consumer lag across subscribed topics.
+      - record: clario360:notification:consumer_lag:max
+        expr: max(clario360_notification_consumer_lag)
+
+  # ---------------------------------------------------------------------------
+  # Alert rules — the delivery-pipeline health signals for the notification
+  # suite. Severities route through the existing Alertmanager
+  # (deploy/monitoring/alertmanager/config.yaml): critical -> PagerDuty+Slack,
+  # warning -> Slack.
+  # ---------------------------------------------------------------------------
+  - name: clario360-notification-alerts
+    rules:
+      # High delivery-failure ratio per channel.
+      - alert: NotificationDeliveryFailureRatioHigh
+        expr: |
+          (
+            sum by (channel) (rate(clario360_notification_deliveries_total{status="failed"}[5m]))
+            /
+            clamp_min(sum by (channel) (rate(clario360_notification_deliveries_total{status=~"delivered|failed"}[5m])), 0.001)
+          ) > 0.10
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+          service: notification-service
+          slo: delivery
+        annotations:
+          summary: "Notification delivery failures on {{ $labels.channel }} at {{ $value | humanizePercentage }}"
+          description: "The {{ $labels.channel }} channel is failing more than 10% of delivery attempts over the last 5 minutes."
+          runbook: "docs/runbooks/incident-response/IR-001-service-outage.md"
+
+      - alert: NotificationDeliveryFailureRatioCritical
+        expr: |
+          (
+            sum by (channel) (rate(clario360_notification_deliveries_total{status="failed"}[5m]))
+            /
+            clamp_min(sum by (channel) (rate(clario360_notification_deliveries_total{status=~"delivered|failed"}[5m])), 0.001)
+          ) > 0.30
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+          service: notification-service
+          slo: delivery
+        annotations:
+          summary: "Notification delivery failures on {{ $labels.channel }} CRITICAL at {{ $value | humanizePercentage }}"
+          description: "The {{ $labels.channel }} channel is failing more than 30% of delivery attempts over the last 5 minutes. Recipients are not receiving notifications."
+          runbook: "docs/runbooks/incident-response/IR-001-service-outage.md"
+
+      # Rising durable dead-letter queue depth.
+      - alert: NotificationDLQDepthGrowing
+        expr: clario360_notification_dlq_depth > 0
+        for: 15m
+        labels:
+          severity: warning
+          team: platform
+          service: notification-service
+          slo: delivery
+        annotations:
+          summary: "Notification DLQ depth is {{ $value }} (pending operator action)"
+          description: "Durable dead-letter entries have been pending for more than 15 minutes. Inspect/replay via the /api/v1/notifications/dlq admin routes."
+          runbook: "docs/runbooks/troubleshooting/TS-003-missing-events.md"
+
+      - alert: NotificationDLQDepthCritical
+        expr: clario360_notification_dlq_depth > 50
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+          service: notification-service
+          slo: delivery
+        annotations:
+          summary: "Notification DLQ depth CRITICAL at {{ $value }}"
+          description: "More than 50 events are stuck in the durable dead-letter store. A downstream dependency or a poison-pill event type is likely failing repeatedly."
+          runbook: "docs/runbooks/troubleshooting/TS-003-missing-events.md"
+
+      # Events are being dead-lettered at a high rate.
+      - alert: NotificationDeadLetterRateHigh
+        expr: sum(increase(clario360_notification_delivery_dead_lettered_total[1h])) > 20
+        for: 0m
+        labels:
+          severity: warning
+          team: platform
+          service: notification-service
+          slo: delivery
+        annotations:
+          summary: "{{ $value }} notification deliveries dead-lettered in the last hour"
+          description: "Deliveries are exhausting their retry budget and being dead-lettered faster than expected."
+          runbook: "docs/runbooks/troubleshooting/TS-003-missing-events.md"
+
+      # Mass WebSocket disconnect: active connections collapsed from their peak.
+      - alert: NotificationWSConnectionsDropped
+        expr: |
+          (
+            max_over_time(sum(clario360_notification_ws_connections_active)[15m:]) - sum(clario360_notification_ws_connections_active)
+          )
+          /
+          clamp_min(max_over_time(sum(clario360_notification_ws_connections_active)[15m:]), 1) > 0.50
+          and
+          max_over_time(sum(clario360_notification_ws_connections_active)[15m:]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+          service: notification-service
+          slo: realtime
+        annotations:
+          summary: "Notification WebSocket connections dropped {{ $value | humanizePercentage }} from their 15m peak"
+          description: "Active real-time connections fell by more than half versus the last 15 minutes' peak, indicating a mass disconnect (bad deploy, LB drop, or hub failure)."
+          runbook: "docs/runbooks/troubleshooting/TS-005-websocket-disconnects.md"
+
+      # Consumer is erroring while processing events.
+      - alert: NotificationConsumerErrors
+        expr: sum(rate(clario360_notification_consumer_events_processed_total{result="error"}[5m])) > 0
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+          service: notification-service
+          slo: ingestion
+        annotations:
+          summary: "Notification consumer erroring at {{ $value | humanize }}/s"
+          description: "The notification Kafka consumer has been returning processing errors for 10 minutes; events may be retried or dead-lettered instead of producing notifications."
+          runbook: "docs/runbooks/troubleshooting/TS-003-missing-events.md"
+
+      # Delivery retry backlog growing / stuck.
+      - alert: NotificationRetryBacklogGrowing
+        expr: clario360_notification_delivery_retry_backlog > 100
+        for: 15m
+        labels:
+          severity: warning
+          team: platform
+          service: notification-service
+          slo: delivery
+        annotations:
+          summary: "Notification delivery retry backlog is {{ $value }}"
+          description: "More than 100 delivery rows have been due for retry for 15 minutes; the retry worker is not draining them (channel outage or worker stall)."
+          runbook: "docs/runbooks/incident-response/IR-001-service-outage.md"
+
+      - alert: NotificationRetryBacklogCritical
+        expr: clario360_notification_delivery_retry_backlog > 500
+        for: 10m
+        labels:
+          severity: critical
+          team: platform
+          service: notification-service
+          slo: delivery
+        annotations:
+          summary: "Notification delivery retry backlog CRITICAL at {{ $value }}"
+          description: "The delivery retry backlog exceeds 500 rows. The retry worker is falling behind faster than it can drain; investigate the failing channel(s)."
+          runbook: "docs/runbooks/incident-response/IR-001-service-outage.md"
+
+      # Kafka consumer lag on the notification consumer group.
+      - alert: NotificationConsumerLagHigh
+        expr: clario360_notification_consumer_lag > 1000
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+          service: notification-service
+          slo: ingestion
+        annotations:
+          summary: "Notification consumer lag high on {{ $labels.topic }}: {{ $value }} messages"
+          description: "The notification consumer is more than 1000 messages behind on {{ $labels.topic }}; notification delivery is delayed."
+          runbook: "docs/runbooks/incident-response/IR-003-kafka-failure.md"
+
+      - alert: NotificationConsumerLagCritical
+        expr: clario360_notification_consumer_lag > 10000
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+          service: notification-service
+          slo: ingestion
+        annotations:
+          summary: "Notification consumer lag CRITICAL on {{ $labels.topic }}: {{ $value }} messages"
+          description: "The notification consumer is more than 10000 messages behind on {{ $labels.topic }}; the consumer is stalled or under-provisioned."
+          runbook: "docs/runbooks/incident-response/IR-003-kafka-failure.md"
+
+      # Preference resolution failing closed (channels suppressed).
+      - alert: NotificationPrefResolutionFallback
+        expr: sum(rate(clario360_notification_pref_resolution_fallback_total[15m])) > 0
+        for: 15m
+        labels:
+          severity: warning
+          team: platform
+          service: notification-service
+          slo: delivery
+        annotations:
+          summary: "Notification preference resolution failing closed at {{ $value | humanize }}/s"
+          description: "Notifications are falling back to in_app-only because channel preferences cannot be resolved (IAM/preference store degraded); outbound channels are being suppressed."
+          runbook: "docs/runbooks/troubleshooting/TS-003-missing-events.md"

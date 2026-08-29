@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clario360.io/siem/events/sources/source.recovered.json",
+  "title": "siem.source.recovered",
+  "description": "Data payload of the siem.source.recovered CloudEvent. Emitted when a previously-silent source recovers to within the recovery threshold for 3 consecutive samples.",
+  "type": "object",
+  "required": ["source_id", "tenant_id", "status_before", "status_after", "recovered_at"],
+  "properties": {
+    "source_id":     {"type": "string", "format": "uuid"},
+    "tenant_id":     {"type": "string", "format": "uuid"},
+    "source_name":   {"type": "string"},
+    "status_before": {"type": "string", "enum": ["silent"]},
+    "status_after":  {"type": "string", "enum": ["active"]},
+    "baseline_eps":  {"type": "integer", "minimum": 0},
+    "observed_eps":  {"type": "integer", "minimum": 0},
+    "drift_pct":     {"type": "number"},
+    "recovered_at":  {"type": "string", "format": "date-time"}
+  }
+}

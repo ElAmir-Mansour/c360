@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clario360.io/siem/events/sources/source.cert.rotated.json",
+  "title": "siem.source.cert.rotated",
+  "description": "Data payload of the siem.source.cert.rotated CloudEvent. Emitted after a rotation enrollment exchange succeeds; the previous cert is scheduled for revocation after the overlap window.",
+  "type": "object",
+  "required": ["source_id", "tenant_id", "old_cert_serial", "new_cert_serial", "new_mtls_thumbprint", "rotated_at", "overlap_window_seconds"],
+  "properties": {
+    "source_id":              {"type": "string", "format": "uuid"},
+    "tenant_id":              {"type": "string", "format": "uuid"},
+    "old_cert_serial":        {"type": "string"},
+    "new_cert_serial":        {"type": "string"},
+    "new_mtls_thumbprint":    {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "rotated_at":             {"type": "string", "format": "date-time"},
+    "overlap_window_seconds": {"type": "integer", "minimum": 0}
+  }
+}

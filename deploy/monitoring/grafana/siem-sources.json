@@ -1,0 +1,139 @@
+{
+  "annotations": { "list": [] },
+  "description": "SIEM source registry & collector control plane (SIEM-03). Panels show source counts by status, cert expiry, silent transitions, top-noisy sources, parser-error rates, heartbeat freshness, and leadership status.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Sources by status",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "targets": [
+        { "expr": "sum by (status) (siem_sources_total)", "refId": "A", "legendFormat": "{{status}}" }
+      ]
+    },
+    {
+      "type": "gauge",
+      "title": "Active sources nearing cert expiry (≤ 30d)",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "showThresholdLabels": true },
+      "targets": [
+        { "expr": "count(siem_source_cert_expiry_days < 30)", "refId": "A", "legendFormat": "expiring" }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Top 20 sources by cert expiry",
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 6 },
+      "id": 3,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "topk(20, siem_source_cert_expiry_days)", "refId": "A", "format": "table", "instant": true }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Silent transitions (5m rate)",
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 6 },
+      "id": 4,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum by (tenant, reason) (rate(siem_detector_silent_transitions_total[5m]))", "refId": "A", "legendFormat": "{{tenant}} / {{reason}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Top-noisy sources by EPS (5min window)",
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 16 },
+      "id": 5,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "topk(10, siem_source_eps_current{window=\"5min\"})", "refId": "A", "legendFormat": "{{tenant}} / {{source_id}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Parser error rate by source",
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 16 },
+      "id": 6,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "topk(10, sum by (source_id) (rate(siem_source_parser_errors_total[5m])))", "refId": "A", "legendFormat": "{{source_id}}" }
+      ]
+    },
+    {
+      "type": "heatmap",
+      "title": "Heartbeat freshness (last-seen age, seconds)",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 26 },
+      "id": 7,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "siem_source_last_seen_age_seconds", "refId": "A", "format": "heatmap" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Detector leader (siem-detector role)",
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 36 },
+      "id": 8,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "textMode": "value_and_name" },
+      "targets": [
+        { "expr": "siem_leadership_leader{role=\"siem-detector\"}", "refId": "A", "legendFormat": "{{instance}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Enrollment tokens (issued vs consumed vs replay-blocked)",
+      "gridPos": { "h": 8, "w": 16, "x": 8, "y": 36 },
+      "id": 9,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum by (purpose) (rate(siem_enrollment_tokens_issued_total[5m]))", "refId": "A", "legendFormat": "issued {{purpose}}" },
+        { "expr": "sum by (purpose, result) (rate(siem_enrollment_tokens_consumed_total[5m]))", "refId": "B", "legendFormat": "consumed {{purpose}}/{{result}}" },
+        { "expr": "sum (rate(siem_enrollment_tokens_replay_blocked_total[5m]))", "refId": "C", "legendFormat": "replay blocked" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "mTLS verifications by result",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 44 },
+      "id": 10,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum by (result) (rate(siem_mtls_verifications_total[5m]))", "refId": "A", "legendFormat": "{{result}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Detector run duration p95",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 44 },
+      "id": 11,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(siem_detector_run_duration_seconds_bucket[5m])))", "refId": "A", "legendFormat": "p95" }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["clario360", "siem", "sources"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "timezone": "Africa/Lagos",
+  "title": "Clario360 — SIEM Sources & Collector Control Plane (SIEM-03)",
+  "uid": "clario360-siem-sources",
+  "version": 1,
+  "weekStart": ""
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clario360.io/siem/events/sources/source.cert.issued.json",
+  "title": "siem.source.cert.issued",
+  "description": "Data payload of the siem.source.cert.issued CloudEvent. Emitted after a successful enrollment exchange.",
+  "type": "object",
+  "required": ["source_id", "tenant_id", "cert_serial", "mtls_thumbprint", "cert_issued_at", "cert_expires_at"],
+  "properties": {
+    "source_id":       {"type": "string", "format": "uuid"},
+    "tenant_id":       {"type": "string", "format": "uuid"},
+    "cert_serial":     {"type": "string"},
+    "mtls_thumbprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "vault_pki_mount": {"type": "string"},
+    "cert_issued_at":  {"type": "string", "format": "date-time"},
+    "cert_expires_at": {"type": "string", "format": "date-time"}
+  }
+}

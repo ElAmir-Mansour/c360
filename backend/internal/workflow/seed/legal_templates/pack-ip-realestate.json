@@ -1,0 +1,1139 @@
+[
+  {
+    "id": "tmpl-trademark-registration-prosecution",
+    "category": "legal",
+    "icon": "badge-check",
+    "tags": ["legal", "ip", "trademark", "prosecution", "ksa", "moc", "saip"],
+    "name_i18n": {
+      "en": "Trademark Registration & Prosecution",
+      "ar": "تسجيل العلامة التجارية ومتابعة إجراءاتها"
+    },
+    "description_i18n": {
+      "en": "Captures a new trademark, runs a clearance/availability search with SAIP, files the application, monitors examination and any office actions, and records the registration certificate.",
+      "ar": "يستقبل علامة تجارية جديدة، ويجري بحث الجاهزية والتوافر لدى الهيئة السعودية للملكية الفكرية، ويقدّم الطلب، ويتابع الفحص وأي ملاحظات رسمية، ثم يوثّق شهادة التسجيل."
+    },
+    "definition": {
+      "name": "Trademark Registration & Prosecution",
+      "description": "Clearance search, filing, examination tracking, and certificate recording for a new trademark.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "trademark_id": { "type": "string" },
+        "mark_text": { "type": "string" },
+        "nice_class": { "type": "string", "default": "35" },
+        "clearance_passed": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "capture_mark",
+          "type": "human_task",
+          "name": "Capture Trademark Details",
+          "config": {
+            "assignee_role": "ip_paralegal",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "mark_text", "type": "text", "label": "Mark / Wordmark", "required": true },
+              { "name": "nice_class", "type": "select", "label": "Nice Class", "required": true, "options": ["3", "9", "16", "29", "30", "35", "43"] },
+              { "name": "owner_entity", "type": "text", "label": "Owner Entity", "required": true },
+              { "name": "specimen_url", "type": "text", "label": "Logo / Specimen URL", "required": false }
+            ]
+          },
+          "transitions": [
+            { "target": "clearance_search" }
+          ]
+        },
+        {
+          "id": "clearance_search",
+          "type": "service_task",
+          "name": "SAIP Clearance / Availability Search",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/ip/trademarks/${variables.trademark_id}/clearance",
+            "body": {
+              "mark_text": "${steps.capture_mark.output.mark_text}",
+              "nice_class": "${steps.capture_mark.output.nice_class}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "condition": "steps.clearance_search.output.clearance_passed == true", "target": "counsel_clearance_review" },
+            { "target": "counsel_clearance_review" }
+          ]
+        },
+        {
+          "id": "counsel_clearance_review",
+          "type": "human_task",
+          "name": "IP Counsel Clearance Review",
+          "config": {
+            "assignee_role": "ip_counsel",
+            "sla_hours": 48,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "proceed_to_file", "type": "boolean", "label": "Proceed to File?", "required": true },
+              { "name": "risk_notes", "type": "textarea", "label": "Clearance / Risk Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.counsel_clearance_review.output.proceed_to_file == true", "target": "file_application" },
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "file_application",
+          "type": "service_task",
+          "name": "File Application with SAIP",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/ip/trademarks/${variables.trademark_id}/file",
+            "body": {
+              "trademark_id": "${variables.trademark_id}",
+              "nice_class": "${steps.capture_mark.output.nice_class}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "await_examination" }
+          ]
+        },
+        {
+          "id": "await_examination",
+          "type": "event_task",
+          "name": "Await Examination / Office Action",
+          "config": {
+            "topic": "saip.trademark.examination",
+            "mode": "wait",
+            "correlation_field": "trademark_id",
+            "timeout_hours": 2160
+          },
+          "transitions": [
+            { "target": "record_outcome" }
+          ]
+        },
+        {
+          "id": "record_outcome",
+          "type": "human_task",
+          "name": "Record Examination Outcome / Office Action",
+          "config": {
+            "assignee_role": "ip_counsel",
+            "sla_hours": 120,
+            "form_fields": [
+              { "name": "outcome", "type": "select", "label": "Outcome", "required": true, "options": ["registered", "office_action", "refused"] },
+              { "name": "registration_number", "type": "text", "label": "Registration Number", "required": false },
+              { "name": "response_notes", "type": "textarea", "label": "Response / Prosecution Notes", "required": false }
+            ]
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-trademark-renewal-maintenance",
+    "category": "legal",
+    "icon": "refresh-cw",
+    "tags": ["legal", "ip", "trademark", "renewal", "portfolio", "ksa", "saip"],
+    "name_i18n": {
+      "en": "Trademark Renewal & Portfolio Maintenance",
+      "ar": "تجديد العلامات التجارية وصيانة المحفظة"
+    },
+    "description_i18n": {
+      "en": "Schedule-triggered maintenance that flags marks nearing expiry, decides renew/abandon per mark, files the renewal with SAIP, and updates the portfolio register.",
+      "ar": "صيانة مجدولة تُنبّه إلى العلامات المقتربة من الانتهاء، وتقرّر التجديد أو التخلي لكل علامة، وتقدّم التجديد لدى الهيئة السعودية للملكية الفكرية، وتُحدّث سجل المحفظة."
+    },
+    "definition": {
+      "name": "Trademark Renewal & Portfolio Maintenance",
+      "description": "Expiry monitoring, renew/abandon decision, SAIP renewal filing, and register update.",
+      "trigger_config": {
+        "type": "schedule",
+        "cron": "0 6 * * 1"
+      },
+      "variables": {
+        "trademark_id": { "type": "string" },
+        "expiry_date": { "type": "string" },
+        "renew": { "type": "boolean", "default": true }
+      },
+      "steps": [
+        {
+          "id": "scan_expiring",
+          "type": "service_task",
+          "name": "Scan Portfolio for Expiring Marks",
+          "config": {
+            "service": "lex",
+            "method": "GET",
+            "url": "/api/v1/lex/ip/trademarks/expiring?window_days=180",
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "renewal_decision" }
+          ]
+        },
+        {
+          "id": "renewal_decision",
+          "type": "human_task",
+          "name": "Renew or Abandon Decision",
+          "config": {
+            "assignee_role": "ip_portfolio_manager",
+            "sla_hours": 72,
+            "escalation_role": "ip_counsel",
+            "form_fields": [
+              { "name": "decision", "type": "select", "label": "Decision", "required": true, "options": ["renew", "abandon"] },
+              { "name": "renew", "type": "boolean", "label": "Renew?", "required": true },
+              { "name": "decision_rationale", "type": "textarea", "label": "Rationale", "required": true }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.renewal_decision.output.renew == true", "target": "budget_approval" },
+            { "target": "update_register" }
+          ]
+        },
+        {
+          "id": "budget_approval",
+          "type": "approval_chain",
+          "name": "Renewal Budget Approval",
+          "config": {
+            "approvers": [ { "role": "ip_counsel" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "file_renewal" }
+          ]
+        },
+        {
+          "id": "file_renewal",
+          "type": "service_task",
+          "name": "File Renewal with SAIP",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/ip/trademarks/${variables.trademark_id}/renew",
+            "body": {
+              "trademark_id": "${variables.trademark_id}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "update_register" }
+          ]
+        },
+        {
+          "id": "update_register",
+          "type": "human_task",
+          "name": "Update Portfolio Register",
+          "config": {
+            "assignee_role": "ip_paralegal",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "new_expiry_date", "type": "date", "label": "New Expiry Date", "required": false },
+              { "name": "register_status", "type": "select", "label": "Register Status", "required": true, "options": ["renewed", "abandoned"] }
+            ]
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-ip-infringement-enforcement",
+    "category": "legal",
+    "icon": "shield-alert",
+    "tags": ["legal", "ip", "enforcement", "infringement", "brand", "ksa", "saip"],
+    "name_i18n": {
+      "en": "IP Infringement & Brand Enforcement",
+      "ar": "التعدي على الملكية الفكرية وإنفاذ حماية العلامة"
+    },
+    "description_i18n": {
+      "en": "Event-triggered enforcement: log the suspected infringement, gather and assess evidence, choose an enforcement track (cease-and-desist, SAIP complaint, or litigation) via DoA approval, then dispatch the chosen action.",
+      "ar": "إنفاذ مُفعّل بالحدث: تسجيل الاشتباه بالتعدي، وجمع الأدلة وتقييمها، واختيار مسار الإنفاذ (إنذار بالكف، أو شكوى لدى الهيئة السعودية للملكية الفكرية، أو التقاضي) عبر اعتماد تفويض الصلاحيات، ثم إطلاق الإجراء المختار."
+    },
+    "definition": {
+      "name": "IP Infringement & Brand Enforcement",
+      "description": "Log, evidence, track-decision with DoA approval, and dispatch enforcement action.",
+      "trigger_config": {
+        "type": "event",
+        "topic": "lex.ip.infringement.reported"
+      },
+      "variables": {
+        "case_id": { "type": "string" },
+        "infringer": { "type": "string" },
+        "track": { "type": "string", "default": "cease_and_desist" },
+        "severity": { "type": "string", "default": "medium" }
+      },
+      "steps": [
+        {
+          "id": "log_report",
+          "type": "human_task",
+          "name": "Log Suspected Infringement",
+          "config": {
+            "assignee_role": "brand_protection_officer",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "infringer", "type": "text", "label": "Alleged Infringer", "required": true },
+              { "name": "affected_mark", "type": "text", "label": "Affected Mark / Asset", "required": true },
+              { "name": "channel", "type": "select", "label": "Channel", "required": true, "options": ["marketplace", "social", "physical", "domain", "other"] },
+              { "name": "description", "type": "textarea", "label": "Description", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "gather_evidence" }
+          ]
+        },
+        {
+          "id": "gather_evidence",
+          "type": "service_task",
+          "name": "Capture & Preserve Evidence",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/ip/enforcement/${variables.case_id}/evidence",
+            "body": {
+              "case_id": "${variables.case_id}",
+              "infringer": "${steps.log_report.output.infringer}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "assess_track" }
+          ]
+        },
+        {
+          "id": "assess_track",
+          "type": "human_task",
+          "name": "Assess & Recommend Enforcement Track",
+          "config": {
+            "assignee_role": "ip_counsel",
+            "sla_hours": 48,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "track", "type": "select", "label": "Recommended Track", "required": true, "options": ["cease_and_desist", "saip_complaint", "litigation"] },
+              { "name": "severity", "type": "select", "label": "Severity", "required": true, "options": ["low", "medium", "high"] },
+              { "name": "assessment_notes", "type": "textarea", "label": "Assessment Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "track_gate" }
+          ]
+        },
+        {
+          "id": "track_gate",
+          "type": "condition",
+          "name": "Litigation Track Gate",
+          "config": {
+            "expression": "steps.assess_track.output.track == 'litigation'"
+          },
+          "transitions": [
+            { "condition": "steps.assess_track.output.track == 'litigation'", "target": "litigation_approval" },
+            { "target": "dispatch_action" }
+          ]
+        },
+        {
+          "id": "litigation_approval",
+          "type": "approval_chain",
+          "name": "Litigation Authorization (DoA)",
+          "config": {
+            "approvers": [ { "role": "legal_director" }, { "role": "chief_executive" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 72
+          },
+          "transitions": [
+            { "target": "dispatch_action" }
+          ]
+        },
+        {
+          "id": "dispatch_action",
+          "type": "service_task",
+          "name": "Dispatch Enforcement Action",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/ip/enforcement/${variables.case_id}/dispatch",
+            "body": {
+              "case_id": "${variables.case_id}",
+              "track": "${steps.assess_track.output.track}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-ip-licensing-assignment",
+    "category": "legal",
+    "icon": "file-signature",
+    "tags": ["legal", "ip", "licensing", "assignment", "doa", "ksa", "esign"],
+    "name_i18n": {
+      "en": "IP Licensing & Assignment",
+      "ar": "ترخيص الملكية الفكرية والتنازل عنها"
+    },
+    "description_i18n": {
+      "en": "Drafts a licence or assignment agreement, runs IP and finance review, routes value-based DoA approval, executes by e-signature, and records the deal in the IP register (with SAIP recordal where required).",
+      "ar": "يصوغ اتفاقية ترخيص أو تنازل، ويجري مراجعة الملكية الفكرية والمالية، ويوجّه اعتماد تفويض الصلاحيات المبني على القيمة، وينفّذها بالتوقيع الإلكتروني، ويسجّل الصفقة في سجل الملكية الفكرية مع التدوين لدى الهيئة عند اللزوم."
+    },
+    "definition": {
+      "name": "IP Licensing & Assignment",
+      "description": "Draft, review, DoA approval, e-sign execution, and register recordal for IP licence/assignment.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "deal_id": { "type": "string" },
+        "deal_type": { "type": "string", "default": "license" },
+        "deal_value": { "type": "number", "default": 0 },
+        "counterparty": { "type": "string" }
+      },
+      "steps": [
+        {
+          "id": "draft_agreement",
+          "type": "human_task",
+          "name": "Draft Licence / Assignment Agreement",
+          "config": {
+            "assignee_role": "ip_counsel",
+            "sla_hours": 72,
+            "form_fields": [
+              { "name": "deal_type", "type": "select", "label": "Deal Type", "required": true, "options": ["license", "assignment"] },
+              { "name": "counterparty", "type": "text", "label": "Counterparty", "required": true },
+              { "name": "deal_value", "type": "number", "label": "Deal Value (SAR)", "required": true },
+              { "name": "scope_terms", "type": "textarea", "label": "Scope / Field-of-Use Terms", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "finance_review" }
+          ]
+        },
+        {
+          "id": "finance_review",
+          "type": "human_task",
+          "name": "Finance & Royalty Review",
+          "config": {
+            "assignee_role": "finance_reviewer",
+            "sla_hours": 48,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "finance_cleared", "type": "boolean", "label": "Finance Cleared?", "required": true },
+              { "name": "royalty_notes", "type": "textarea", "label": "Royalty / Pricing Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.finance_review.output.finance_cleared == true", "target": "doa_gate" },
+            { "target": "draft_agreement" }
+          ]
+        },
+        {
+          "id": "doa_gate",
+          "type": "condition",
+          "name": "DoA Threshold Gate",
+          "config": {
+            "expression": "variables.deal_value > 500000"
+          },
+          "transitions": [
+            { "condition": "variables.deal_value > 500000", "target": "executive_approval" },
+            { "target": "manager_approval" }
+          ]
+        },
+        {
+          "id": "manager_approval",
+          "type": "approval_chain",
+          "name": "Manager Approval (within DoA)",
+          "config": {
+            "approvers": [ { "role": "legal_manager" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "esign_execute" }
+          ]
+        },
+        {
+          "id": "executive_approval",
+          "type": "approval_chain",
+          "name": "Executive Approval (above DoA)",
+          "config": {
+            "approvers": [ { "role": "legal_director" }, { "role": "chief_executive" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 96
+          },
+          "transitions": [
+            { "target": "esign_execute" }
+          ]
+        },
+        {
+          "id": "esign_execute",
+          "type": "service_task",
+          "name": "E-Signature & Register Recordal",
+          "config": {
+            "service": "esign",
+            "method": "POST",
+            "url": "/api/v1/lex/ip/deals/${variables.deal_id}/execute",
+            "body": {
+              "deal_id": "${variables.deal_id}",
+              "status": "executed"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-domain-digital-asset-management",
+    "category": "legal",
+    "icon": "globe",
+    "tags": ["legal", "ip", "domain", "digital-asset", "ksa"],
+    "name_i18n": {
+      "en": "Domain Name & Digital-Asset Management",
+      "ar": "إدارة أسماء النطاقات والأصول الرقمية"
+    },
+    "description_i18n": {
+      "en": "Handles domain/digital-asset requests: capture the asset, verify availability and conflicts, approve acquisition or renewal, register/renew with the registrar, and record it in the digital-asset inventory.",
+      "ar": "يعالج طلبات النطاقات والأصول الرقمية: استلام الأصل، والتحقق من التوافر والتعارض، واعتماد الاستحواذ أو التجديد، والتسجيل أو التجديد لدى المُسجِّل، وتوثيقه في جرد الأصول الرقمية."
+    },
+    "definition": {
+      "name": "Domain Name & Digital-Asset Management",
+      "description": "Capture, availability check, approval, registrar action, and inventory recordal for digital assets.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "asset_id": { "type": "string" },
+        "asset_name": { "type": "string" },
+        "action": { "type": "string", "default": "register" },
+        "available": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "capture_asset",
+          "type": "human_task",
+          "name": "Capture Asset Request",
+          "config": {
+            "assignee_role": "brand_protection_officer",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "asset_name", "type": "text", "label": "Domain / Asset Name", "required": true },
+              { "name": "asset_type", "type": "select", "label": "Asset Type", "required": true, "options": ["domain", "social_handle", "app_store", "ssl_cert"] },
+              { "name": "action", "type": "select", "label": "Action", "required": true, "options": ["register", "renew", "transfer", "release"] }
+            ]
+          },
+          "transitions": [
+            { "target": "availability_check" }
+          ]
+        },
+        {
+          "id": "availability_check",
+          "type": "service_task",
+          "name": "Availability & Conflict Check",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/ip/digital-assets/${variables.asset_id}/availability",
+            "body": {
+              "asset_name": "${steps.capture_asset.output.asset_name}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "approve_action" }
+          ]
+        },
+        {
+          "id": "approve_action",
+          "type": "approval_chain",
+          "name": "Approve Acquisition / Renewal",
+          "config": {
+            "approvers": [ { "role": "ip_counsel" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "registrar_action" }
+          ]
+        },
+        {
+          "id": "registrar_action",
+          "type": "service_task",
+          "name": "Execute Registrar Action",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/ip/digital-assets/${variables.asset_id}/execute",
+            "body": {
+              "asset_id": "${variables.asset_id}",
+              "action": "${steps.capture_asset.output.action}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "record_inventory" }
+          ]
+        },
+        {
+          "id": "record_inventory",
+          "type": "human_task",
+          "name": "Record in Digital-Asset Inventory",
+          "config": {
+            "assignee_role": "ip_paralegal",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "registrar", "type": "text", "label": "Registrar / Provider", "required": true },
+              { "name": "next_renewal_date", "type": "date", "label": "Next Renewal Date", "required": false }
+            ]
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-commercial-lease-drafting-ejar",
+    "category": "legal",
+    "icon": "building-2",
+    "tags": ["legal", "real-estate", "lease", "ejar", "clm", "doa", "ksa"],
+    "name_i18n": {
+      "en": "Commercial Lease Drafting & Review (Ejar)",
+      "ar": "صياغة ومراجعة عقد الإيجار التجاري (إيجار)"
+    },
+    "description_i18n": {
+      "en": "Drafts a commercial lease, runs legal risk review, routes value-based DoA approval, registers the contract on the Ejar network, and executes by e-signature.",
+      "ar": "يصوغ عقد إيجار تجاري، ويجري مراجعة المخاطر القانونية، ويوجّه اعتماد تفويض الصلاحيات المبني على القيمة، ويوثّق العقد على شبكة إيجار، وينفّذه بالتوقيع الإلكتروني."
+    },
+    "definition": {
+      "name": "Commercial Lease Drafting & Review (Ejar)",
+      "description": "Draft, risk review, DoA approval, Ejar registration, and e-sign execution for a commercial lease.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "lease_id": { "type": "string" },
+        "annual_rent": { "type": "number", "default": 0 },
+        "tenant_party": { "type": "string" },
+        "approved": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "draft_lease",
+          "type": "human_task",
+          "name": "Draft Commercial Lease",
+          "config": {
+            "assignee_role": "real_estate_counsel",
+            "sla_hours": 72,
+            "form_fields": [
+              { "name": "property_ref", "type": "text", "label": "Property / Unit Reference", "required": true },
+              { "name": "tenant_party", "type": "text", "label": "Tenant / Counterparty", "required": true },
+              { "name": "annual_rent", "type": "number", "label": "Annual Rent (SAR)", "required": true },
+              { "name": "term_years", "type": "number", "label": "Term (Years)", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "risk_review" }
+          ]
+        },
+        {
+          "id": "risk_review",
+          "type": "human_task",
+          "name": "Legal Risk Review",
+          "config": {
+            "assignee_role": "legal_counsel",
+            "sla_hours": 48,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "review_approved", "type": "boolean", "label": "Cleared for Approval?", "required": true },
+              { "name": "risk_level", "type": "select", "label": "Risk Level", "required": true, "options": ["low", "medium", "high"] },
+              { "name": "review_notes", "type": "textarea", "label": "Review Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.risk_review.output.review_approved == true", "target": "doa_gate" },
+            { "target": "draft_lease" }
+          ]
+        },
+        {
+          "id": "doa_gate",
+          "type": "condition",
+          "name": "DoA Threshold Gate",
+          "config": {
+            "expression": "variables.annual_rent > 1000000"
+          },
+          "transitions": [
+            { "condition": "variables.annual_rent > 1000000", "target": "executive_approval" },
+            { "target": "manager_approval" }
+          ]
+        },
+        {
+          "id": "manager_approval",
+          "type": "approval_chain",
+          "name": "Manager Approval (within DoA)",
+          "config": {
+            "approvers": [ { "role": "legal_manager" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "ejar_register" }
+          ]
+        },
+        {
+          "id": "executive_approval",
+          "type": "approval_chain",
+          "name": "Executive Approval (above DoA)",
+          "config": {
+            "approvers": [ { "role": "legal_director" }, { "role": "chief_executive" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 96
+          },
+          "transitions": [
+            { "target": "ejar_register" }
+          ]
+        },
+        {
+          "id": "ejar_register",
+          "type": "service_task",
+          "name": "Register Contract on Ejar Network",
+          "config": {
+            "service": "ejar",
+            "method": "POST",
+            "url": "/api/v1/lex/real-estate/leases/${variables.lease_id}/ejar-register",
+            "body": {
+              "lease_id": "${variables.lease_id}",
+              "annual_rent": "${steps.draft_lease.output.annual_rent}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "esign_execute" }
+          ]
+        },
+        {
+          "id": "esign_execute",
+          "type": "service_task",
+          "name": "E-Signature & Execution",
+          "config": {
+            "service": "esign",
+            "method": "POST",
+            "url": "/api/v1/lex/real-estate/leases/${variables.lease_id}/execute",
+            "body": {
+              "lease_id": "${variables.lease_id}",
+              "status": "executed"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-lease-renewal-rent-review",
+    "category": "legal",
+    "icon": "calendar-clock",
+    "tags": ["legal", "real-estate", "lease", "renewal", "rent-review", "ejar", "ksa"],
+    "name_i18n": {
+      "en": "Lease Renewal & Rent Review",
+      "ar": "تجديد الإيجار ومراجعة القيمة الإيجارية"
+    },
+    "description_i18n": {
+      "en": "Schedule-triggered renewal: flag leases nearing expiry, assess market rent, decide renew/renegotiate/exit, approve the new rent, and update the Ejar registration.",
+      "ar": "تجديد مجدول: تنبيه لعقود الإيجار المقتربة من الانتهاء، وتقييم القيمة الإيجارية السوقية، وقرار التجديد أو إعادة التفاوض أو الإنهاء، واعتماد الإيجار الجديد، وتحديث توثيق إيجار."
+    },
+    "definition": {
+      "name": "Lease Renewal & Rent Review",
+      "description": "Expiry flag, rent assessment, renew/renegotiate decision, approval, and Ejar update.",
+      "trigger_config": {
+        "type": "schedule",
+        "cron": "0 7 1 * *"
+      },
+      "variables": {
+        "lease_id": { "type": "string" },
+        "current_rent": { "type": "number", "default": 0 },
+        "proposed_rent": { "type": "number", "default": 0 },
+        "decision": { "type": "string", "default": "renew" }
+      },
+      "steps": [
+        {
+          "id": "flag_expiring",
+          "type": "service_task",
+          "name": "Flag Leases Nearing Expiry",
+          "config": {
+            "service": "lex",
+            "method": "GET",
+            "url": "/api/v1/lex/real-estate/leases/expiring?window_days=120",
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "rent_assessment" }
+          ]
+        },
+        {
+          "id": "rent_assessment",
+          "type": "human_task",
+          "name": "Market Rent Assessment & Decision",
+          "config": {
+            "assignee_role": "real_estate_counsel",
+            "sla_hours": 72,
+            "escalation_role": "legal_manager",
+            "form_fields": [
+              { "name": "decision", "type": "select", "label": "Decision", "required": true, "options": ["renew", "renegotiate", "exit"] },
+              { "name": "proposed_rent", "type": "number", "label": "Proposed Rent (SAR)", "required": true },
+              { "name": "assessment_notes", "type": "textarea", "label": "Assessment Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "decision_gate" }
+          ]
+        },
+        {
+          "id": "decision_gate",
+          "type": "condition",
+          "name": "Renew/Renegotiate vs Exit Gate",
+          "config": {
+            "expression": "steps.rent_assessment.output.decision == 'exit'"
+          },
+          "transitions": [
+            { "condition": "steps.rent_assessment.output.decision == 'exit'", "target": "end" },
+            { "target": "rent_approval" }
+          ]
+        },
+        {
+          "id": "rent_approval",
+          "type": "approval_chain",
+          "name": "New Rent Approval",
+          "config": {
+            "approvers": [ { "role": "legal_manager" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "ejar_update" }
+          ]
+        },
+        {
+          "id": "ejar_update",
+          "type": "service_task",
+          "name": "Update Ejar Registration",
+          "config": {
+            "service": "ejar",
+            "method": "POST",
+            "url": "/api/v1/lex/real-estate/leases/${variables.lease_id}/ejar-renew",
+            "body": {
+              "lease_id": "${variables.lease_id}",
+              "proposed_rent": "${steps.rent_assessment.output.proposed_rent}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-property-acquisition-disposal",
+    "category": "legal",
+    "icon": "landmark",
+    "tags": ["legal", "real-estate", "acquisition", "disposal", "due-diligence", "doa", "ksa"],
+    "name_i18n": {
+      "en": "Property Acquisition / Disposal",
+      "ar": "تملّك العقار أو التصرف فيه"
+    },
+    "description_i18n": {
+      "en": "Manages a property acquisition or disposal: open the matter, run title and legal due diligence, escalate any defects, route board-level DoA approval, then execute the deed and record the transaction.",
+      "ar": "يدير عملية تملّك عقار أو التصرف فيه: فتح الملف، وإجراء الفحص النافي للجهالة على الصك والوضع القانوني، وتصعيد أي عيوب، وتوجيه اعتماد مجلس الإدارة وفق تفويض الصلاحيات، ثم تنفيذ الصك وتوثيق المعاملة."
+    },
+    "definition": {
+      "name": "Property Acquisition / Disposal",
+      "description": "Matter open, title/legal due diligence, defect escalation, board DoA approval, deed execution.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "deal_id": { "type": "string" },
+        "deal_type": { "type": "string", "default": "acquisition" },
+        "deal_value": { "type": "number", "default": 0 },
+        "dd_cleared": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "open_matter",
+          "type": "human_task",
+          "name": "Open Property Matter",
+          "config": {
+            "assignee_role": "real_estate_counsel",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "deal_type", "type": "select", "label": "Deal Type", "required": true, "options": ["acquisition", "disposal"] },
+              { "name": "property_ref", "type": "text", "label": "Property / Deed Reference", "required": true },
+              { "name": "deal_value", "type": "number", "label": "Deal Value (SAR)", "required": true },
+              { "name": "counterparty", "type": "text", "label": "Counterparty", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "due_diligence" }
+          ]
+        },
+        {
+          "id": "due_diligence",
+          "type": "service_task",
+          "name": "Title & Legal Due Diligence",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/real-estate/deals/${variables.deal_id}/due-diligence",
+            "body": {
+              "deal_id": "${variables.deal_id}",
+              "property_ref": "${steps.open_matter.output.property_ref}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "condition": "steps.due_diligence.output.dd_cleared == true", "target": "board_approval" },
+            { "target": "defect_resolution" }
+          ]
+        },
+        {
+          "id": "defect_resolution",
+          "type": "human_task",
+          "name": "Resolve Title / Legal Defects",
+          "config": {
+            "assignee_role": "legal_director",
+            "sla_hours": 120,
+            "form_fields": [
+              { "name": "defects_cleared", "type": "boolean", "label": "Defects Cleared?", "required": true },
+              { "name": "resolution_notes", "type": "textarea", "label": "Resolution Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.defect_resolution.output.defects_cleared == true", "target": "board_approval" },
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "board_approval",
+          "type": "approval_chain",
+          "name": "Board-Level DoA Approval",
+          "config": {
+            "approvers": [ { "role": "legal_director" }, { "role": "chief_executive" }, { "role": "board_secretary" } ],
+            "mode": "sequential",
+            "quorum": 3,
+            "sla_hours": 168
+          },
+          "transitions": [
+            { "target": "execute_deed" }
+          ]
+        },
+        {
+          "id": "execute_deed",
+          "type": "service_task",
+          "name": "Execute Deed & Record Transaction",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/real-estate/deals/${variables.deal_id}/execute",
+            "body": {
+              "deal_id": "${variables.deal_id}",
+              "status": "executed"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-lease-termination-surrender",
+    "category": "legal",
+    "icon": "door-open",
+    "tags": ["legal", "real-estate", "lease", "termination", "surrender", "ejar", "ksa"],
+    "name_i18n": {
+      "en": "Lease Termination / Surrender",
+      "ar": "إنهاء عقد الإيجار أو التنازل عنه"
+    },
+    "description_i18n": {
+      "en": "Processes early termination or surrender of a lease: capture the request, assess liability and notice obligations, approve any settlement, deregister on Ejar, and confirm handover/closeout.",
+      "ar": "يعالج الإنهاء المبكر لعقد الإيجار أو التنازل عنه: استلام الطلب، وتقييم الالتزامات والتعويضات ومدد الإشعار، واعتماد أي تسوية، وإلغاء التوثيق على إيجار، وتأكيد التسليم والإغلاق."
+    },
+    "definition": {
+      "name": "Lease Termination / Surrender",
+      "description": "Capture, liability assessment, settlement approval, Ejar deregistration, and handover closeout.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "lease_id": { "type": "string" },
+        "termination_type": { "type": "string", "default": "surrender" },
+        "settlement_amount": { "type": "number", "default": 0 }
+      },
+      "steps": [
+        {
+          "id": "capture_request",
+          "type": "human_task",
+          "name": "Capture Termination Request",
+          "config": {
+            "assignee_role": "real_estate_paralegal",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "lease_ref", "type": "text", "label": "Lease Reference", "required": true },
+              { "name": "termination_type", "type": "select", "label": "Termination Type", "required": true, "options": ["surrender", "early_termination", "breach"] },
+              { "name": "effective_date", "type": "date", "label": "Requested Effective Date", "required": true },
+              { "name": "reason", "type": "textarea", "label": "Reason", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "liability_assessment" }
+          ]
+        },
+        {
+          "id": "liability_assessment",
+          "type": "human_task",
+          "name": "Liability & Notice Assessment",
+          "config": {
+            "assignee_role": "real_estate_counsel",
+            "sla_hours": 48,
+            "escalation_role": "legal_manager",
+            "form_fields": [
+              { "name": "settlement_required", "type": "boolean", "label": "Settlement Required?", "required": true },
+              { "name": "settlement_amount", "type": "number", "label": "Settlement Amount (SAR)", "required": false },
+              { "name": "assessment_notes", "type": "textarea", "label": "Assessment Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "settlement_gate" }
+          ]
+        },
+        {
+          "id": "settlement_gate",
+          "type": "condition",
+          "name": "Settlement Approval Gate",
+          "config": {
+            "expression": "steps.liability_assessment.output.settlement_required == true"
+          },
+          "transitions": [
+            { "condition": "steps.liability_assessment.output.settlement_required == true", "target": "settlement_approval" },
+            { "target": "ejar_deregister" }
+          ]
+        },
+        {
+          "id": "settlement_approval",
+          "type": "approval_chain",
+          "name": "Settlement Approval (DoA)",
+          "config": {
+            "approvers": [ { "role": "legal_manager" }, { "role": "finance_reviewer" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 72
+          },
+          "transitions": [
+            { "target": "ejar_deregister" }
+          ]
+        },
+        {
+          "id": "ejar_deregister",
+          "type": "service_task",
+          "name": "Deregister Contract on Ejar",
+          "config": {
+            "service": "ejar",
+            "method": "POST",
+            "url": "/api/v1/lex/real-estate/leases/${variables.lease_id}/ejar-terminate",
+            "body": {
+              "lease_id": "${variables.lease_id}",
+              "termination_type": "${steps.capture_request.output.termination_type}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "handover_closeout" }
+          ]
+        },
+        {
+          "id": "handover_closeout",
+          "type": "human_task",
+          "name": "Confirm Handover & Closeout",
+          "config": {
+            "assignee_role": "real_estate_paralegal",
+            "sla_hours": 48,
+            "form_fields": [
+              { "name": "handover_confirmed", "type": "boolean", "label": "Handover Confirmed?", "required": true },
+              { "name": "deposit_returned", "type": "boolean", "label": "Deposit Returned?", "required": false },
+              { "name": "closeout_notes", "type": "textarea", "label": "Closeout Notes", "required": false }
+            ]
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  }
+]

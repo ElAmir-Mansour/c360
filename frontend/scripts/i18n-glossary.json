@@ -1,0 +1,1159 @@
+{
+  "$comment": "Canonical Saudi-MSA termbase. Single source of truth over all frontend bundles + backend NameAR strings. See saudi-arabic-localization strategy.",
+  "acronymPolicy": "Keep RTO/RPO/RTA/WORM/SLA/MFA/SSO/SIEM/PDPL/VAT/CR verbatim in Latin; gloss the Arabic expansion once on first use per surface.",
+  "terms": [
+    {
+      "en": "statute / Saudi law",
+      "ar": "نظام",
+      "domain": "legal",
+      "banned_ar": [
+        "قانون",
+        "شريعة"
+      ],
+      "note": "KSA institutional convention: primary legislation is نظام (e.g. نظام العمل, نظام الشركات). Do NOT translate 'law' as قانون in a Saudi statutory context — Saudi primary legislation is a نظام."
+    },
+    {
+      "en": "regulation / implementing regulation",
+      "ar": "لائحة (اللائحة التنفيذية)",
+      "domain": "legal",
+      "banned_ar": [
+        "تنظيم",
+        "نظام"
+      ],
+      "note": "لائحة is the subordinate instrument under a نظام. Keep the نظام/لائحة hierarchy distinct — conflating them is a frequent error."
+    },
+    {
+      "en": "compliance",
+      "ar": "امتثال",
+      "domain": "legal",
+      "banned_ar": [
+        "التزام",
+        "توافق",
+        "مطابقة"
+      ],
+      "note": "Established in-codebase (contract 'compliance' badge = امتثال). Regulatory compliance = الامتثال التنظيمي."
+    },
+    {
+      "en": "contract",
+      "ar": "عقد / عقود",
+      "domain": "legal",
+      "banned_ar": [
+        "اتفاقية"
+      ],
+      "note": "Plural عقود. CLM = إدارة دورة حياة العقود."
+    },
+    {
+      "en": "agreement",
+      "ar": "اتفاقية",
+      "domain": "legal",
+      "banned_ar": [
+        "عقد"
+      ],
+      "note": "Used for MoU/framework agreements; NDA = اتفاقية عدم إفصاح."
+    },
+    {
+      "en": "case (litigation case)",
+      "ar": "قضية / قضايا",
+      "domain": "legal",
+      "banned_ar": [
+        "حالة",
+        "ملف"
+      ],
+      "note": "Codebase-canonical: قضية = the litigation case entity. Distinct from دعوى (the lawsuit/claim filed) and from ملف قانوني (a legal matter/work file)."
+    },
+    {
+      "en": "matter (legal matter / work file)",
+      "ar": "ملف قانوني",
+      "domain": "legal",
+      "banned_ar": [
+        "قضية",
+        "مسألة"
+      ],
+      "note": "Non-obvious: 'matter' is the broad CLM work item, wider than a court قضية. Use ملف قانوني (or معاملة قانونية for a transactional matter). Never collapse matter and case into قضية."
+    },
+    {
+      "en": "lawsuit / claim / statement of claim",
+      "ar": "دعوى / صحيفة الدعوى",
+      "domain": "legal",
+      "banned_ar": [
+        "قضية"
+      ],
+      "note": "دعوى = the lawsuit/claim; صحيفة الدعوى = the statement of claim document. رفع الدعوى = to file suit."
+    },
+    {
+      "en": "litigation",
+      "ar": "التقاضي",
+      "domain": "legal",
+      "banned_ar": [
+        "مقاضاة",
+        "دعاوى"
+      ],
+      "note": "Litigation cases module = قضايا التقاضي / إدارة القضايا."
+    },
+    {
+      "en": "clause",
+      "ar": "بند",
+      "domain": "legal",
+      "banned_ar": [
+        "فقرة",
+        "شرط"
+      ],
+      "note": "Codebase-canonical (بند / بند مفقود = missing clause). شرط = 'condition'; keep separate from بند."
+    },
+    {
+      "en": "obligation",
+      "ar": "التزام",
+      "domain": "legal",
+      "banned_ar": [
+        "واجب",
+        "تعهّد"
+      ],
+      "note": "Plural التزامات. Obligation tracking = تتبّع الالتزامات."
+    },
+    {
+      "en": "party",
+      "ar": "طرف / أطراف",
+      "domain": "legal",
+      "banned_ar": [
+        "جهة"
+      ],
+      "note": "Plural أطراف. Counterparty = الطرف المقابل. Third party = طرف ثالث."
+    },
+    {
+      "en": "plaintiff",
+      "ar": "مدّعٍ",
+      "domain": "legal",
+      "banned_ar": [
+        "مُدّعي",
+        "شاكي"
+      ],
+      "note": "Codebase-canonical. Definite form: المدّعي. Keep the hamza/kasra rendering مدّعٍ in indefinite headings."
+    },
+    {
+      "en": "defendant",
+      "ar": "مدّعى عليه",
+      "domain": "legal",
+      "banned_ar": [
+        "متّهم",
+        "مدعي عليه"
+      ],
+      "note": "Codebase-canonical. متّهم is criminal-defendant only — do not use for civil/commercial 'defendant'."
+    },
+    {
+      "en": "hearing",
+      "ar": "جلسة",
+      "domain": "legal",
+      "banned_ar": [
+        "استماع",
+        "محاكمة"
+      ],
+      "note": "Codebase-canonical. Hearing minutes = محضر الجلسة."
+    },
+    {
+      "en": "judgment / verdict / ruling",
+      "ar": "حكم",
+      "domain": "legal",
+      "banned_ar": [
+        "قرار"
+      ],
+      "note": "Codebase-canonical. Plural أحكام. Enforcement of judgment = تنفيذ الحكم."
+    },
+    {
+      "en": "pleading / memo",
+      "ar": "مذكرة",
+      "domain": "legal",
+      "banned_ar": [
+        "مرافعة",
+        "بيان"
+      ],
+      "note": "Codebase-canonical (مذكرة = written pleading/memo). Response memo = مذكرة جوابية / مذكرة رد."
+    },
+    {
+      "en": "objection / appeal",
+      "ar": "اعتراض / استئناف",
+      "domain": "legal",
+      "banned_ar": [
+        "طعن",
+        "شكوى"
+      ],
+      "note": "اعتراض = objection to a judgment; استئناف = appeal to the appellate court. Court of Appeal = محكمة الاستئناف."
+    },
+    {
+      "en": "expert (court-appointed)",
+      "ar": "خبير",
+      "domain": "legal",
+      "banned_ar": [
+        "مختص",
+        "خبرة"
+      ],
+      "note": "Codebase-canonical. Expert report = تقرير الخبير; expert mandate = مهمة الخبير."
+    },
+    {
+      "en": "hearing minutes / hearing record / seizure record",
+      "ar": "محضر",
+      "domain": "legal",
+      "banned_ar": [
+        "ملاحظات",
+        "سجل"
+      ],
+      "note": "Codebase-canonical. محضر الجلسة = hearing minutes; محضر ضبط = seizure record."
+    },
+    {
+      "en": "approval (sign-off)",
+      "ar": "اعتماد",
+      "domain": "legal",
+      "banned_ar": [
+        "موافقة"
+      ],
+      "note": "Non-obvious: distinguish اعتماد (authoritative sign-off, DoA-gated approval, 'approved' state) from موافقة (assent/consent). Codebase uses بانتظار الاعتماد for 'awaiting approval'. Prefer اعتماد for the workflow approval gate."
+    },
+    {
+      "en": "consent / agree",
+      "ar": "موافقة / أوافق",
+      "domain": "legal",
+      "banned_ar": [
+        "اعتماد"
+      ],
+      "note": "Pairs with اعتماد above — use موافقة for user consent/agree actions, اعتماد for authoritative approval gates."
+    },
+    {
+      "en": "settlement",
+      "ar": "تسوية",
+      "domain": "legal",
+      "banned_ar": [
+        "صلح",
+        "اتفاق"
+      ],
+      "note": "Codebase-canonical (settlement module). صلح is acceptable for amicable settlement but تسوية is the platform-standard entity term."
+    },
+    {
+      "en": "consultation",
+      "ar": "استشارة قانونية",
+      "domain": "legal",
+      "banned_ar": [
+        "مشورة",
+        "استفسار"
+      ],
+      "note": "Codebase-canonical. Legal advisor = مستشار قانوني (legal_roles.go)."
+    },
+    {
+      "en": "investigation",
+      "ar": "تحقيق",
+      "domain": "legal",
+      "banned_ar": [
+        "تحرٍّ",
+        "فحص"
+      ],
+      "note": "Codebase-canonical (investigations section = قسم القضايا والتحقيقات)."
+    },
+    {
+      "en": "power of attorney (POA)",
+      "ar": "توكيل",
+      "domain": "legal",
+      "banned_ar": [
+        "تفويض",
+        "وكالة"
+      ],
+      "note": "CRITICAL distinction: توكIل = a notarized power of attorney authorizing representation. Do NOT render as تفويض."
+    },
+    {
+      "en": "delegation of authority",
+      "ar": "تفويض الصلاحيات",
+      "domain": "legal",
+      "banned_ar": [
+        "توكيل",
+        "تفويض"
+      ],
+      "note": "CRITICAL distinction from POA. The DoA matrix (who may approve at what value) = مصفوفة تفويض الصلاحيات. Codebase 'DoA authority reference' = مرجع تفويض الصلاحيات."
+    },
+    {
+      "en": "playbook (contract playbook)",
+      "ar": "دليل الصياغة والتفاوض",
+      "domain": "legal",
+      "banned_ar": [
+        "كتاب اللعب",
+        "خطة"
+      ],
+      "note": "Non-obvious: a contract playbook is a standards/fallback guide. Prefer دليل الصياغة والتفاوض (or دليل بنود العقود). Never translate literally as كتاب/دفتر اللعب."
+    },
+    {
+      "en": "redline / tracked changes",
+      "ar": "التعديلات المتعقّبة",
+      "domain": "legal",
+      "banned_ar": [
+        "الخط الأحمر",
+        "شطب"
+      ],
+      "note": "Non-obvious: 'redline' means tracked contract edits, not a limit. Use التعديلات المتعقّبة (or المراجعة التتبعية). الخط الأحمر wrongly implies a boundary/ultimatum."
+    },
+    {
+      "en": "draft",
+      "ar": "مسودة",
+      "domain": "legal",
+      "banned_ar": [
+        "مسوّدة",
+        "نسخة أولية"
+      ],
+      "note": "Codebase-canonical. AI-generated draft = مسودة مُولَّدة بالذكاء الاصطناعي."
+    },
+    {
+      "en": "legal review",
+      "ar": "مراجعة قانونية",
+      "domain": "legal",
+      "banned_ar": [
+        "تدقيق قانوني",
+        "فحص"
+      ],
+      "note": "Codebase-canonical badge value."
+    },
+    {
+      "en": "competent court / jurisdiction",
+      "ar": "المحكمة المختصة / الاختصاص القضائي / الاختصاص",
+      "domain": "legal",
+      "banned_ar": [
+        "محكمة الاختصاص",
+        "ولاية قضائية"
+      ],
+      "note": "Codebase field 'competent court' = المحكمة المختصة."
+    },
+    {
+      "en": "lawyer / attorney",
+      "ar": "محامٍ",
+      "domain": "legal",
+      "banned_ar": [
+        "وكيل",
+        "قانوني"
+      ],
+      "note": "Definite: المحامي. Handling lawyer = المحامي المختص (legal_roles.go: الموظف المختص / المحامي)."
+    },
+    {
+      "en": "legal department / legal affairs",
+      "ar": "الإدارة القانونية / الشؤون القانونية",
+      "domain": "legal",
+      "banned_ar": [
+        "قسم القانون"
+      ],
+      "note": "legal_roles.go canonical: مدير الإدارة القانونية = Legal Director."
+    },
+    {
+      "en": "failover",
+      "ar": "تجاوز الفشل",
+      "domain": "dr",
+      "banned_ar": [
+        "الفشل التلقائي",
+        "تبديل عند الفشل",
+        "إيقاف عند الفشل"
+      ],
+      "note": "Codebase-canonical (dr-action-labels). Failover drill = تمرين تجاوز فشل."
+    },
+    {
+      "en": "failback",
+      "ar": "العودة الاحتياطية",
+      "domain": "dr",
+      "banned_ar": [
+        "الرجوع",
+        "العودة للفشل",
+        "استرجاع"
+      ],
+      "note": "Codebase-canonical. The reverse of failover — returning production to the primary site."
+    },
+    {
+      "en": "replication",
+      "ar": "النسخ المتماثل",
+      "domain": "dr",
+      "banned_ar": [
+        "التكرار",
+        "المضاعفة",
+        "الاستنساخ"
+      ],
+      "note": "Codebase-canonical. Replication stream = تدفّق النسخ المتماثل; pause/resume = إيقاف/استئناف."
+    },
+    {
+      "en": "RTO (Recovery Time Objective)",
+      "ar": "RTO — هدف زمن الاسترداد",
+      "domain": "dr",
+      "banned_ar": [
+        "هدف وقت الاسترجاع"
+      ],
+      "note": "ACRONYM RULE: keep 'RTO' verbatim and gloss هدف زمن الاسترداد on first use per surface. Codebase pattern: هدف زمن الاسترداد (RTO)."
+    },
+    {
+      "en": "RPO (Recovery Point Objective)",
+      "ar": "RPO — هدف نقطة الاسترداد",
+      "domain": "dr",
+      "banned_ar": [
+        "هدف نقطة الاسترجاع"
+      ],
+      "note": "ACRONYM RULE: keep 'RPO' verbatim + gloss هدف نقطة الاسترداد. Codebase pattern: هدف نقطة الاسترداد (RPO)."
+    },
+    {
+      "en": "RTA (Recovery Time Actual)",
+      "ar": "RTA — زمن الاسترداد الفعلي",
+      "domain": "dr",
+      "banned_ar": [
+        "الزمن الحقيقي"
+      ],
+      "note": "ACRONYM RULE: keep 'RTA' verbatim + gloss زمن الاسترداد الفعلي. It is the MEASURED counterpart to the RTO target — keep target vs actual distinct."
+    },
+    {
+      "en": "runbook",
+      "ar": "دليل التشغيل",
+      "domain": "dr",
+      "banned_ar": [
+        "كتاب التشغيل",
+        "دليل الإجراءات"
+      ],
+      "note": "DR runbook = دليل تشغيل التعافي. Distinct from a legal playbook."
+    },
+    {
+      "en": "isolated boot / isolated recovery",
+      "ar": "الإقلاع المعزول",
+      "domain": "dr",
+      "banned_ar": [
+        "التشغيل المنعزل",
+        "الإقلاع المنفصل"
+      ],
+      "note": "Codebase-canonical. Boot plan = خطة الإقلاع."
+    },
+    {
+      "en": "WORM (Write Once Read Many)",
+      "ar": "WORM",
+      "domain": "dr",
+      "banned_ar": [
+        "أرشفة غير قابلة للتعديل"
+      ],
+      "note": "ACRONYM RULE: keep 'WORM' verbatim. Codebase keeps WORM and describes as مقفلة بنمط WORM / كتابة WORM. Gloss once as (الكتابة مرة والقراءة عدة مرات) if needed."
+    },
+    {
+      "en": "recovery point",
+      "ar": "نقطة الاسترداد",
+      "domain": "dr",
+      "banned_ar": [
+        "نقطة الاسترجاع",
+        "نقطة التعافي"
+      ],
+      "note": "Codebase-canonical. Sealed recovery point = نقطة استرداد مختومة."
+    },
+    {
+      "en": "disaster recovery",
+      "ar": "التعافي من الكوارث",
+      "domain": "dr",
+      "banned_ar": [
+        "استرداد الكوارث",
+        "استعادة الكوارث"
+      ],
+      "note": "Codebase-canonical (تنفيذ التعافي من الكوارث). Note استرداد = recovery of data; تعافٍ = the DR discipline/posture."
+    },
+    {
+      "en": "drill (DR exercise)",
+      "ar": "تمرين",
+      "domain": "dr",
+      "banned_ar": [
+        "تدريب",
+        "محاكاة"
+      ],
+      "note": "Codebase-canonical. Failover drill = تمرين تجاوز فشل."
+    },
+    {
+      "en": "consistency group",
+      "ar": "مجموعة اتّساق",
+      "domain": "dr",
+      "banned_ar": [
+        "مجموعة التناسق",
+        "مجموعة الثبات"
+      ],
+      "note": "Codebase-canonical. The unit of coordinated failover/replication."
+    },
+    {
+      "en": "cutover / cutback",
+      "ar": "التحويل النهائي / التحويل العكسي",
+      "domain": "dr",
+      "banned_ar": [
+        "القطع",
+        "التبديل النهائي"
+      ],
+      "note": "Codebase-canonical: cutback (failback gate) = التحويل العكسي. Cutover to DR = التحويل النهائي."
+    },
+    {
+      "en": "backup",
+      "ar": "نسخة احتياطية",
+      "domain": "dr",
+      "banned_ar": [
+        "احتياطي",
+        "دعم"
+      ],
+      "note": "Plural نسخ احتياطية. Distinct from failback (العودة الاحتياطية) — do not let احتياطية bleed between them."
+    },
+    {
+      "en": "snapshot",
+      "ar": "لقطة",
+      "domain": "dr",
+      "banned_ar": [
+        "صورة",
+        "نسخة"
+      ],
+      "note": "Point-in-time snapshot = لقطة زمنية."
+    },
+    {
+      "en": "threat",
+      "ar": "تهديد",
+      "domain": "cyber",
+      "banned_ar": [
+        "خطر",
+        "تحذير"
+      ],
+      "note": "Threat intelligence = استخبارات التهديدات; threat actor = جهة التهديد."
+    },
+    {
+      "en": "vulnerability",
+      "ar": "ثغرة",
+      "domain": "cyber",
+      "banned_ar": [
+        "ضعف",
+        "هشاشة"
+      ],
+      "note": "Plural ثغرات. Vulnerability management = إدارة الثغرات."
+    },
+    {
+      "en": "security incident",
+      "ar": "حادث أمني",
+      "domain": "cyber",
+      "banned_ar": [
+        "واقعة",
+        "حدث"
+      ],
+      "note": "Distinguish incident (حادث) from event (حدث). Incident response = الاستجابة للحوادث."
+    },
+    {
+      "en": "breach",
+      "ar": "اختراق",
+      "domain": "cyber",
+      "banned_ar": [
+        "خرق",
+        "تسريب"
+      ],
+      "note": "Data breach = اختراق البيانات; data leak = تسريب البيانات (keep breach vs leak distinct)."
+    },
+    {
+      "en": "encryption",
+      "ar": "تشفير",
+      "domain": "cyber",
+      "banned_ar": [
+        "ترميز",
+        "تعمية"
+      ],
+      "note": "At-rest = التشفير أثناء التخزين; in-transit = التشفير أثناء النقل. BYOK glossed, key verbatim."
+    },
+    {
+      "en": "authentication",
+      "ar": "المصادقة",
+      "domain": "cyber",
+      "banned_ar": [
+        "التوثيق",
+        "التحقق"
+      ],
+      "note": "Keep المصادقة (authentication) distinct from التخويل (authorization) and from التحقق (verification)."
+    },
+    {
+      "en": "authorization",
+      "ar": "التخويل",
+      "domain": "cyber",
+      "banned_ar": [
+        "المصادقة",
+        "الترخيص"
+      ],
+      "note": "AuthN vs AuthZ: المصادقة vs التخويل. Do not use الترخيص here (that is 'license')."
+    },
+    {
+      "en": "MFA (Multi-Factor Authentication)",
+      "ar": "MFA — المصادقة متعددة العوامل",
+      "domain": "cyber",
+      "banned_ar": [
+        "التحقق الثنائي"
+      ],
+      "note": "ACRONYM RULE: keep 'MFA' verbatim + gloss المصادقة متعددة العوامل. 2FA (التحقق بخطوتين) is the narrower two-factor case."
+    },
+    {
+      "en": "SSO (Single Sign-On)",
+      "ar": "SSO — الدخول الموحّد",
+      "domain": "cyber",
+      "banned_ar": [
+        "تسجيل الدخول الأحادي",
+        "الدخول المفرد"
+      ],
+      "note": "ACRONYM RULE: keep 'SSO' verbatim + gloss الدخول الموحّد. SAML/OIDC kept verbatim."
+    },
+    {
+      "en": "SIEM",
+      "ar": "SIEM — إدارة معلومات وأحداث الأمن / SIEM",
+      "domain": "cyber",
+      "banned_ar": [],
+      "note": "ACRONYM RULE: keep 'SIEM' verbatim; gloss once (إدارة معلومات وأحداث الأمن)."
+    },
+    {
+      "en": "firewall",
+      "ar": "جدار الحماية",
+      "domain": "cyber",
+      "banned_ar": [
+        "الجدار الناري",
+        "حائط"
+      ],
+      "note": "جدار الحماية is the KSA-standard institutional term."
+    },
+    {
+      "en": "separation of duties (SoD)",
+      "ar": "الفصل بين المهام",
+      "domain": "cyber",
+      "banned_ar": [
+        "فصل الواجبات",
+        "تقسيم المهام"
+      ],
+      "note": "Governance control (author≠approver). Codebase enforces SoD in legal role matrix."
+    },
+    {
+      "en": "least privilege",
+      "ar": "الحد الأدنى من الصلاحيات",
+      "domain": "cyber",
+      "banned_ar": [
+        "أقل امتياز",
+        "صلاحيات دنيا"
+      ],
+      "note": "Principle of least privilege = مبدأ الحد الأدنى من الصلاحيات."
+    },
+    {
+      "en": "role",
+      "ar": "دور",
+      "domain": "cyber",
+      "banned_ar": [
+        "وظيفة",
+        "رتبة"
+      ],
+      "note": "RBAC = التحكم في الوصول المبني على الأدوار. Plural أدوار."
+    },
+    {
+      "en": "permission",
+      "ar": "صلاحية",
+      "domain": "cyber",
+      "banned_ar": [
+        "إذن",
+        "سماح"
+      ],
+      "note": "Plural صلاحيات. Effective permissions = الصلاحيات الفعلية (codebase /lex/me)."
+    },
+    {
+      "en": "access control",
+      "ar": "التحكم في الوصول",
+      "domain": "cyber",
+      "banned_ar": [
+        "التحكم بالدخول",
+        "ضبط الوصول"
+      ],
+      "note": "RLS (row-level security) glossed as أمن مستوى الصف, acronym optional."
+    },
+    {
+      "en": "audit log / audit trail",
+      "ar": "سجل التدقيق / مسار التدقيق",
+      "domain": "cyber",
+      "banned_ar": [
+        "سجل المراجعة"
+      ],
+      "note": "Codebase 'Audit trail' tab = سجل التدقيق. Keep تدقيق (audit) vs مراجعة (review) distinct."
+    },
+    {
+      "en": "dashboard",
+      "ar": "لوحة المعلومات / لوحة التحكم",
+      "domain": "platform-ui",
+      "banned_ar": [
+        "لوحة القيادة",
+        "اللوحة"
+      ],
+      "note": "لوحة المعلومات for data dashboards; لوحة التحكم acceptable for a control panel/console. Pick one per surface and hold it."
+    },
+    {
+      "en": "settings",
+      "ar": "الإعدادات",
+      "domain": "platform-ui",
+      "banned_ar": [
+        "الضبط",
+        "التهيئة"
+      ],
+      "note": "Codebase-canonical. Profile settings = إعدادات الملف الشخصي."
+    },
+    {
+      "en": "tenant",
+      "ar": "المستأجر",
+      "domain": "platform-ui",
+      "banned_ar": [
+        "العميل",
+        "المستضاف"
+      ],
+      "note": "Codebase-canonical (multi-tenant SaaS). Tenant-scoped = محدود بالمستأجر."
+    },
+    {
+      "en": "notification",
+      "ar": "إشعار",
+      "domain": "platform-ui",
+      "banned_ar": [
+        "تنبيه",
+        "إخطار"
+      ],
+      "note": "Codebase-canonical. Plural إشعارات. Keep إشعar (notification) vs تنبيه (alert) distinct."
+    },
+    {
+      "en": "save",
+      "ar": "حفظ",
+      "domain": "platform-ui",
+      "banned_ar": [
+        "تخزين"
+      ],
+      "note": "Codebase-canonical. UI buttons use the masdar (verbal noun) form: حفظ, not the imperative."
+    },
+    {
+      "en": "cancel",
+      "ar": "إلغاء",
+      "domain": "platform-ui",
+      "banned_ar": [
+        "ألغِ",
+        "إبطال"
+      ],
+      "note": "Codebase-canonical. Masdar form on buttons."
+    },
+    {
+      "en": "submit",
+      "ar": "إرسال",
+      "domain": "platform-ui",
+      "banned_ar": [
+        "تسليم",
+        "اعتماد"
+      ],
+      "note": "إرسال for send/submit a form; تقديم acceptable for 'submit a request/application'. Do not use اعتماد."
+    },
+    {
+      "en": "search",
+      "ar": "بحث",
+      "domain": "platform-ui",
+      "banned_ar": [
+        "تفتيش"
+      ],
+      "note": "Codebase-canonical (messages.ts). Search placeholder = ابحث... is fine as an action prompt."
+    },
+    {
+      "en": "filter",
+      "ar": "تصفية",
+      "domain": "platform-ui",
+      "banned_ar": [
+        "فلترة",
+        "ترشيح"
+      ],
+      "note": "Prefer تصفية. Filters panel = عوامل التصفية."
+    },
+    {
+      "en": "sign in / log in",
+      "ar": "تسجيل الدخول",
+      "domain": "platform-ui",
+      "banned_ar": [
+        "الدخول",
+        "ولوج"
+      ],
+      "note": "Codebase-canonical (messages.ts). Sign out = تسجيل الخروج."
+    },
+    {
+      "en": "export",
+      "ar": "تصدير",
+      "domain": "platform-ui",
+      "banned_ar": [
+        "إخراج",
+        "تنزيل"
+      ],
+      "note": "Export to CSV = تصدير إلى CSV. Keep export vs download distinct."
+    },
+    {
+      "en": "upload / download",
+      "ar": "رفع / تنزيل",
+      "domain": "platform-ui",
+      "banned_ar": [
+        "تحميل"
+      ],
+      "note": "Non-obvious: تحميل is dangerously ambiguous. Standardize رفع = upload, تنزيل = download; avoid تحميل for either."
+    },
+    {
+      "en": "user profile",
+      "ar": "الملف الشخصي",
+      "domain": "platform-ui",
+      "banned_ar": [
+        "البروفايل",
+        "الحساب"
+      ],
+      "note": "Codebase-canonical (messages.ts)."
+    },
+    {
+      "en": "Nafath",
+      "ar": "نفاذ",
+      "domain": "gov",
+      "banned_ar": [
+        "نافذ"
+      ],
+      "note": "KSA national SSO identity platform — always the proper noun نفاذ."
+    },
+    {
+      "en": "Najiz",
+      "ar": "ناجز",
+      "domain": "gov",
+      "banned_ar": [
+        "ناجيز"
+      ],
+      "note": "Codebase-canonical (Ministry of Justice litigation portal). Najiz sync = مزامنة ناجز."
+    },
+    {
+      "en": "emdha (e-signature platform)",
+      "ar": "إمضاء",
+      "domain": "gov",
+      "banned_ar": [
+        "اعتماد",
+        "إمضا"
+      ],
+      "note": "KSA national e-signature platform proper noun. Do not confuse with generic توقيع إلكتروني (e-signature the concept)."
+    },
+    {
+      "en": "PDPL (Personal Data Protection Law)",
+      "ar": "نظام حماية البيانات الشخصية",
+      "domain": "gov",
+      "banned_ar": [
+        "قانون حماية البيانات"
+      ],
+      "note": "Codebase-canonical. Keep 'PDPL' acronym optionally in parentheses; the Arabic is a نظام."
+    },
+    {
+      "en": "NCA (National Cybersecurity Authority)",
+      "ar": "الهيئة الوطنية للأمن السيبراني",
+      "domain": "gov",
+      "banned_ar": [
+        "هيئة الأمن الإلكتروني",
+        "الأمن المعلوماتي"
+      ],
+      "note": "KSA regulator. KSA convention uses السيبراني (cyber), not الإلكتروني, for cybersecurity."
+    },
+    {
+      "en": "ZATCA",
+      "ar": "هيئة الزكاة والضريبة والجمارك",
+      "domain": "gov",
+      "banned_ar": [
+        "مصلحة الزكاة",
+        "هيئة الضرائب"
+      ],
+      "note": "Keep 'ZATCA' acronym optional; full Arabic name is the current authority. Relevant to VAT/e-invoicing."
+    },
+    {
+      "en": "data residency / sovereignty",
+      "ar": "موطنة البيانات / السيادة",
+      "domain": "gov",
+      "banned_ar": [
+        "إقامة البيانات",
+        "محلية البيانات"
+      ],
+      "note": "KSA data sovereignty = السيادة على البيانات. In-Kingdom = داخل المملكة (codebase: كتابة WORM داخل المملكة)."
+    },
+    {
+      "en": "regulatory authority / regulatory commission",
+      "ar": "هيئة",
+      "domain": "gov",
+      "banned_ar": [
+        "سلطة",
+        "وكالة"
+      ],
+      "note": "KSA regulators are هيئة (e.g. الهيئة الوطنية للأمن السيبراني). Ministry = وزارة."
+    },
+    {
+      "en": "Hijri (calendar)",
+      "ar": "هجري",
+      "domain": "gov",
+      "banned_ar": [
+        "إسلامي",
+        "قمري"
+      ],
+      "note": "Codebase-canonical (hearing dates show هجري). Hijri date = التاريخ الهجري; Gregorian = ميلادي."
+    },
+    {
+      "en": "commercial registration (CR)",
+      "ar": "السجل التجاري",
+      "domain": "gov",
+      "banned_ar": [
+        "التسجيل التجاري",
+        "رقم الشركة"
+      ],
+      "note": "CR number = رقم السجل التجاري. A common tenant/entity identifier field."
+    },
+    {
+      "en": "national ID",
+      "ar": "الهوية الوطنية",
+      "domain": "gov",
+      "banned_ar": [
+        "البطاقة المدنية",
+        "الرقم القومي"
+      ],
+      "note": "KSA usage: الهوية الوطنية (citizen) / الإقامة (resident ID)."
+    },
+    {
+      "en": "invoice",
+      "ar": "فاتورة",
+      "domain": "finance",
+      "banned_ar": [
+        "إيصال",
+        "قائمة"
+      ],
+      "note": "E-invoicing (ZATCA Fatoora) = الفوترة الإلكترونية."
+    },
+    {
+      "en": "quote / quotation",
+      "ar": "عرض سعر",
+      "domain": "finance",
+      "banned_ar": [
+        "اقتباس",
+        "تسعيرة"
+      ],
+      "note": "Codebase pricing console. Quote export = تصدير عرض السعر."
+    },
+    {
+      "en": "pricing",
+      "ar": "التسعير",
+      "domain": "finance",
+      "banned_ar": [
+        "الأسعار",
+        "التثمين"
+      ],
+      "note": "Pricing calculator = حاسبة التسعير."
+    },
+    {
+      "en": "margin",
+      "ar": "هامش الربح",
+      "domain": "finance",
+      "banned_ar": [
+        "الحد",
+        "الفارق"
+      ],
+      "note": "Codebase margin-masked export. هامش alone is acceptable in-table; هامش الربح in full."
+    },
+    {
+      "en": "VAT",
+      "ar": "ضريبة القيمة المضافة",
+      "domain": "finance",
+      "banned_ar": [
+        "الضريبة",
+        "القيمة المضافة"
+      ],
+      "note": "Keep 'VAT' acronym optional. 15% VAT = ضريبة القيمة المضافة ١٥٪ (but keep Western digits per codebase digit convention)."
+    },
+    {
+      "en": "subscription",
+      "ar": "اشتراك",
+      "domain": "finance",
+      "banned_ar": [
+        "عضوية",
+        "تسجيل"
+      ],
+      "note": "Subscription plan = خطة الاشتراك."
+    },
+    {
+      "en": "license",
+      "ar": "ترخيص",
+      "domain": "finance",
+      "banned_ar": [
+        "رخصة",
+        "إجازة"
+      ],
+      "note": "Codebase licensing (trial license = ترخيص تجريبي). Keep ترخيص (license) distinct from التخويل (authorization)."
+    },
+    {
+      "en": "currency (SAR)",
+      "ar": "ريال سعودي (ر.س)",
+      "domain": "finance",
+      "banned_ar": [
+        "ريال"
+      ],
+      "note": "Saudi Riyal = ريال سعودي. Codebase preserves Western digits for amounts."
+    },
+    {
+      "en": "discount",
+      "ar": "خصم",
+      "domain": "finance",
+      "banned_ar": [
+        "تخفيض",
+        "حسم"
+      ],
+      "note": "Volume discount = خصم الكمية."
+    },
+    {
+      "en": "budget",
+      "ar": "ميزانية",
+      "domain": "finance",
+      "banned_ar": [
+        "موازنة",
+        "تكلفة"
+      ],
+      "note": "موازنة is used for the state/appropriations budget; ميزانية for a project/department budget."
+    },
+    {
+      "en": "workflow",
+      "ar": "سير العمل",
+      "domain": "workflow",
+      "banned_ar": [
+        "تدفق العمل",
+        "مسار العمل",
+        "وركفلو"
+      ],
+      "note": "Codebase-canonical (سير العمل). Workflow engine = محرّك سير العمل; workflow instance = مثيل سير العمل."
+    },
+    {
+      "en": "task",
+      "ar": "مهمة / مهام",
+      "domain": "workflow",
+      "banned_ar": [
+        "عمل",
+        "واجب"
+      ],
+      "note": "Plural مهام. My tasks = مهامي. Human task = مهمة بشرية."
+    },
+    {
+      "en": "approval flow / approval gate",
+      "ar": "مسار الاعتماد / بوابة الاعتماد",
+      "domain": "workflow",
+      "banned_ar": [
+        "مسار الموافقة"
+      ],
+      "note": "Codebase gate concept (بوابة الموافقة appears in DR; for legal DoA sign-off prefer الاعتماد). Awaiting approval = بانتظار الاعتماد."
+    },
+    {
+      "en": "template",
+      "ar": "قالب",
+      "domain": "workflow",
+      "banned_ar": [
+        "نموذج",
+        "صيغة"
+      ],
+      "note": "Codebase-canonical (قالب داخلي = internal template). Plural قوالب. Keep قالب (template) vs نموذج (form)."
+    },
+    {
+      "en": "instance",
+      "ar": "مثيل",
+      "domain": "workflow",
+      "banned_ar": [
+        "نسخة",
+        "حالة"
+      ],
+      "note": "Non-obvious: a running workflow 'instance' = مثيل. نسخة means a copy/version; do not use it for a process instance."
+    },
+    {
+      "en": "escalation",
+      "ar": "تصعيد",
+      "domain": "workflow",
+      "banned_ar": [
+        "ترقية",
+        "رفع"
+      ],
+      "note": "Escalation level (L1/L2/L3) = مستوى التصعيد (legal_roles.go org metadata)."
+    },
+    {
+      "en": "SLA (Service Level Agreement)",
+      "ar": "SLA — اتفاقية مستوى الخدمة",
+      "domain": "workflow",
+      "banned_ar": [
+        "اتفاقية الخدمة"
+      ],
+      "note": "ACRONYM RULE: keep 'SLA' verbatim + gloss اتفاقية مستوى الخدمة. SLA management is a Legal Director/Admin config right (PermLexSLAManage)."
+    },
+    {
+      "en": "assignee / owner",
+      "ar": "المسؤول / مسؤول / المُكلَّف",
+      "domain": "workflow",
+      "banned_ar": [
+        "المالك",
+        "المستلم"
+      ],
+      "note": "Task assignee = المُكلَّف بالمهمة; case owner/responsible = المسؤول. Unassigned = غير مُسنَد."
+    },
+    {
+      "en": "step / stage",
+      "ar": "خطوة / مرحلة",
+      "domain": "workflow",
+      "banned_ar": [],
+      "note": "خطوة = a single step; مرحلة = a broader phase/stage. Wizard step = خطوة المعالج."
+    },
+    {
+      "en": "trigger",
+      "ar": "مُشغِّل",
+      "domain": "workflow",
+      "banned_ar": [
+        "محفّز",
+        "زناد"
+      ],
+      "note": "Trigger a workflow = تشغيل سير العمل; trigger (the event) = المُشغِّل."
+    },
+    {
+      "en": "routing / department routing",
+      "ar": "التوجيه / توجيه الإدارة",
+      "domain": "workflow",
+      "banned_ar": [
+        "التمرير",
+        "إعادة التوجيه"
+      ],
+      "note": "Codebase 'apply routing' = تطبيق التوجيه; route to department = التوجيه إلى الإدارة."
+    },
+    {
+      "en": "deadline / due date",
+      "ar": "الموعد النهائي / تاريخ الاستحقاق",
+      "domain": "workflow",
+      "banned_ar": [
+        "الموعد الأخير",
+        "النهاية"
+      ],
+      "note": "Codebase deadline-risk surface. Overdue = متأخر/فائت الاستحقاق; due in N days = الاستحقاق خلال N يوم (Western digits)."
+    },
+    {
+      "en": "case classification",
+      "ar": "تصنيف القضية",
+      "domain": "legal",
+      "banned_ar": [
+        "تصنيف الحالة",
+        "فئة"
+      ],
+      "note": "Codebase-canonical classification tree = شجرة التصنيف. Distinct from status (الحالة)."
+    },
+    {
+      "en": "status",
+      "ar": "الحالة / حالة",
+      "domain": "platform-ui",
+      "banned_ar": [
+        "الوضع",
+        "المرحلة"
+      ],
+      "note": "Entity status field. Company side (plaintiff/defendant) = صفة الشركة, a DIFFERENT axis from الحالة — keep them separate as the codebase does."
+    }
+  ],
+  "global_banned_ar": [
+    "وركفلو",
+    "بروفايل",
+    "فلترة",
+    "كنسل"
+  ],
+  "product_names": [
+    "Clario360",
+    "Clario",
+    "Watheeq",
+    "Lex",
+    "Acta",
+    "Visus",
+    "ClarioDR",
+    "DataStream",
+    "Najiz",
+    "Nafath",
+    "Absher",
+    "WatheeqTech",
+    "MITRE ATT&CK",
+    "Slack",
+    "Microsoft Teams",
+    "Jira",
+    "Jira Cloud",
+    "ServiceNow",
+    "PagerDuty"
+  ]
+}

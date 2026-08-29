@@ -1,0 +1,1389 @@
+/* ClarioDR design-system tokens (--ds-*). GENERATED from
+   src/styles/tokens/index.ts — regenerate via `node scripts/generate-tokens.mjs`.
+   Imported first (before @tailwind) so the shadcn vars below derive from the
+   token scale and CSS @import ordering rules are satisfied. */
+@import '../styles/tokens/tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   DIN Next (client-licensed brand typography) — NOT bundled.
+   The licensed .woff2 files were never committed, so declaring
+   @font-face rules for them only produced real /fonts/din-next-*
+   404 requests on every cold load. The rules are therefore
+   removed. To reinstate DIN: drop the licensed files into
+   public/fonts (see public/fonts/DIN-FONTS-README.md), restore
+   @font-face rules for 'DIN Next LT Pro' / 'DIN Next LT Arabic'
+   (weights 400/500/700, font-display: swap). The runtime stacks below already
+   lead with the licensed family names, so locally installed/licensed faces are
+   preferred while bundled Inter / IBM Plex fallbacks remain reliable.
+   ============================================================ */
+
+@layer base {
+  :root {
+    /* ----------------------------------------------------------------------
+       Brand typography — DIN Next leads the declared UI stacks; Inter (Latin)
+       + IBM Plex Sans Arabic are the bundled next/font fallbacks exposed on
+       <body> as --font-inter / --font-ibm-arabic. DIN Next (client-licensed) is
+       not bundled — see the reinstatement note at the top of this file.
+       The actual stack variables are bound on <body>, where next/font exposes
+       --font-inter / --font-ibm-arabic. Defining them here on :root would make
+       those nested var() references invalid before the body variables exist.
+       ---------------------------------------------------------------------- */
+
+    /* ----------------------------------------------------------------------
+       shadcn/ui semantic vars — DERIVED from the Clario360 --ds-* token scale.
+       Each value references a design-system token (HSL triplet), so the brand
+       lives behind one swappable layer and existing components inherit it
+       unchanged. The legacy literal triplets are retained in comments for
+       reference.
+       Approved anchors: Deep Teal #005E5E, Dark Teal #06352F, La Rioja
+       #ABB705, Spring Teal #0DA7A8, Milk #FDFFF6, Grey Dark #6C7874, and
+       Grey Light #D1D8D5.
+       ---------------------------------------------------------------------- */
+    --background: var(--ds-bg-page); /* was 140 20% 97% */
+    --foreground: var(--ds-text-primary); /* was 210 29% 15% */
+    --card: var(--ds-surface-card); /* was 0 0% 100% */
+    --card-foreground: var(--ds-text-primary);
+    --popover: var(--ds-surface-raised);
+    --popover-foreground: var(--ds-text-primary);
+    --primary: var(--ds-brand-primary); /* public brand teal #005E5E */
+    --primary-foreground: var(--ds-text-on-primary);
+    --secondary: var(--ds-bg-subtle); /* was 155 28% 93% */
+    --secondary-foreground: var(--ds-text-primary);
+    --muted: var(--ds-bg-subtle);
+    --muted-foreground: var(--ds-text-muted); /* was 215 16% 40% */
+    --accent: var(--ds-primary-50); /* subtle teal emphasis surface (was gold tint) */
+    --accent-foreground: var(--ds-text-primary);
+    --destructive: var(--ds-state-error); /* was 0 84.2% 60.2% */
+    --destructive-foreground: var(--ds-text-inverted);
+    --border: var(--ds-border-default); /* was 152 18% 85% */
+    --input: var(--ds-border-input); /* form-control boundary, ~3:1 (was 152 20% 88%) */
+    --ring: var(--ds-border-focus); /* interactive teal */
+    --radius: var(--ds-radius-lg); /* 0.75rem */
+
+    /* Flat shell surfaces — the legacy --panel/--card/--shell vars now resolve
+       to the token scale so every raw `bg-[var(--card-bg)]`-style consumer
+       de-chromes with the shell. They reference --ds-* vars (re-bound in .dark)
+       so a single :root definition themes both modes. */
+    --panel-bg: hsl(var(--ds-surface-card));
+    --panel-border: hsl(var(--ds-border-default));
+    --card-bg: hsl(var(--ds-surface-card));
+    --card-border: hsl(var(--ds-border-default));
+    /* Public-brand teal rail with chartreuse active accents. */
+    --sidebar-bg: hsl(var(--ds-primary-600));
+    --sidebar-border: rgba(255, 255, 255, 0.08);
+    --sidebar-hover: rgba(255, 255, 255, 0.06);
+    --sidebar-active: rgba(255, 255, 255, 0.08);
+    --sidebar-muted: hsl(var(--ds-neutral-300)); /* Grey Light #D1D8D5 */
+    --shell-shadow: var(--ds-elevation-1);
+    --card-shadow: var(--ds-elevation-1);
+    --card-shadow-hover: var(--ds-elevation-2);
+
+    /* Semantic data-viz tokens — severity scale (HSL triplets).
+       Single source mirrored in src/lib/design-tokens.ts for SVG/canvas.
+       `low` is emerald + `info` is a true blue so neither reads as the leaf-green
+       brand accent or the teal brand. */
+    --severity-critical: 0 72% 51%;   /* #dc2626 */
+    --severity-high: 25 95% 53%;      /* #f97316 */
+    --severity-medium: 38 92% 50%;    /* #f59e0b */
+    --severity-low: 160 84% 39%;      /* #10b981 emerald */
+    --severity-info: 206 90% 48%;     /* #0c89e9 blue */
+
+    /* Status tokens — success is emerald (distinct from the brand green) */
+    --status-success: 160 84% 39%;
+    --status-warning: 38 92% 50%;
+    --status-error: 0 72% 51%;
+    --status-info: 206 90% 48%;
+    --status-neutral: 160 5.3% 44.7%; /* Grey Dark #6C7874 */
+    --status-pending: 262 83% 58%;
+
+    /* Categorical chart series — anchored by Deep Teal, then five semantic
+       hues selected for accessible categorical encoding on light surfaces. */
+    --chart-1: 180 100% 18.4%; /* Deep Teal #005E5E */
+    --chart-2: 90 60% 38%;     /* accessible leaf green */
+    --chart-3: 38 92% 40%;    /* amber (deepened to clear 3:1 on white) */
+    --chart-4: 275 62% 58%;   /* violet */
+    --chart-5: 212 80% 50%;   /* blue */
+    --chart-6: 330 72% 52%;   /* magenta */
+  }
+
+  .dark {
+    /* The --ds-* tokens are re-assigned for dark in tokens.css (.dark block),
+       which is imported above. Since the shadcn vars in :root already reference
+       those tokens, dark theming flows through automatically; these explicit
+       re-bindings make the mapping legible and keep accent/popover intentional. */
+    --background: var(--ds-bg-page);
+    --foreground: var(--ds-text-primary);
+    --card: var(--ds-surface-card);
+    --card-foreground: var(--ds-text-primary);
+    --popover: var(--ds-surface-raised);
+    --popover-foreground: var(--ds-text-primary);
+    --primary: var(--ds-brand-primary);
+    --primary-foreground: var(--ds-text-on-primary);
+    --secondary: var(--ds-bg-subtle);
+    --secondary-foreground: var(--ds-text-primary);
+    --muted: var(--ds-bg-subtle);
+    --muted-foreground: var(--ds-text-muted);
+    --accent: var(--ds-accent); /* exact #ABB705 brand accent */
+    --accent-foreground: var(--ds-text-on-accent);
+    --destructive: var(--ds-state-error);
+    --destructive-foreground: var(--ds-text-inverted);
+    --border: var(--ds-border-default);
+    --input: var(--ds-border-input);
+    --ring: var(--ds-border-focus);
+
+    /* --panel/--card/--shell vars inherit their :root token references and
+       re-theme through the .dark --ds-* re-bindings; only the always-dark
+       sidebar surface needs explicit dark values. */
+    --sidebar-bg: hsl(var(--ds-primary-800));
+    --sidebar-border: rgba(255, 255, 255, 0.10);
+    --sidebar-hover: rgba(255, 255, 255, 0.08);
+    --sidebar-active: rgba(255, 255, 255, 0.10);
+    --sidebar-muted: hsl(var(--ds-neutral-300)); /* Grey Light #D1D8D5 */
+
+    /* Brighter / slightly desaturated severity for AA contrast on dark bg */
+    --severity-critical: 0 84% 63%;
+    --severity-high: 25 95% 60%;
+    --severity-medium: 38 95% 58%;
+    --severity-low: 160 70% 55%;     /* emerald, lifted for dark */
+    --severity-info: 206 90% 62%;    /* blue, lifted for dark */
+
+    --status-success: 160 70% 55%;
+    --status-warning: 38 95% 58%;
+    --status-error: 0 84% 63%;
+    --status-info: 206 90% 62%;
+    --status-neutral: 160 5.3% 62%;   /* Grey Dark #6C7874, lifted */
+    --status-pending: 262 84% 70%;
+
+    --chart-1: 180.4 85.6% 52%; /* Spring Teal, lifted for dark surfaces */
+    --chart-2: 88 55% 60%;      /* accessible leaf green, lifted */
+    --chart-3: 38 92% 60%;    /* amber */
+    --chart-4: 275 70% 72%;   /* violet */
+    --chart-5: 212 85% 66%;   /* blue */
+    --chart-6: 330 78% 68%;   /* magenta */
+  }
+
+  /* Auth surface palette, derived from the approved Dark/Deep Teal anchors and
+     La Rioja accent. Interactive Deep Teal clears AA with Milk; the accent
+     surface carries Dark Teal ink. */
+  .auth-clario {
+    --background: var(--ds-neutral-50); /* #FDFFF6 */
+    --foreground: var(--ds-primary-700); /* #06352F */
+    --card: 0 0% 100%;
+    --card-foreground: var(--ds-primary-700);
+    --popover: 0 0% 100%;
+    --popover-foreground: var(--ds-primary-700);
+    --primary: var(--ds-primary-600); /* #005E5E */
+    --primary-foreground: var(--ds-neutral-50); /* #FDFFF6 */
+    --secondary: var(--ds-neutral-100); /* Milk → Grey Light derived tint */
+    --secondary-foreground: var(--ds-primary-700);
+    --muted: var(--ds-neutral-100);
+    --muted-foreground: var(--ds-neutral-500); /* #6C7874 */
+    --accent: var(--ds-accent-500); /* #ABB705 */
+    --accent-foreground: var(--ds-primary-800); /* #06352F */
+    --border: var(--ds-neutral-300); /* #D1D8D5 */
+    --input: var(--ds-neutral-300);
+    --ring: var(--ds-primary-600);
+  }
+
+  .dark .auth-clario {
+    --background: var(--ds-primary-800); /* #06352F */
+    --foreground: var(--ds-neutral-50); /* #FDFFF6 */
+    --card: var(--ds-primary-700); /* #06352F */
+    --card-foreground: var(--ds-neutral-50);
+    --popover: var(--ds-primary-700);
+    --popover-foreground: var(--ds-neutral-50);
+    --primary: var(--ds-primary-600); /* #005E5E */
+    --primary-foreground: var(--ds-neutral-50);
+    --secondary: var(--ds-primary-700);
+    --secondary-foreground: var(--ds-neutral-50);
+    --muted: var(--ds-primary-700);
+    --muted-foreground: var(--ds-neutral-300);
+    --accent: var(--ds-accent-500); /* #ABB705 */
+    --accent-foreground: var(--ds-primary-800);
+    --border: var(--ds-primary-600);
+    --input: var(--ds-primary-600);
+    --ring: var(--ds-accent-500);
+  }
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    min-height: 100vh;
+    --font-sans: 'DIN Next LT Pro', var(--font-inter), 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, 'IBM Plex Sans Arabic', 'Noto Sans Arabic', Tahoma, ui-sans-serif, sans-serif;
+    --font-arabic: 'DIN Next LT Arabic', var(--font-ibm-arabic), 'IBM Plex Sans Arabic', 'Noto Sans Arabic', Tahoma, var(--font-inter), 'Inter', Arial, ui-sans-serif, system-ui, sans-serif;
+    /* DIN Next leads the declared runtime stack. The bundled next/font faces
+       remain the active fallback until the client supplies licensed DIN files. */
+    font-family: var(--font-sans), "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, "IBM Plex Sans Arabic", "Noto Sans Arabic", Tahoma, ui-sans-serif, sans-serif;
+    color: hsl(var(--foreground));
+    font-feature-settings: "ss05" 1, "tnum" 1;
+    text-rendering: optimizeLegibility;
+    text-align: start;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html:lang(ar) body {
+    /* DIN Next LT Arabic leads via --font-arabic. IBM Plex Sans Arabic is the
+       bundled fallback; Latin runs can continue through the Inter stack. */
+    font-family: var(--font-arabic), "IBM Plex Sans Arabic", "Noto Sans Arabic", Tahoma, var(--font-sans), "Inter", Arial, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  /* `font-display` is Latin-first by design. In the Arabic Watheeq shell it
+     must resolve through the Arabic family token instead, and Arabic joining
+     must not inherit the tight Latin display tracking used by headings. */
+  html:lang(ar) [data-watheeq-app='true'] .font-display {
+    font-family: var(--font-arabic);
+    letter-spacing: normal;
+  }
+
+  code,
+  pre,
+  kbd,
+  samp {
+    font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.18);
+    color: hsl(var(--foreground));
+  }
+
+  /* Respect users who prefer reduced motion (WCAG 2.3.3) */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--ds-clario-muted) / 0.24);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--ds-clario-dark-teal) / 0.36);
+    background-clip: padding-box;
+  }
+}
+
+@layer components {
+  .sidebar-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.14);
+    border-radius: 9999px;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.24);
+  }
+
+  /* ========================================================================
+   * Materialised component layer — token-bound primitives (Stream A / F1).
+   * Every value references an existing --ds-* var so the brand lives behind a
+   * single swappable layer. Additive: no existing class is redefined, and the
+   * scoped .auth-clario surface is never touched.
+   * ====================================================================== */
+
+  /* ---- Buttons ---------------------------------------------------------- */
+  .btn-base {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    padding: 0 1rem;
+    border-radius: var(--ds-radius-button);
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition:
+      transform var(--ds-duration-fast) var(--ds-ease-standard),
+      box-shadow var(--ds-duration-normal) var(--ds-ease-standard),
+      background-color var(--ds-duration-fast) var(--ds-ease-standard),
+      border-color var(--ds-duration-fast) var(--ds-ease-standard),
+      filter var(--ds-duration-fast) var(--ds-ease-standard);
+  }
+  .btn-base:disabled,
+  .btn-base[aria-disabled='true'] {
+    color: rgb(var(--ds-clario-muted));
+    background-color: rgb(var(--ds-clario-border));
+    border-color: rgb(var(--ds-clario-border));
+    box-shadow: none;
+    opacity: 1;
+    pointer-events: none;
+  }
+
+  .btn-primary {
+    color: white;
+    background-color: rgb(var(--ds-action-primary));
+    box-shadow: var(--ds-elevation-1);
+  }
+  .btn-primary:hover {
+    background-color: rgb(var(--ds-action-primary-hover));
+    box-shadow: var(--ds-elevation-2);
+  }
+  .btn-primary:active {
+    background-color: rgb(var(--ds-action-primary-active));
+    box-shadow: var(--ds-elevation-1);
+  }
+
+  .btn-secondary {
+    color: rgb(var(--ds-clario-ink));
+    background-color: rgb(var(--ds-clario-tint));
+    border: 1px solid rgb(var(--ds-clario-border));
+    box-shadow: var(--ds-elevation-1);
+  }
+  .btn-secondary:hover {
+    border-color: rgb(var(--ds-clario-primary));
+    background-color: rgb(var(--ds-clario-canvas));
+    box-shadow: var(--ds-elevation-2);
+  }
+  .btn-secondary:active {
+    box-shadow: var(--ds-elevation-1);
+  }
+
+  .btn-ghost {
+    color: rgb(var(--ds-clario-ink));
+    background-color: transparent;
+  }
+  .btn-ghost:hover {
+    background-color: rgb(var(--ds-clario-tint));
+    color: rgb(var(--ds-clario-primary));
+  }
+  .btn-ghost:active {
+    background-color: rgb(var(--ds-clario-border));
+  }
+
+  html:lang(ar) .btn-base,
+  [dir='rtl'] .btn-base {
+    font-family: var(--font-arabic);
+  }
+
+  .btn-danger {
+    color: hsl(var(--ds-text-inverted));
+    background-color: hsl(var(--ds-state-error));
+    box-shadow: var(--ds-elevation-1);
+  }
+  .btn-danger:hover {
+    box-shadow: var(--ds-elevation-2);
+    filter: brightness(1.05);
+  }
+  .btn-danger:active {
+    box-shadow: var(--ds-elevation-1);
+  }
+
+  /* ---- Cards ------------------------------------------------------------ *
+   * Flat, calm surface: solid token background, a single 1px token border and
+   * a whisper of elevation. No shine sweeps, no radial washes, no blur — dark
+   * mode flows entirely through the .dark --ds-* re-bindings. */
+  .card {
+    position: relative;
+    border-radius: var(--ds-radius-card);
+    background-color: hsl(var(--ds-surface-card));
+    border: 1px solid hsl(var(--ds-border-default));
+    box-shadow: var(--ds-elevation-1);
+    color: hsl(var(--ds-text-primary));
+    overflow: hidden;
+    transition:
+      box-shadow var(--ds-duration-normal) var(--ds-ease-standard),
+      border-color var(--ds-duration-normal) var(--ds-ease-standard),
+      background-color var(--ds-duration-normal) var(--ds-ease-standard);
+  }
+
+  .card-interactive {
+    cursor: pointer;
+  }
+  .card-interactive:hover {
+    box-shadow: var(--ds-elevation-2);
+    border-color: hsl(var(--ds-border-strong));
+  }
+  .card-interactive:focus-visible {
+    box-shadow: var(--ds-elevation-focus), var(--ds-elevation-2);
+  }
+
+  /* ---- Badges ----------------------------------------------------------- */
+  .badge-base {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3125rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: var(--ds-radius-pill);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: 0.01em;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+  .badge-success {
+    color: hsl(var(--ds-success-700));
+    background-color: hsl(var(--ds-success-500) / 0.12);
+    border-color: hsl(var(--ds-success-500) / 0.28);
+  }
+  .badge-warning {
+    color: hsl(var(--ds-warning-800));
+    background-color: hsl(var(--ds-warning-500) / 0.14);
+    border-color: hsl(var(--ds-warning-500) / 0.3);
+  }
+  .badge-danger {
+    color: hsl(var(--ds-error-700));
+    background-color: hsl(var(--ds-error-500) / 0.12);
+    border-color: hsl(var(--ds-error-500) / 0.28);
+  }
+  .badge-info {
+    color: hsl(var(--ds-info-700));
+    background-color: hsl(var(--ds-info-500) / 0.12);
+    border-color: hsl(var(--ds-info-500) / 0.28);
+  }
+  .badge-neutral {
+    color: hsl(var(--ds-text-secondary));
+    background-color: hsl(var(--ds-neutral-500) / 0.12);
+    border-color: hsl(var(--ds-neutral-500) / 0.24);
+  }
+  .dark .badge-success {
+    color: hsl(var(--ds-success-300));
+  }
+  .dark .badge-warning {
+    color: hsl(var(--ds-warning-300));
+  }
+  .dark .badge-danger {
+    color: hsl(var(--ds-error-300));
+  }
+  .dark .badge-info {
+    color: hsl(var(--ds-info-300));
+  }
+
+  /* ---- Overlay surfaces (popover / dropdown / menu / dialog / toast) ----
+   * Additive, opt-in surface primitives so every floating layer shares the same
+   * raised background + token elevation. elevation-3 for popovers/menus/dialogs
+   * (they float above the page); elevation-4 for toasts (top of the stack). All
+   * transitions run on the token motion scale. */
+  .popover-surface,
+  .dropdown-surface,
+  .menu-surface,
+  .dialog-surface {
+    border-radius: var(--ds-radius-lg);
+    background-color: hsl(var(--ds-surface-raised));
+    border: 1px solid hsl(var(--ds-border-default) / 0.7);
+    box-shadow: var(--ds-elevation-3);
+    color: hsl(var(--ds-text-primary));
+    transition:
+      opacity var(--ds-duration-fast) var(--ds-ease-standard),
+      transform var(--ds-duration-fast) var(--ds-ease-decelerate),
+      box-shadow var(--ds-duration-normal) var(--ds-ease-standard);
+  }
+  .toast-surface {
+    border-radius: var(--ds-radius-lg);
+    background-color: hsl(var(--ds-surface-raised));
+    border: 1px solid hsl(var(--ds-border-default) / 0.7);
+    box-shadow: var(--ds-elevation-4);
+    color: hsl(var(--ds-text-primary));
+    transition:
+      opacity var(--ds-duration-fast) var(--ds-ease-standard),
+      transform var(--ds-duration-normal) var(--ds-ease-decelerate),
+      box-shadow var(--ds-duration-normal) var(--ds-ease-standard);
+  }
+
+  /* ---- Glass (de-chromed) ------------------------------------------------ *
+   * Kept for backward compatibility, but now a flat solid surface: no blur, no
+   * translucency. Consumers keep compiling and inherit the calm register. */
+  .glass {
+    background-color: hsl(var(--ds-surface-card));
+    border: 1px solid hsl(var(--ds-border-default));
+    box-shadow: var(--ds-elevation-1);
+  }
+
+  /* ---- Canonical surfaces (legacy-var bound) ----------------------------- *
+   * These reproduce — EXACTLY — the most-repeated arbitrary-utility clusters
+   * that decorate raw <div>s across the suites:
+   *
+   *   border border-[color:var(--card-border)] bg-[var(--card-bg)]
+   *   shadow-[var(--card-shadow)]                         -> .surface-card
+   *   border border-[color:var(--panel-border)] bg-[var(--panel-bg)]
+   *   shadow-[var(--shell-shadow)]                        -> .surface-panel
+   *
+   * They intentionally bind the legacy --card / --panel / --shell vars (not
+   * the --ds-surface-* set used by `.card`), so migrating a div to one of these
+   * classes is pixel-identical in both light + dark. Radius is left to the
+   * caller (rounded-softer / rounded-softest / rounded-2xl / rounded-full) so a
+   * single surface class covers every radius the cluster appears with. */
+  .surface-card {
+    border: 1px solid var(--card-border);
+    background-color: var(--card-bg);
+    box-shadow: var(--card-shadow);
+    color: hsl(var(--card-foreground));
+  }
+  .surface-card-interactive {
+    cursor: pointer;
+    transition:
+      box-shadow var(--ds-duration-normal) var(--ds-ease-standard),
+      border-color var(--ds-duration-normal) var(--ds-ease-standard),
+      transform var(--ds-duration-normal) var(--ds-ease-standard);
+  }
+  .surface-card-interactive:hover {
+    box-shadow: var(--card-shadow-hover);
+  }
+
+  .surface-panel {
+    border: 1px solid var(--panel-border);
+    background-color: var(--panel-bg);
+    box-shadow: var(--card-shadow);
+    color: hsl(var(--card-foreground));
+  }
+
+  /* Stat surface — the card cluster used as a metric tile. Same chrome as
+   * .surface-card; kept as its own name so <StatBlock> and area-migration
+   * agents target the metric pattern explicitly (and so a future restyle of
+   * stat tiles is a one-line change here). */
+  .surface-stat {
+    border: 1px solid var(--card-border);
+    background-color: var(--card-bg);
+    box-shadow: var(--card-shadow);
+    color: hsl(var(--card-foreground));
+  }
+
+  /* ---- Dashboard shell surfaces ----------------------------------------- *
+   * The app shell composes three repeated surfaces. Names mirror the existing
+   * --shell-/--sidebar-/--panel- vars so the shell can drop its inline
+   * arbitrary utilities (layout.tsx + sidebar) without any visual change. */
+  .shell-frame {
+    border: 1px solid var(--panel-border);
+    background-color: var(--panel-bg);
+    box-shadow: var(--shell-shadow);
+  }
+  .shell-sidebar {
+    background: var(--sidebar-bg);
+    border-color: var(--sidebar-border);
+  }
+  .shell-sidebar-item {
+    transition:
+      background-color var(--ds-duration-fast) var(--ds-ease-standard),
+      color var(--ds-duration-fast) var(--ds-ease-standard);
+  }
+  .shell-sidebar-item:hover {
+    background: var(--sidebar-hover);
+  }
+  .shell-sidebar-item[data-active='true'],
+  .shell-sidebar-item.is-active {
+    background: var(--sidebar-active);
+  }
+
+  /* ---- Premium table ---------------------------------------------------- */
+  .table-premium {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.875rem;
+  }
+  .table-premium thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    text-align: start;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: hsl(var(--ds-text-muted));
+    background-color: hsl(var(--ds-bg-subtle));
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid hsl(var(--ds-border-default) / 0.7);
+    /* Sticky header floats above scrolling rows — a subtle elevation lifts it
+       off the body and reinforces the contrast as content slides underneath. */
+    box-shadow: var(--ds-elevation-1);
+  }
+  .table-premium tbody td {
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid hsl(var(--ds-border-subtle) / 0.7);
+    color: hsl(var(--ds-text-secondary));
+  }
+  .table-premium tbody tr {
+    transition:
+      background-color var(--ds-duration-fast) var(--ds-ease-standard),
+      box-shadow var(--ds-duration-fast) var(--ds-ease-standard);
+  }
+  .table-premium tbody tr:hover {
+    /* Brand-tinted hover wash + a slight raised feel via a soft inset-free
+       elevation so the active row reads as lifted at hover speed. */
+    background-color: hsl(var(--ds-brand-primary) / 0.05);
+    box-shadow: var(--ds-elevation-1);
+  }
+  .table-premium tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  /* ---- Sidebar active item ----------------------------------------------- *
+   * The sidebar is an always-dark deep-teal rail, so the active label is pinned to
+   * neutral-0 (pure white in both themes) rather than the theme-flipping
+   * --ds-text-inverted. The active indicator rail is the leaf-green accent — the
+   * deck's designated active-nav highlight, which pops on the teal rail (≈7:1). */
+  .sidebar-item-active {
+    position: relative;
+    color: hsl(var(--ds-neutral-0));
+    background: var(--sidebar-active);
+  }
+  .sidebar-item-active::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 60%;
+    width: 3px;
+    border-radius: var(--ds-radius-pill);
+    background: hsl(var(--ds-accent));
+  }
+}
+
+/* Global focus ring — token-bound, applies everywhere except where a component
+   opts out. Additive; placed outside @layer so it wins over utility resets but
+   not over the more specific prefers-contrast rule below. */
+*:focus-visible {
+  outline: none;
+  box-shadow: var(--ds-elevation-focus);
+}
+
+/* ==========================================================================
+   KPI Card Themed Variants
+   ========================================================================== */
+
+/* Refined color-coded KPI surface: a clean card (no pastel wash), a thin
+   colour-coded accent rail on the leading edge, and a soft tinted icon chip —
+   all tints derived from each theme's --kpi-accent so the 15 .kpi-theme-*
+   blocks need no changes. Compact padding for a data-dense layout. */
+.kpi-card-themed {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--ds-radius-card);
+  padding: 1rem 1.125rem;
+  background: hsl(var(--ds-surface-card));
+  border: 1px solid hsl(var(--ds-border-default) / 0.6);
+  box-shadow: var(--ds-elevation-1);
+  /* Soft accent tints from the theme accent (set by .kpi-theme-*). */
+  --kpi-accent-resolved: var(--kpi-accent, hsl(var(--ds-brand-primary)));
+  --kpi-chip-bg: color-mix(in srgb, var(--kpi-accent-resolved) 12%, transparent);
+  --kpi-accent-ring: color-mix(in srgb, var(--kpi-accent-resolved) 34%, transparent);
+  transition:
+    transform var(--ds-duration-normal) var(--ds-ease-standard),
+    box-shadow var(--ds-duration-normal) var(--ds-ease-standard),
+    border-color var(--ds-duration-normal) var(--ds-ease-standard);
+}
+/* Thin colour-coded accent rail (leading edge) — keeps fast colour scanning
+   without the washed background. */
+.kpi-card-themed::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  background: var(--kpi-accent-resolved);
+  opacity: 0.85;
+  pointer-events: none;
+}
+.kpi-card-themed::after {
+  content: none;
+}
+.kpi-card-themed:hover {
+  box-shadow: var(--ds-elevation-2);
+  border-color: var(--kpi-accent-ring);
+}
+
+/* Icon chip — soft tint + coloured glyph (not a gradient-filled block). */
+.kpi-icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.625rem;
+  color: var(--kpi-accent-resolved);
+  background: var(--kpi-chip-bg);
+  box-shadow: none;
+}
+
+/* ---- Color themes ---------------------------------------------------------
+   Token-derived KPI theming. Each .kpi-theme-* block anchors ONE hue
+   (--kpi-orb) to a design-system ramp — --ds-severity-* / --status-* /
+   --chart-* re-bind in .dark, so KPI theming survives re-theming and dark mode
+   with no hand-tuned dark blocks. Every other --kpi-* var (surface tint,
+   border, icon fill, accent text) is derived from that anchor via color-mix
+   against theme-aware tokens (--ds-surface-card / --ds-border-default /
+   --ds-text-primary), which flips light↔dark automatically. Class names are
+   unchanged; consumers keep reading the same --kpi-* contract. */
+.kpi-theme-red,
+.kpi-theme-orange,
+.kpi-theme-amber,
+.kpi-theme-yellow,
+.kpi-theme-green,
+.kpi-theme-emerald,
+.kpi-theme-teal,
+.kpi-theme-cyan,
+.kpi-theme-sky,
+.kpi-theme-blue,
+.kpi-theme-indigo,
+.kpi-theme-violet,
+.kpi-theme-purple,
+.kpi-theme-pink,
+.kpi-theme-primary {
+  /* Deeper companion of the anchor: darkens in light mode, lightens in dark
+     (because --ds-text-primary flips), keeping gradients/accents legible. */
+  --kpi-orb-alt: color-mix(in srgb, var(--kpi-orb) 78%, hsl(var(--ds-text-primary)));
+  /* Accent text/labels: weighted toward the theme's ink for AA contrast. */
+  --kpi-accent: color-mix(in srgb, var(--kpi-orb) 45%, hsl(var(--ds-text-primary)));
+  /* Whisper-tint surface on the token card background — calm, flat. */
+  --kpi-bg: color-mix(in srgb, var(--kpi-orb) 5%, hsl(var(--ds-surface-card)));
+  --kpi-border: color-mix(in srgb, var(--kpi-orb) 30%, hsl(var(--ds-border-default)));
+  --kpi-border-hover: color-mix(in srgb, var(--kpi-orb) 48%, hsl(var(--ds-border-default)));
+  --kpi-icon-bg: linear-gradient(135deg, var(--kpi-orb), var(--kpi-orb-alt));
+  --kpi-icon-shadow: color-mix(in srgb, var(--kpi-orb) 25%, transparent);
+  --kpi-shadow: color-mix(in srgb, var(--kpi-orb) 8%, transparent);
+}
+/* Hue anchors — dark-rebindable semantic tokens first, ramp steps otherwise.
+   Neighboring Tailwind hues without a 1:1 token are mixed from two tokens. */
+.kpi-theme-red {
+  --kpi-orb: hsl(var(--severity-critical));
+}
+.kpi-theme-orange {
+  --kpi-orb: hsl(var(--severity-high));
+}
+.kpi-theme-amber {
+  --kpi-orb: hsl(var(--severity-medium));
+}
+.kpi-theme-yellow {
+  /* Amber pulled toward the leaf-green accent yields a distinct yellow (so it
+     reads apart from the amber `amber`/orange `high` themes). */
+  --kpi-orb: color-mix(in srgb, hsl(var(--severity-medium)) 60%, hsl(var(--ds-accent-500)));
+}
+.kpi-theme-green {
+  --kpi-orb: hsl(var(--severity-low));
+}
+.kpi-theme-emerald {
+  --kpi-orb: hsl(var(--ds-success-600));
+}
+.kpi-theme-teal {
+  --kpi-orb: hsl(var(--ds-teal-500));
+}
+.kpi-theme-cyan {
+  /* Teal pulled toward info-blue → cyan (chart-6 is now magenta, so it can no
+     longer anchor a teal/cyan family). */
+  --kpi-orb: color-mix(in srgb, hsl(var(--ds-primary-400)) 55%, hsl(var(--status-info)));
+}
+.kpi-theme-sky {
+  --kpi-orb: hsl(var(--severity-info));
+}
+.kpi-theme-blue {
+  /* Brand primary is now teal, so the `blue` theme anchors the categorical blue
+     (chart-5) to stay a true blue. */
+  --kpi-orb: hsl(var(--chart-5));
+}
+.kpi-theme-indigo {
+  --kpi-orb: color-mix(in srgb, hsl(var(--chart-5)) 55%, hsl(var(--status-pending)));
+}
+.kpi-theme-violet {
+  --kpi-orb: hsl(var(--status-pending));
+}
+.kpi-theme-purple {
+  --kpi-orb: color-mix(in srgb, hsl(var(--chart-4)) 78%, hsl(var(--severity-critical)));
+}
+.kpi-theme-pink {
+  --kpi-orb: color-mix(in srgb, hsl(var(--severity-critical)) 55%, hsl(var(--chart-4)));
+}
+.kpi-theme-primary {
+  /* Exact canonical brand primary #005E5E (was --chart-1, a lighter data-viz
+     teal). This is the brand/neutral KPI anchor the cool blue/purple themes were
+     swept into, so every neutral card reads as the exact WatheeqTech teal. */
+  --kpi-orb: hsl(var(--ds-brand-primary));
+  --kpi-accent: hsl(var(--ds-brand-primary));
+}
+
+/* Dashboard animations */
+@keyframes critical-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px 4px rgba(220, 38, 38, 0.25);
+  }
+}
+
+@keyframes live-dot-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(0,0,0,0.04), transparent);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+/* ----------------------------------------------------------------------------
+ * Motion keyframes (Stream A / F2) — entrance + emphasis animations wired to the
+ * --ds-duration-* / --ds-ease-* token scale through the Tailwind animation map
+ * (tailwind.config.ts). Declared here so they exist for direct CSS use too. All
+ * are gated under prefers-reduced-motion below (belt-and-braces alongside the
+ * global guard in @layer base).
+ * ------------------------------------------------------------------------- */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes spring-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Reduced-motion: disable all entrance/emphasis keyframe utilities outright so
+   the end-state is shown instantly (WCAG 2.3.3). */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-scale-in,
+  .animate-slide-in-right,
+  .animate-spring-pop,
+  .animate-shimmer,
+  .skeleton-shimmer {
+    animation: none !important;
+  }
+}
+
+/* WCAG 1.4.3 / 1.4.11 — honor the OS "increase contrast" setting: strengthen the
+   lowest-contrast affordances (muted text, borders, inputs) and make the focus
+   ring unmistakable. Additive; leaves the default themes untouched. */
+@media (prefers-contrast: more) {
+  :root {
+    --muted-foreground: 215 25% 27%;
+    --border: 215 20% 42%;
+    --input: 215 20% 42%;
+  }
+  .dark {
+    --muted-foreground: 0 0% 90%;
+    --border: 0 0% 62%;
+    --input: 0 0% 62%;
+  }
+  *:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Auth surface (.auth-clario) — glass card, RTL mirroring, reduced-motion.
+ * Owned by the auth-integration layer; scoped so nothing leaks to the shell.
+ * ------------------------------------------------------------------------- */
+
+/* Glass legibility floor: where backdrop-filter is unsupported, ensure the
+ * form card stays solid enough to read against the animated background. The
+ * component class already declares supports-[] variants; this is a belt-and-
+ * braces fallback for older engines that ignore the Tailwind supports query. */
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .auth-clario #auth-form {
+    background-color: hsl(var(--card));
+  }
+}
+
+/* The form card is a programmatic focus target for the skip link; never show
+ * a focus outline when focus arrives via the skip link (it is non-interactive). */
+.auth-clario #auth-form:focus {
+  outline: none;
+}
+
+/* Desktop auth split: curve the form panel into the skyline instead of using a
+ * hard rectangular edge. The pseudo-element sits below the header/form content
+ * and only changes the silhouette of the left surface. */
+.auth-split-panel {
+  background: hsl(var(--background));
+}
+
+@media (min-width: 1024px) {
+  .auth-split-panel {
+    isolation: isolate;
+    box-shadow: 24px 0 72px -48px hsl(var(--ds-primary-950) / 0.46);
+  }
+
+  .auth-split-panel::before {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    right: -52px;
+    width: 104px;
+    border-radius: 50%;
+    background: hsl(var(--background));
+    box-shadow: 24px 0 62px -48px hsl(var(--ds-primary-950) / 0.54);
+    pointer-events: none;
+  }
+
+  .auth-split-panel > * {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+.auth-clario input[type='email'],
+.auth-clario input[type='password'],
+.auth-clario input[type='text'] {
+  background-color: rgb(var(--ds-auth-teal)) !important;
+  color: hsl(var(--foreground));
+  color-scheme: dark;
+}
+
+.auth-clario input.auth-otp-input[type='text'] {
+  background-color: hsl(var(--card)) !important;
+  color: hsl(var(--foreground));
+  color-scheme: light;
+}
+
+.dark .auth-clario input.auth-otp-input[type='text'] {
+  background-color: hsl(var(--background)) !important;
+  color-scheme: dark;
+}
+
+.auth-clario input:-webkit-autofill,
+.auth-clario input:-webkit-autofill:hover,
+.auth-clario input:-webkit-autofill:focus,
+.auth-clario textarea:-webkit-autofill,
+.auth-clario textarea:-webkit-autofill:hover,
+.auth-clario textarea:-webkit-autofill:focus {
+  -webkit-text-fill-color: hsl(var(--foreground));
+  caret-color: hsl(var(--foreground));
+  border-color: hsl(var(--ds-brand-primary) / 0.5);
+  box-shadow: 0 0 0 1000px rgb(var(--ds-auth-teal)) inset, inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: background-color 9999s ease-out, color 9999s ease-out;
+}
+
+/* RTL: the inline SVG mesh background is decorative and direction-agnostic, but
+ * mirror it horizontally in Arabic so the gradient "weight" tracks the mirrored
+ * two-column layout (hero moves to the right, form to the left). Decorative
+ * only — has no semantic impact. */
+.auth-clario-rtl .auth-bg-mesh {
+  transform: scaleX(-1);
+}
+
+/* Reduced-motion: the AuthBackground ships its own OS-gated stylesheet, but
+ * guarantee the parallax/drift layers are pinned if anything slips through. */
+@media (prefers-reduced-motion: reduce) {
+  .auth-clario .auth-bg-layer {
+    transition: none !important;
+  }
+}
+
+/* ============================================================
+   Watheeq sidebar skin
+   Applied via data-watheeq on the sidebar <aside> when the user
+   is inside /lex or on a Watheeq-only tenant.
+   ============================================================ */
+
+.lex-top-nav {
+  /* Canonical WatheeqTech brand palette: Deep Teal chrome (#005E5E), matching
+     the reference surface, with Dark Teal (#06352F) as the active-tab surface;
+     La Rioja (#ABB705) is the top hairline + active underline. Exposed
+     as component tokens so the TSX stays theme/lint-safe. */
+  --lex-top-nav-bg: hsl(var(--ds-primary-600));
+  --lex-top-nav-active: hsl(var(--ds-primary-800));
+  background: var(--lex-top-nav-bg);
+}
+
+aside[data-watheeq='true'] {
+  /* Keep the Watheeq teal and leaf-green anchors while building the rail from
+     several translucent layers. The highlights are intentionally CSS-only so
+     the shell remains sharp at every viewport and in both writing directions. */
+  --sidebar-bg: hsl(var(--ds-primary-600));
+  --sidebar-hover: rgb(var(--ds-clario-accent) / 0.18);
+  --sidebar-active: rgb(var(--ds-clario-spring-teal) / 0.72);
+  --watheeq-gloss-border: rgba(255, 255, 255, 0.14);
+  --watheeq-gloss-highlight: rgba(255, 255, 255, 0.19);
+  --watheeq-depth-shadow: rgba(0, 32, 35, 0.42);
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 14% -8%, rgba(255, 255, 255, 0.2), transparent 29%),
+    radial-gradient(circle at 115% 48%, rgb(var(--ds-clario-spring-teal) / 0.16), transparent 42%),
+    linear-gradient(
+      104deg,
+      hsl(var(--ds-primary-500)) 0%,
+      hsl(var(--ds-primary-600)) 46%,
+      hsl(var(--ds-primary-800)) 100%
+    );
+  box-shadow:
+    inset -1px 0 0 rgba(255, 255, 255, 0.16),
+    inset 14px 0 28px -30px rgba(255, 255, 255, 0.9),
+    12px 0 28px -24px rgba(0, 28, 31, 0.85);
+  /* The global --font-sans / --font-arabic stacks apply here, so the sidebar
+     inherits the brand face without a scoped font-family override. */
+}
+
+/* Physical shadows face the content edge: right in LTR, left in RTL. The
+   mobile drawer retains its deeper floating shadow above the page backdrop. */
+aside[data-watheeq='true']:dir(rtl) {
+  background:
+    radial-gradient(circle at 86% -8%, rgba(255, 255, 255, 0.2), transparent 29%),
+    radial-gradient(circle at -15% 48%, rgb(var(--ds-clario-spring-teal) / 0.16), transparent 42%),
+    linear-gradient(
+      256deg,
+      hsl(var(--ds-primary-500)) 0%,
+      hsl(var(--ds-primary-600)) 46%,
+      hsl(var(--ds-primary-800)) 100%
+    );
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.16),
+    inset -14px 0 28px -30px rgba(255, 255, 255, 0.9),
+    -12px 0 28px -24px rgba(0, 28, 31, 0.85);
+}
+
+aside[data-watheeq='true'][aria-modal='true'] {
+  box-shadow:
+    inset -1px 0 0 rgba(255, 255, 255, 0.16),
+    inset 14px 0 28px -30px rgba(255, 255, 255, 0.9),
+    0 35px 85px -45px rgba(0, 20, 23, 0.95);
+}
+
+aside[data-watheeq='true'][aria-modal='true']:dir(rtl) {
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.16),
+    inset -14px 0 28px -30px rgba(255, 255, 255, 0.9),
+    0 35px 85px -45px rgba(0, 20, 23, 0.95);
+}
+
+/* A broad reflected-light band supplies the gloss without reducing text
+   contrast. It sits behind all real content and never intercepts interaction. */
+aside[data-watheeq='true']::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      118deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      transparent 21%,
+      transparent 68%,
+      rgba(0, 22, 25, 0.13) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.055),
+      transparent 18%,
+      transparent 82%,
+      rgba(0, 27, 30, 0.18)
+    );
+}
+
+aside[data-watheeq='true'] > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Shared raised-glass surfaces: brand, suite selector, footer identity and the
+   collapse control all use the same light direction and depth language. */
+aside[data-watheeq='true'] .sidebar-brand-card,
+aside[data-watheeq='true'] .sidebar-suite-switcher,
+aside[data-watheeq='true'] .sidebar-user-card,
+aside[data-watheeq='true'] .sidebar-collapse-control {
+  border: 1px solid var(--watheeq-gloss-border);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.105), rgba(255, 255, 255, 0.035));
+  box-shadow:
+    inset 0 1px 0 var(--watheeq-gloss-highlight),
+    inset 0 -1px 0 rgba(0, 25, 28, 0.2),
+    0 7px 15px -11px var(--watheeq-depth-shadow);
+}
+
+aside[data-watheeq='true'] .sidebar-brand-card:hover,
+aside[data-watheeq='true'] .sidebar-suite-switcher:hover,
+aside[data-watheeq='true'] .sidebar-collapse-control:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.145), rgb(var(--ds-clario-accent) / 0.09));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.27),
+    inset 0 -1px 0 rgba(0, 25, 28, 0.22),
+    0 9px 18px -11px rgba(0, 28, 31, 0.72);
+  transform: translateY(-1px);
+}
+
+aside[data-watheeq='true'] .sidebar-suite-icon {
+  position: relative;
+  background: linear-gradient(
+    145deg,
+    hsl(var(--ds-primary-400)) 0%,
+    hsl(var(--ds-primary-500)) 48%,
+    hsl(var(--ds-primary-600)) 100%
+  );
+  border: 1px solid rgb(var(--ds-clario-border) / 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    inset 0 -2px 4px rgba(0, 45, 48, 0.35),
+    0 5px 9px -6px rgba(0, 20, 22, 0.9);
+}
+
+/* Navigation rows lift from the rail on hover. The active row gets a stronger
+   bevel plus a soft top reflection, while its green rail remains unmistakable. */
+aside[data-watheeq='true'] .sidebar-nav-link {
+  border: 1px solid transparent;
+}
+
+aside[data-watheeq='true'] .sidebar-nav-link:not(.sidebar-item-active):hover,
+aside[data-watheeq='true'] .sidebar-section-trigger:hover,
+aside[data-watheeq='true'] .sidebar-nav-disclosure:hover {
+  background: linear-gradient(180deg, rgb(var(--ds-clario-accent) / 0.23), rgb(var(--ds-clario-accent) / 0.12));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.13),
+    0 6px 11px -9px rgba(0, 25, 27, 0.9);
+}
+
+aside[data-watheeq='true'] .sidebar-item-active {
+  overflow: hidden;
+  background: linear-gradient(180deg, rgb(var(--ds-clario-spring-teal) / 0.92), rgb(var(--ds-clario-primary) / 0.9));
+  border: 1px solid rgb(var(--ds-clario-spring-teal) / 0.16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    inset 0 -1px 0 rgba(0, 35, 38, 0.28),
+    0 8px 14px -10px rgba(0, 25, 27, 0.95),
+    0 0 16px -12px rgb(var(--ds-clario-accent) / 0.8);
+  text-shadow: 0 1px 1px rgba(0, 28, 30, 0.36);
+}
+
+aside[data-watheeq='true'] .sidebar-item-active::before {
+  z-index: 2;
+  width: 3px;
+  height: 62%;
+  background: linear-gradient(
+    180deg,
+    hsl(var(--ds-accent-300)),
+    hsl(var(--ds-accent-500))
+  );
+  box-shadow: 0 0 8px rgb(var(--ds-clario-accent) / 0.72);
+}
+
+aside[data-watheeq='true'] .sidebar-item-active::after {
+  content: '';
+  position: absolute;
+  inset: 1px 7px auto;
+  height: 45%;
+  border-radius: 0.65rem 0.65rem 55% 55%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.115), transparent);
+  pointer-events: none;
+}
+
+aside[data-watheeq='true'] .sidebar-item-active > * {
+  position: relative;
+  z-index: 1;
+}
+
+aside[data-watheeq='true'] .sidebar-tier-header > span:first-child {
+  box-shadow:
+    0 0 0 2px rgb(var(--ds-clario-accent) / 0.12),
+    0 0 8px rgb(var(--ds-clario-accent) / 0.55);
+}
+
+aside[data-watheeq='true'] .sidebar-section-trigger span,
+aside[data-watheeq='true'] .sidebar-nav-link span[class*='rounded-full'] {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 3px 7px -6px rgba(0, 22, 24, 0.9);
+}
+
+aside[data-watheeq='true'] .sidebar-user-card {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 25, 28, 0.24),
+    0 9px 18px -12px rgba(0, 27, 30, 0.85);
+}
+
+aside[data-watheeq='true'] .sidebar-user-card a[aria-label] {
+  box-shadow:
+    0 0 0 2px rgb(var(--ds-clario-spring-teal) / 0.2),
+    0 4px 9px -5px rgba(0, 21, 23, 0.9);
+}
+
+aside[data-watheeq='true'] .sidebar-brand-card:focus-visible,
+aside[data-watheeq='true'] .sidebar-suite-switcher:focus-visible,
+aside[data-watheeq='true'] .sidebar-nav-link:focus-visible,
+aside[data-watheeq='true'] .sidebar-nav-disclosure:focus-visible,
+aside[data-watheeq='true'] .sidebar-section-trigger:focus-visible,
+aside[data-watheeq='true'] .sidebar-collapse-control:focus-visible,
+aside[data-watheeq='true'] .sidebar-user-card:focus-visible {
+  outline: 2px solid rgb(var(--ds-clario-accent) / 0.85);
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  aside[data-watheeq='true'] .sidebar-brand-card:hover,
+  aside[data-watheeq='true'] .sidebar-suite-switcher:hover,
+  aside[data-watheeq='true'] .sidebar-collapse-control:hover {
+    transform: none;
+  }
+}
+
+/* Master-brand shell alignment. Watheeq remains a named suite, while its shell
+   uses the same flat Clario360 surface language as every other suite. */
+aside[data-watheeq='true'],
+aside[data-watheeq='true']:dir(rtl) {
+  --sidebar-bg: hsl(var(--ds-primary-600));
+  --sidebar-hover: rgba(255, 255, 255, 0.08);
+  --sidebar-active: hsl(var(--ds-accent-500) / 0.2);
+  --watheeq-gloss-border: rgba(255, 255, 255, 0.14);
+  --watheeq-gloss-highlight: transparent;
+  --watheeq-depth-shadow: transparent;
+  background: var(--sidebar-bg);
+  box-shadow: none;
+}
+
+aside[data-watheeq='true'][aria-modal='true'],
+aside[data-watheeq='true'][aria-modal='true']:dir(rtl) {
+  box-shadow: 0 28px 68px -34px hsl(var(--ds-primary-800) / 0.78);
+}
+
+aside[data-watheeq='true']::before {
+  background: none;
+}
+
+aside[data-watheeq='true'] .sidebar-brand-card,
+aside[data-watheeq='true'] .sidebar-suite-switcher,
+aside[data-watheeq='true'] .sidebar-user-card,
+aside[data-watheeq='true'] .sidebar-collapse-control {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+aside[data-watheeq='true'] .sidebar-brand-card:hover,
+aside[data-watheeq='true'] .sidebar-suite-switcher:hover,
+aside[data-watheeq='true'] .sidebar-collapse-control:hover,
+aside[data-watheeq='true'] .sidebar-nav-link:not(.sidebar-item-active):hover,
+aside[data-watheeq='true'] .sidebar-section-trigger:hover,
+aside[data-watheeq='true'] .sidebar-nav-disclosure:hover {
+  background: var(--sidebar-hover);
+  box-shadow: none;
+  transform: none;
+}
+
+aside[data-watheeq='true'] .sidebar-suite-icon,
+aside[data-watheeq='true'] .sidebar-user-card,
+aside[data-watheeq='true'] .sidebar-user-card a[aria-label],
+aside[data-watheeq='true'] .sidebar-section-trigger span,
+aside[data-watheeq='true'] .sidebar-nav-link span[class*='rounded-full'] {
+  box-shadow: none;
+}
+
+aside[data-watheeq='true'] .sidebar-suite-icon {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+aside[data-watheeq='true'] .sidebar-item-active {
+  border-color: hsl(var(--ds-accent-500) / 0.34);
+  background: var(--sidebar-active);
+  box-shadow: none;
+  text-shadow: none;
+}
+
+aside[data-watheeq='true'] .sidebar-item-active::before {
+  background: hsl(var(--ds-accent-500));
+  box-shadow: none;
+}
+
+aside[data-watheeq='true'] .sidebar-item-active::after {
+  display: none;
+}
+
+aside[data-watheeq='true'] .sidebar-tier-header > span:first-child {
+  box-shadow: 0 0 0 2px hsl(var(--ds-accent-500) / 0.16);
+}
+
+aside[data-watheeq='true'] .sidebar-brand-card:focus-visible,
+aside[data-watheeq='true'] .sidebar-suite-switcher:focus-visible,
+aside[data-watheeq='true'] .sidebar-nav-link:focus-visible,
+aside[data-watheeq='true'] .sidebar-nav-disclosure:focus-visible,
+aside[data-watheeq='true'] .sidebar-section-trigger:focus-visible,
+aside[data-watheeq='true'] .sidebar-collapse-control:focus-visible,
+aside[data-watheeq='true'] .sidebar-user-card:focus-visible {
+  outline-color: hsl(var(--ds-accent-300));
+}

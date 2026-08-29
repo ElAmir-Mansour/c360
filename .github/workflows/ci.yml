@@ -1,0 +1,613 @@
+# =============================================================================
+# Clario 360 — Continuous Integration Pipeline
+# Triggers: PR to main/develop, push to main
+# Jobs: lint → test-backend, test-frontend, security, helm-validate → build-images
+# =============================================================================
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+  packages: write
+  id-token: write
+
+env:
+  GOWORK: "off"
+  # Measured repository baselines (2026-07-16). These are no-regression floors,
+  # not aspirational targets; raise them as uncovered packages gain tests.
+  BACKEND_COVERAGE_FLOOR: "30.0"
+  FRONTEND_COVERAGE_FLOOR: "31.0"
+
+jobs:
+  # ===========================================================================
+  # JOB 1: LINT — Fast feedback on code quality
+  # ===========================================================================
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: ./.github/actions/setup-go
+
+      - name: Setup Node.js
+        uses: ./.github/actions/setup-node
+
+      # --- Go linting ---
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: backend
+          args: --timeout=10m
+
+      - name: Run go vet
+        working-directory: backend
+        run: go vet ./...
+
+      # --- Frontend linting ---
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: frontend
+        run: npm run lint
+
+      # Design-system ratchet: fails only when NEW violations (hardcoded hex
+      # classes, arbitrary px fonts, physical ml-/mr-/pl-/pr- utilities in the
+      # RTL-first app) push counts past scripts/lint-ds-baseline.json.
+      # NOTE: the a11y gate (`npm run test:a11y`, e2e/a11y-broad.spec.ts) is
+      # NOT run here — it needs Playwright browsers + a running authed stack,
+      # which this pipeline does not provision. Run it locally / on the verify
+      # box against :3002 before merging UI changes.
+      - name: Run design-system lint (lint:ds)
+        working-directory: frontend
+        run: npm run lint:ds
+
+      - name: Run TypeScript type check
+        working-directory: frontend
+        run: npm run type-check
+
+      - name: Validate OpenAPI contracts
+        run: |
+          make validate-api
+          ./scripts/check-api-contracts.sh
+          make check-sdk-drift
+
+      # --- Code quality warnings ---
+      - name: Check for TODO/FIXME/HACK comments
+        run: |
+          echo "::notice::Scanning for TODO/FIXME/HACK comments..."
+          FOUND=$(grep -rn "TODO\|FIXME\|HACK" \
+            backend/internal/ frontend/src/ \
+            --include="*.go" --include="*.ts" --include="*.tsx" \
+            2>/dev/null | head -20) || true
+          if [ -n "$FOUND" ]; then
+            echo "::warning::Found TODO/FIXME/HACK comments in code:"
+            echo "$FOUND"
+          else
+            echo "No TODO/FIXME/HACK comments found."
+          fi
+
+  # ===========================================================================
+  # JOB 2: TEST-BACKEND — Go unit + integration tests with real infra
+  # ===========================================================================
+  test-backend:
+    name: Test Backend
+    runs-on: ubuntu-latest
+    needs: lint
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      kafka:
+        image: bitnami/kafka:3.7
+        ports:
+          - 9092:9092
+        env:
+          KAFKA_CFG_NODE_ID: "1"
+          KAFKA_CFG_PROCESS_ROLES: controller,broker
+          KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+          KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+          KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+          KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+          ALLOW_PLAINTEXT_LISTENER: "yes"
+
+      minio:
+        image: minio/minio:latest
+        ports:
+          - 9000:9000
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
+        options: >-
+          --health-cmd "mc ready local || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      IAM_DB_URL: postgres://postgres:testpass@localhost:5432/iam_test?sslmode=disable
+      PLATFORM_DB_URL: postgres://postgres:testpass@localhost:5432/platform_test?sslmode=disable
+      CYBER_DB_URL: postgres://postgres:testpass@localhost:5432/cyber_test?sslmode=disable
+      DATA_DB_URL: postgres://postgres:testpass@localhost:5432/data_test?sslmode=disable
+      ACTA_DB_URL: postgres://postgres:testpass@localhost:5432/acta_test?sslmode=disable
+      LEX_DB_URL: postgres://postgres:testpass@localhost:5432/lex_test?sslmode=disable
+      VISUS_DB_URL: postgres://postgres:testpass@localhost:5432/visus_test?sslmode=disable
+      REDIS_URL: redis://localhost:6379/0
+      KAFKA_BROKERS: localhost:9092
+      MINIO_ENDPOINT: localhost:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      JWT_PRIVATE_KEY: ${{ secrets.TEST_JWT_PRIVATE_KEY }}
+      JWT_PUBLIC_KEY: ${{ secrets.TEST_JWT_PUBLIC_KEY }}
+      ENCRYPTION_KEY: ${{ secrets.TEST_ENCRYPTION_KEY }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: ./.github/actions/setup-go
+
+      - name: Setup test infrastructure
+        uses: ./.github/actions/setup-test-infra
+        with:
+          pg_password: testpass
+
+      - name: Run unit tests
+        working-directory: backend
+        run: |
+          go test -race -count=1 \
+            -coverprofile=coverage-unit.out \
+            -covermode=atomic \
+            -timeout=10m \
+            ./internal/...
+
+      - name: Run integration tests
+        working-directory: backend
+        run: |
+          go test -race -count=1 \
+            -tags=integration \
+            -coverprofile=coverage-integration.out \
+            -covermode=atomic \
+            -timeout=15m \
+            ./integration_tests/...
+          go test -race -count=1 \
+            -tags=integration \
+            -coverprofile=coverage-integration-lex.out \
+            -covermode=atomic \
+            -timeout=15m \
+            ./internal/lex/integration
+
+      - name: Merge coverage reports
+        working-directory: backend
+        run: |
+          if [ -f coverage-unit.out ]; then
+            cp coverage-unit.out coverage-combined.out
+          fi
+          if [ -f coverage-integration.out ]; then
+            if [ -f coverage-combined.out ]; then
+              tail -n +2 coverage-integration.out >> coverage-combined.out
+            else
+              cp coverage-integration.out coverage-combined.out
+            fi
+          fi
+          if [ -f coverage-integration-lex.out ]; then
+            if [ -f coverage-combined.out ]; then
+              tail -n +2 coverage-integration-lex.out >> coverage-combined.out
+            else
+              cp coverage-integration-lex.out coverage-combined.out
+            fi
+          fi
+
+      - name: Check backend coverage ratchet
+        working-directory: backend
+        run: |
+          if [ ! -f coverage-combined.out ]; then
+            echo "::error::No coverage data found"
+            exit 1
+          fi
+          COVERAGE=$(go tool cover -func=coverage-combined.out | grep total | awk '{print substr($3, 1, length($3)-1)}')
+          echo "Total backend coverage: ${COVERAGE}%"
+          echo "coverage=${COVERAGE}" >> "$GITHUB_OUTPUT"
+          if [[ ! "$COVERAGE" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+            echo "::error::Backend coverage is not numeric: ${COVERAGE}"
+            exit 1
+          fi
+          if ! awk -v coverage="$COVERAGE" -v floor="$BACKEND_COVERAGE_FLOOR" \
+            'BEGIN { exit !(coverage >= floor) }'; then
+            echo "::error::Backend coverage ${COVERAGE}% is below the ${BACKEND_COVERAGE_FLOOR}% no-regression floor"
+            exit 1
+          fi
+          echo "Coverage ${COVERAGE}% meets the ${BACKEND_COVERAGE_FLOOR}% no-regression floor"
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          files: backend/coverage-combined.out
+          flags: backend
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage-combined.out
+          retention-days: 30
+
+  # ===========================================================================
+  # JOB 3: DR-AGENT-ACCEPTANCE — WP-7 agent + DataStream containerized proofs
+  # ===========================================================================
+  dr-agent-acceptance:
+    name: DR Agent Acceptance
+    runs-on: ubuntu-latest
+    needs: lint
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: ./.github/actions/setup-go
+
+      - name: Verify Docker daemon
+        run: docker version
+
+      - name: Build static clario-dr-agent
+        run: make dr-agent-build-static
+
+      - name: Run clario-dr-agent and DataStream acceptance tests
+        run: make dr-agent-acceptance
+
+  # ===========================================================================
+  # JOB 3b: DR-WORM-OBJECTLOCK — ClarioDR WORM object-lock enforcement gate
+  # Fail-closed proof that the recovery-point store rejects a misprovisioned
+  # (non-object-lock) bucket and enforces GOVERNANCE immutability. Runs the
+  # `integration`-tagged worm tests against an EPHEMERAL MinIO (testcontainers)
+  # so object-lock enforcement can never silently regress. GOVERNANCE ONLY — no
+  # compliance-mode object is ever written (that is deferred to a regulated env).
+  # ===========================================================================
+  dr-worm-objectlock:
+    name: DR WORM Object-Lock
+    runs-on: ubuntu-latest
+    needs: lint
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: ./.github/actions/setup-go
+
+      - name: Verify Docker daemon
+        run: docker version
+
+      - name: Run WORM object-lock enforcement integration tests
+        run: make dr-worm-integration
+
+  # ===========================================================================
+  # JOB 4: TEST-FRONTEND — Vitest tests + build verification
+  # ===========================================================================
+  test-frontend:
+    name: Test Frontend
+    runs-on: ubuntu-latest
+    needs: lint
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: ./.github/actions/setup-node
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run tests with coverage
+        working-directory: frontend
+        run: npm run test:coverage -- --reporter=verbose
+
+      - name: Check frontend coverage ratchet
+        working-directory: frontend
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            COVERAGE=$(node -e "
+              const summary = require('./coverage/coverage-summary.json');
+              console.log(summary.total.statements.pct);
+            ")
+            echo "Total frontend coverage: ${COVERAGE}%"
+            if ! node -e \
+              "const c=Number(process.argv[1]), f=Number(process.argv[2]); if (!Number.isFinite(c) || c < f) process.exit(1)" \
+              "$COVERAGE" "$FRONTEND_COVERAGE_FLOOR"; then
+              echo "::error::Frontend coverage ${COVERAGE}% is below the ${FRONTEND_COVERAGE_FLOOR}% no-regression floor"
+              exit 1
+            fi
+            echo "Coverage ${COVERAGE}% meets the ${FRONTEND_COVERAGE_FLOOR}% no-regression floor"
+          else
+            echo "::error::No coverage summary found"
+            exit 1
+          fi
+
+      - name: Build check
+        working-directory: frontend
+        run: npm run build
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          directory: frontend/coverage
+          flags: frontend
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/
+          retention-days: 30
+
+  # ===========================================================================
+  # JOB 4b: TEST-AI — WatheeqTech Second Brain (FastAPI RAG runtime) pytest
+  # Pure-logic unit tests (Arabic chunking + citation assembly): no DB, no model
+  # download, no network — anthropic/torch are imported lazily, so `pytest` alone
+  # suffices and the job stays fast. The heavier runtime deps (torch, pgvector,
+  # tesseract) are exercised only in the container build / deploy, not here.
+  # ===========================================================================
+  test-ai:
+    name: Test AI (Second Brain)
+    runs-on: ubuntu-latest
+    needs: lint
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        working-directory: ai/second-brain
+        run: python -m pip install --upgrade pip pytest
+
+      - name: Run pytest
+        working-directory: ai/second-brain
+        run: pytest -q
+
+  # ===========================================================================
+  # JOB 5: SECURITY — Multi-layer security scanning
+  # ===========================================================================
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: lint
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: ./.github/actions/setup-go
+
+      - name: Setup Node.js
+        uses: ./.github/actions/setup-node
+
+      # --- Go vulnerability check ---
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Run govulncheck
+        working-directory: backend
+        run: govulncheck ./...
+
+      # --- gosec (Go security linter) ---
+      - name: Run gosec
+        uses: securego/gosec@master
+        with:
+          args: -severity medium -fmt sarif -out gosec-results.sarif ./backend/internal/...
+
+      - name: Upload gosec SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: gosec-results.sarif
+          category: gosec
+
+      # --- npm audit ---
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run npm audit
+        working-directory: frontend
+        run: npm audit --production --audit-level=high
+
+      # --- Semgrep SAST ---
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/golang
+            p/typescript
+            p/security-audit
+            p/owasp-top-ten
+            p/secrets
+          generateSarif: "1"
+
+      - name: Upload Semgrep SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+
+      # --- Secret detection ---
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --only-verified --json
+
+      # --- License compliance ---
+      - name: Check Go license compliance
+        run: |
+          go install github.com/google/go-licenses@latest
+          cd backend && go-licenses check ./... \
+            --allowed_licenses=Apache-2.0,MIT,BSD-2-Clause,BSD-3-Clause,ISC \
+            2>&1 || echo "::warning::Some Go dependencies have unrecognized licenses"
+
+      - name: Check frontend license compliance
+        working-directory: frontend
+        run: |
+          npx license-checker --production \
+            --onlyAllow "MIT;ISC;BSD-2-Clause;BSD-3-Clause;Apache-2.0;0BSD;CC0-1.0;Unlicense;CC-BY-4.0;Python-2.0" \
+            || echo "::warning::Some npm dependencies have unrecognized licenses"
+
+  # ===========================================================================
+  # JOB 6: HELM-VALIDATE — Lint and render Helm chart
+  # ===========================================================================
+  helm-validate:
+    name: Helm Validate
+    runs-on: ubuntu-latest
+    needs: lint
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Lint Helm chart
+        run: make helm-lint
+
+      - name: Render Helm chart
+        run: make helm-template
+
+      # The aiSecondBrain component (WatheeqTech Second Brain) is gated off by
+      # default, so the render above exercises 0 of its 7 templates. Render again
+      # with it enabled so a break in those templates is caught in CI, not at
+      # deploy time. A dummy pgvector password satisfies the fail-closed required().
+      - name: Render Helm chart (AI Second Brain enabled)
+        run: make helm-template HELM_TEMPLATE_ARGS="--set aiSecondBrain.enabled=true --set aiSecondBrain.pgvector.password=ci-dummy-password"
+
+  # ===========================================================================
+  # JOB 7: BUILD-IMAGES — Build, push, sign, and scan all container images
+  # Only runs on push to main (not on PRs)
+  # ===========================================================================
+  build-images:
+    name: Build ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    needs: [test-backend, dr-agent-acceptance, dr-worm-objectlock, test-frontend, test-ai, security, helm-validate]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    timeout-minutes: 30
+
+    strategy:
+      matrix:
+        include:
+          - service: api-gateway
+            dockerfile: deploy/docker/Dockerfile.backend
+          - service: iam-service
+            dockerfile: deploy/docker/Dockerfile.backend
+          - service: audit-service
+            dockerfile: deploy/docker/Dockerfile.backend
+          - service: workflow-engine
+            dockerfile: deploy/docker/Dockerfile.backend
+          - service: notification-service
+            dockerfile: deploy/docker/Dockerfile.backend
+          - service: file-service
+            dockerfile: deploy/docker/Dockerfile.backend
+          - service: cyber-service
+            dockerfile: deploy/docker/Dockerfile.backend
+          - service: data-service
+            dockerfile: deploy/docker/Dockerfile.backend
+          - service: acta-service
+            dockerfile: deploy/docker/Dockerfile.backend
+          - service: lex-service
+            dockerfile: deploy/docker/Dockerfile.backend
+          - service: visus-service
+            dockerfile: deploy/docker/Dockerfile.backend
+          - service: license-service
+            dockerfile: deploy/docker/Dockerfile.backend
+          - service: migrator
+            dockerfile: deploy/docker/Dockerfile.migrator
+          - service: seeder
+            dockerfile: deploy/docker/Dockerfile.seeder
+          - service: frontend
+            dockerfile: deploy/docker/Dockerfile.frontend
+          # WatheeqTech Second Brain (FastAPI AI runtime). Self-contained build
+          # context under ai/second-brain (its own Dockerfile + requirements),
+          # so it overrides the default repo-root context.
+          - service: ai-second-brain
+            dockerfile: ai/second-brain/Dockerfile
+            context: ai/second-brain
+      fail-fast: false
+      max-parallel: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build and push image
+        uses: ./.github/actions/build-image
+        with:
+          service: ${{ matrix.service }}
+          registry: ${{ vars.CONTAINER_REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+          dockerfile: ${{ matrix.dockerfile }}
+          context: ${{ matrix.context || '.' }}

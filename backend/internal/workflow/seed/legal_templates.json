@@ -1,0 +1,384 @@
+{
+  "_comment": "Golden legal workflow templates (Workflow_Module_Design §1.2). Each entry is a data-driven catalog row whose `definition` is a valid WorkflowDefinition blueprint (model/definition.go). These 3 PIN the JSON schema for the later 75-template content phase: every entry MUST pass the engine's ValidateDefinition. tenant_id is omitted == GLOBAL (visible to every tenant).",
+  "templates": [
+    {
+      "id": "tmpl-legal-request-intake",
+      "category": "legal",
+      "icon": "inbox",
+      "tags": ["legal", "intake", "triage", "ksa", "service-desk"],
+      "name_i18n": {
+        "en": "New Legal Request Intake & Triage",
+        "ar": "استقبال وفرز الطلبات القانونية الجديدة"
+      },
+      "description_i18n": {
+        "en": "Captures a new legal request, auto-classifies and resolves the beneficiary entity, sets priority with justification, acknowledges within the SLA window, routes by eligibility/DoA, and assigns a lawyer while starting the SLA clock.",
+        "ar": "يستقبل طلباً قانونياً جديداً، ويصنّفه آلياً ويحدد الجهة المستفيدة، ويضبط الأولوية مع التبرير، ويُقرّ بالاستلام ضمن اتفاقية مستوى الخدمة، ثم يوجّهه حسب الأهلية وتفويض الصلاحيات ويُسند محامياً مع بدء عدّاد المهلة."
+      },
+      "definition": {
+        "name": "New Legal Request Intake & Triage",
+        "description": "Capture, classify, acknowledge, route, and assign incoming legal requests.",
+        "trigger_config": {
+          "type": "manual"
+        },
+        "variables": {
+          "request_id": { "type": "string" },
+          "beneficiary_entity": { "type": "string" },
+          "request_type": { "type": "string", "default": "consultation" },
+          "priority": { "type": "string", "default": "normal" }
+        },
+        "steps": [
+          {
+            "id": "capture_request",
+            "type": "human_task",
+            "name": "Capture Request & Auto-Reference",
+            "config": {
+              "assignee_role": "legal_intake_officer",
+              "sla_hours": 1,
+              "form_fields": [
+                { "name": "subject", "type": "text", "label": "Request Subject", "required": true },
+                { "name": "request_type", "type": "select", "label": "Request Type", "required": true, "options": ["consultation", "contract", "litigation", "investigation", "opinion"] },
+                { "name": "description", "type": "textarea", "label": "Description", "required": true },
+                { "name": "beneficiary_entity", "type": "text", "label": "Beneficiary Entity", "required": true }
+              ]
+            },
+            "transitions": [
+              { "target": "classify_resolve" }
+            ]
+          },
+          {
+            "id": "classify_resolve",
+            "type": "service_task",
+            "name": "Auto-Classify & Resolve Beneficiary",
+            "config": {
+              "service": "lex",
+              "method": "POST",
+              "url": "/api/v1/lex/legal-requests/${variables.request_id}/classify",
+              "body": {
+                "request_type": "${steps.capture_request.output.request_type}",
+                "beneficiary_entity": "${steps.capture_request.output.beneficiary_entity}"
+              },
+              "max_retries": 2
+            },
+            "transitions": [
+              { "target": "set_priority" }
+            ]
+          },
+          {
+            "id": "set_priority",
+            "type": "human_task",
+            "name": "Set Priority with Justification",
+            "config": {
+              "assignee_role": "legal_section_head",
+              "sla_hours": 4,
+              "escalation_role": "legal_manager",
+              "form_fields": [
+                { "name": "priority", "type": "select", "label": "Priority", "required": true, "options": ["low", "normal", "high", "urgent"] },
+                { "name": "priority_justification", "type": "textarea", "label": "Priority Justification", "required": true }
+              ]
+            },
+            "transitions": [
+              { "target": "acknowledge" }
+            ]
+          },
+          {
+            "id": "acknowledge",
+            "type": "service_task",
+            "name": "Acknowledge Request (SLA 0-4h)",
+            "config": {
+              "service": "notification",
+              "method": "POST",
+              "url": "/api/v1/notifications",
+              "body": {
+                "template": "legal_request_acknowledged",
+                "request_id": "${variables.request_id}"
+              }
+            },
+            "transitions": [
+              { "target": "route_eligibility" }
+            ]
+          },
+          {
+            "id": "route_eligibility",
+            "type": "condition",
+            "name": "Route by Eligibility / DoA",
+            "config": {
+              "expression": "steps.set_priority.output.priority == 'urgent'"
+            },
+            "transitions": [
+              { "condition": "steps.set_priority.output.priority == 'urgent'", "target": "assign_lawyer" },
+              { "target": "assign_lawyer" }
+            ]
+          },
+          {
+            "id": "assign_lawyer",
+            "type": "human_task",
+            "name": "Assign Lawyer & Start SLA Clock",
+            "config": {
+              "assignee_role": "legal_section_head",
+              "sla_hours": 8,
+              "form_fields": [
+                { "name": "assigned_lawyer", "type": "text", "label": "Assigned Lawyer", "required": true },
+                { "name": "assignment_notes", "type": "textarea", "label": "Assignment Notes", "required": false }
+              ]
+            },
+            "transitions": [
+              { "target": "end" }
+            ]
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "name": "End"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tmpl-contract-approval-doa",
+      "category": "legal",
+      "icon": "file-signature",
+      "tags": ["legal", "contracts", "clm", "approval", "doa"],
+      "name_i18n": {
+        "en": "Contract Approval & DoA Routing",
+        "ar": "اعتماد العقود وتوجيه تفويض الصلاحيات"
+      },
+      "description_i18n": {
+        "en": "Routes a drafted contract through risk review, value-based Delegation-of-Authority approval, and e-signature execution, with a revision loop when the reviewer rejects.",
+        "ar": "يوجّه العقد المُصاغ عبر مراجعة المخاطر، واعتماد تفويض الصلاحيات المبني على القيمة، وتنفيذ التوقيع الإلكتروني، مع حلقة تعديل عند رفض المراجع."
+      },
+      "definition": {
+        "name": "Contract Approval & DoA Routing",
+        "description": "Risk review, DoA-based approval routing, and e-signature execution for contracts.",
+        "trigger_config": {
+          "type": "manual"
+        },
+        "variables": {
+          "contract_id": { "type": "string" },
+          "contract_value": { "type": "number", "default": 0 },
+          "counterparty": { "type": "string" },
+          "approved": { "type": "boolean", "default": false }
+        },
+        "steps": [
+          {
+            "id": "risk_review",
+            "type": "human_task",
+            "name": "Legal Risk Review",
+            "config": {
+              "assignee_role": "legal_counsel",
+              "sla_hours": 48,
+              "escalation_role": "legal_director",
+              "form_fields": [
+                { "name": "risk_level", "type": "select", "label": "Risk Level", "required": true, "options": ["low", "medium", "high"] },
+                { "name": "review_approved", "type": "boolean", "label": "Cleared for Approval?", "required": true },
+                { "name": "review_notes", "type": "textarea", "label": "Review Notes", "required": true }
+              ]
+            },
+            "transitions": [
+              { "condition": "steps.risk_review.output.review_approved == true", "target": "doa_gate" },
+              { "target": "request_revision" }
+            ]
+          },
+          {
+            "id": "doa_gate",
+            "type": "condition",
+            "name": "DoA Threshold Gate",
+            "config": {
+              "expression": "variables.contract_value > 1000000"
+            },
+            "transitions": [
+              { "condition": "variables.contract_value > 1000000", "target": "executive_approval" },
+              { "target": "manager_approval" }
+            ]
+          },
+          {
+            "id": "manager_approval",
+            "type": "approval_chain",
+            "name": "Manager Approval (within DoA)",
+            "config": {
+              "approvers": [ { "role": "legal_manager" } ],
+              "mode": "sequential",
+              "quorum": 1,
+              "sla_hours": 24
+            },
+            "transitions": [
+              { "target": "esign_execute" }
+            ]
+          },
+          {
+            "id": "executive_approval",
+            "type": "approval_chain",
+            "name": "Executive Approval (above DoA)",
+            "config": {
+              "approvers": [ { "role": "legal_director" }, { "role": "chief_executive" } ],
+              "mode": "sequential",
+              "quorum": 2,
+              "sla_hours": 72
+            },
+            "transitions": [
+              { "target": "esign_execute" }
+            ]
+          },
+          {
+            "id": "esign_execute",
+            "type": "service_task",
+            "name": "E-Signature & Execution",
+            "config": {
+              "service": "esign",
+              "method": "POST",
+              "url": "/api/v1/lex/contracts/${variables.contract_id}/execute",
+              "body": {
+                "contract_id": "${variables.contract_id}",
+                "status": "executed"
+              },
+              "max_retries": 3
+            },
+            "transitions": [
+              { "target": "end" }
+            ]
+          },
+          {
+            "id": "request_revision",
+            "type": "human_task",
+            "name": "Request Revision",
+            "config": {
+              "assignee_role": "contract_drafter",
+              "form_fields": [
+                { "name": "revised_document_url", "type": "text", "label": "Revised Document URL", "required": true },
+                { "name": "revision_notes", "type": "textarea", "label": "Revision Notes", "required": true }
+              ]
+            },
+            "transitions": [
+              { "target": "risk_review" }
+            ]
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "name": "End"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tmpl-litigation-case-intake",
+      "category": "legal",
+      "icon": "gavel",
+      "tags": ["legal", "litigation", "disputes", "ksa", "najiz"],
+      "name_i18n": {
+        "en": "Litigation Case Intake & Classification",
+        "ar": "استقبال وتصنيف القضايا القضائية"
+      },
+      "description_i18n": {
+        "en": "Opens a litigation matter, runs a conflict check, classifies the case by court and dispute type, sets the legal hold, and assigns lead counsel with a hearing-management handoff.",
+        "ar": "يفتح ملف قضية قضائية، ويجري فحص تعارض المصالح، ويصنّف القضية حسب المحكمة ونوع النزاع، ويضبط الحجز القانوني، ويُسند المحامي الرئيس مع تسليم إدارة الجلسات."
+      },
+      "definition": {
+        "name": "Litigation Case Intake & Classification",
+        "description": "Open, conflict-check, classify, legal-hold, and assign counsel for a litigation case.",
+        "trigger_config": {
+          "type": "manual"
+        },
+        "variables": {
+          "case_id": { "type": "string" },
+          "court": { "type": "string" },
+          "dispute_type": { "type": "string", "default": "commercial" },
+          "conflict_cleared": { "type": "boolean", "default": false }
+        },
+        "steps": [
+          {
+            "id": "open_matter",
+            "type": "human_task",
+            "name": "Open Litigation Matter",
+            "config": {
+              "assignee_role": "litigation_intake_officer",
+              "sla_hours": 4,
+              "form_fields": [
+                { "name": "case_title", "type": "text", "label": "Case Title", "required": true },
+                { "name": "court", "type": "text", "label": "Court / Najiz Reference", "required": true },
+                { "name": "dispute_type", "type": "select", "label": "Dispute Type", "required": true, "options": ["commercial", "labor", "administrative", "criminal", "civil"] },
+                { "name": "opposing_party", "type": "text", "label": "Opposing Party", "required": true }
+              ]
+            },
+            "transitions": [
+              { "target": "conflict_check" }
+            ]
+          },
+          {
+            "id": "conflict_check",
+            "type": "service_task",
+            "name": "Conflict-of-Interest Check",
+            "config": {
+              "service": "lex",
+              "method": "POST",
+              "url": "/api/v1/lex/legal-cases/${variables.case_id}/conflict-check",
+              "body": {
+                "opposing_party": "${steps.open_matter.output.opposing_party}"
+              },
+              "max_retries": 2
+            },
+            "transitions": [
+              { "condition": "steps.conflict_check.output.cleared == true", "target": "classify_case" },
+              { "target": "conflict_resolution" }
+            ]
+          },
+          {
+            "id": "conflict_resolution",
+            "type": "human_task",
+            "name": "Resolve Conflict / Waiver",
+            "config": {
+              "assignee_role": "legal_director",
+              "sla_hours": 24,
+              "form_fields": [
+                { "name": "waiver_granted", "type": "boolean", "label": "Waiver Granted?", "required": true },
+                { "name": "resolution_notes", "type": "textarea", "label": "Resolution Notes", "required": true }
+              ]
+            },
+            "transitions": [
+              { "target": "classify_case" }
+            ]
+          },
+          {
+            "id": "classify_case",
+            "type": "human_task",
+            "name": "Classify Case & Set Legal Hold",
+            "config": {
+              "assignee_role": "litigation_lead",
+              "sla_hours": 8,
+              "form_fields": [
+                { "name": "case_classification", "type": "select", "label": "Classification", "required": true, "options": ["high_value", "standard", "regulatory", "reputational"] },
+                { "name": "legal_hold_required", "type": "boolean", "label": "Legal Hold Required?", "required": true },
+                { "name": "estimated_exposure", "type": "number", "label": "Estimated Exposure (SAR)", "required": false }
+              ]
+            },
+            "transitions": [
+              { "target": "assign_counsel" }
+            ]
+          },
+          {
+            "id": "assign_counsel",
+            "type": "human_task",
+            "name": "Assign Lead Counsel & Hand Off to Hearing Management",
+            "config": {
+              "assignee_role": "litigation_lead",
+              "sla_hours": 8,
+              "escalation_role": "legal_director",
+              "form_fields": [
+                { "name": "lead_counsel", "type": "text", "label": "Lead Counsel", "required": true },
+                { "name": "first_hearing_date", "type": "date", "label": "First Hearing Date", "required": false },
+                { "name": "handoff_notes", "type": "textarea", "label": "Handoff Notes", "required": false }
+              ]
+            },
+            "transitions": [
+              { "target": "end" }
+            ]
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "name": "End"
+          }
+        ]
+      }
+    }
+  ]
+}

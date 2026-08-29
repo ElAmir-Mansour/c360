@@ -1,0 +1,93 @@
+{{- if and .Values.aiSecondBrain.enabled .Values.aiSecondBrain.pgvector.enabled }}
+{{- $pv := .Values.aiSecondBrain.pgvector -}}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "clario360.componentName" (dict "root" . "component" "ai-second-brain-db") }}
+  namespace: {{ include "clario360.namespace" . }}
+  labels:
+    {{- include "clario360.componentLabels" (dict "root" . "component" "ai-second-brain-db") | nindent 4 }}
+spec:
+  replicas: 1
+  serviceName: {{ include "clario360.componentName" (dict "root" . "component" "ai-second-brain-db") }}
+  selector:
+    matchLabels:
+      {{- include "clario360.componentSelectorLabels" (dict "root" . "component" "ai-second-brain-db") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "clario360.componentSelectorLabels" (dict "root" . "component" "ai-second-brain-db") | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        # The pgvector/postgres image drops to the `postgres` user (uid 999) via
+        # its entrypoint; only set fsGroup so the mounted PVC is group-writable.
+        fsGroup: 999
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: pgvector
+          image: {{ include "clario360.image" (dict "imageConfig" $pv.image "root" . "defaultRepo" "pgvector/pgvector") }}
+          imagePullPolicy: {{ $pv.image.pullPolicy | default "IfNotPresent" }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: postgres
+              containerPort: {{ int $pv.port }}
+              protocol: TCP
+          env:
+            - name: POSTGRES_DB
+              value: {{ $pv.database | quote }}
+            - name: POSTGRES_USER
+              value: {{ $pv.username | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  {{- if $pv.existingSecret }}
+                  name: {{ $pv.existingSecret }}
+                  key: POSTGRES_PASSWORD
+                  {{- else }}
+                  name: {{ include "clario360.componentName" (dict "root" . "component" "ai-second-brain") }}-secret
+                  key: PGVECTOR_PASSWORD
+                  {{- end }}
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", {{ $pv.username | quote }}]
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", {{ $pv.username | quote }}]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          resources:
+            {{- toYaml $pv.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        {{- if $pv.storage.storageClass }}
+        storageClassName: {{ $pv.storage.storageClass | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ $pv.storage.size | default "10Gi" }}
+{{- end }}

@@ -1,0 +1,1530 @@
+[
+  {
+    "id": "tmpl-contract-request-intake",
+    "category": "legal",
+    "icon": "file-plus",
+    "tags": ["legal", "contracts", "clm", "intake", "self-service", "ksa"],
+    "name_i18n": {
+      "en": "Contract Request / Self-Service Intake",
+      "ar": "طلب عقد / الاستقبال الذاتي"
+    },
+    "description_i18n": {
+      "en": "Lets a business unit self-submit a contract request, auto-creates the matter, verifies the requester via Nafath, triages by contract type and value, and routes to the drafting queue with an SLA acknowledgement.",
+      "ar": "يتيح لوحدة الأعمال تقديم طلب عقد ذاتياً، وينشئ الملف آلياً، ويتحقق من هوية مقدّم الطلب عبر نفاذ، ويفرز الطلب حسب نوع العقد وقيمته، ويوجّهه إلى قائمة الصياغة مع إقرار باستلام ضمن اتفاقية مستوى الخدمة."
+    },
+    "definition": {
+      "name": "Contract Request / Self-Service Intake",
+      "description": "Self-service contract request capture, Nafath verification, triage, and routing to drafting.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "request_id": { "type": "string" },
+        "business_unit": { "type": "string" },
+        "contract_type": { "type": "string", "default": "service_agreement" },
+        "estimated_value": { "type": "number", "default": 0 }
+      },
+      "steps": [
+        {
+          "id": "submit_request",
+          "type": "human_task",
+          "name": "Submit Contract Request",
+          "config": {
+            "assignee_role": "business_requester",
+            "sla_hours": 2,
+            "form_fields": [
+              { "name": "contract_title", "type": "text", "label": "Contract Title", "required": true },
+              { "name": "contract_type", "type": "select", "label": "Contract Type", "required": true, "options": ["service_agreement", "supply", "nda", "lease", "employment", "license", "other"] },
+              { "name": "counterparty", "type": "text", "label": "Counterparty", "required": true },
+              { "name": "estimated_value", "type": "number", "label": "Estimated Value (SAR)", "required": true },
+              { "name": "business_justification", "type": "textarea", "label": "Business Justification", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "nafath_verify" }
+          ]
+        },
+        {
+          "id": "nafath_verify",
+          "type": "service_task",
+          "name": "Verify Requester Identity (Nafath)",
+          "config": {
+            "service": "nafath",
+            "method": "POST",
+            "url": "/api/v1/integrations/nafath/verify",
+            "body": {
+              "request_id": "${variables.request_id}",
+              "business_unit": "${variables.business_unit}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "create_matter" }
+          ]
+        },
+        {
+          "id": "create_matter",
+          "type": "service_task",
+          "name": "Auto-Create Contract Matter",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/contracts/requests",
+            "body": {
+              "title": "${steps.submit_request.output.contract_title}",
+              "contract_type": "${steps.submit_request.output.contract_type}",
+              "counterparty": "${steps.submit_request.output.counterparty}",
+              "estimated_value": "${steps.submit_request.output.estimated_value}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "triage" }
+          ]
+        },
+        {
+          "id": "triage",
+          "type": "human_task",
+          "name": "Triage & Assign Drafting Queue",
+          "config": {
+            "assignee_role": "legal_intake_officer",
+            "sla_hours": 4,
+            "escalation_role": "legal_section_head",
+            "form_fields": [
+              { "name": "priority", "type": "select", "label": "Priority", "required": true, "options": ["low", "normal", "high", "urgent"] },
+              { "name": "assigned_drafter", "type": "text", "label": "Assigned Drafter", "required": true },
+              { "name": "triage_notes", "type": "textarea", "label": "Triage Notes", "required": false }
+            ]
+          },
+          "transitions": [
+            { "target": "acknowledge" }
+          ]
+        },
+        {
+          "id": "acknowledge",
+          "type": "service_task",
+          "name": "Acknowledge Request (SLA)",
+          "config": {
+            "service": "notification",
+            "method": "POST",
+            "url": "/api/v1/notifications",
+            "body": {
+              "template": "contract_request_acknowledged",
+              "request_id": "${variables.request_id}"
+            }
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-contract-drafting-template",
+    "category": "legal",
+    "icon": "file-pen",
+    "tags": ["legal", "contracts", "clm", "drafting", "clause-library"],
+    "name_i18n": {
+      "en": "Drafting from Template / Clause Library",
+      "ar": "الصياغة من القالب / مكتبة البنود"
+    },
+    "description_i18n": {
+      "en": "Generates a first draft from an approved template, lets the drafter assemble clauses from the clause library, runs an automated clause-compliance check, captures a peer review, and stores the draft for the review desk.",
+      "ar": "ينشئ مسودة أولى من قالب معتمد، ويتيح للمحرر تجميع البنود من مكتبة البنود، ويجري فحصاً آلياً لمطابقة البنود، ويلتقط مراجعة الأقران، ويحفظ المسودة لمكتب المراجعة."
+    },
+    "definition": {
+      "name": "Drafting from Template / Clause Library",
+      "description": "Template-based draft generation, clause assembly, automated compliance check, and peer review.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "contract_id": { "type": "string" },
+        "template_id": { "type": "string" },
+        "draft_url": { "type": "string" }
+      },
+      "steps": [
+        {
+          "id": "select_template",
+          "type": "human_task",
+          "name": "Select Template & Assemble Clauses",
+          "config": {
+            "assignee_role": "contract_drafter",
+            "sla_hours": 16,
+            "form_fields": [
+              { "name": "template_id", "type": "text", "label": "Template ID", "required": true },
+              { "name": "selected_clauses", "type": "textarea", "label": "Selected Clauses (from library)", "required": true },
+              { "name": "key_terms", "type": "textarea", "label": "Key Commercial Terms", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "generate_draft" }
+          ]
+        },
+        {
+          "id": "generate_draft",
+          "type": "service_task",
+          "name": "Generate Draft from Template",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/contracts/${variables.contract_id}/draft",
+            "body": {
+              "template_id": "${steps.select_template.output.template_id}",
+              "clauses": "${steps.select_template.output.selected_clauses}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "clause_compliance_check" }
+          ]
+        },
+        {
+          "id": "clause_compliance_check",
+          "type": "service_task",
+          "name": "Automated Clause-Compliance Check",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/contracts/${variables.contract_id}/clause-check",
+            "body": {
+              "draft_url": "${variables.draft_url}"
+            },
+            "max_retries": 1
+          },
+          "transitions": [
+            { "target": "compliance_gate" }
+          ]
+        },
+        {
+          "id": "compliance_gate",
+          "type": "condition",
+          "name": "Compliance Gate",
+          "config": {
+            "expression": "steps.clause_compliance_check.output.passed == true"
+          },
+          "transitions": [
+            { "condition": "steps.clause_compliance_check.output.passed == true", "target": "peer_review" },
+            { "target": "select_template" }
+          ]
+        },
+        {
+          "id": "peer_review",
+          "type": "human_task",
+          "name": "Peer Review of Draft",
+          "config": {
+            "assignee_role": "senior_counsel",
+            "sla_hours": 24,
+            "escalation_role": "legal_section_head",
+            "form_fields": [
+              { "name": "review_outcome", "type": "select", "label": "Outcome", "required": true, "options": ["approved", "minor_edits", "rework"] },
+              { "name": "review_comments", "type": "textarea", "label": "Comments", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "store_draft" }
+          ]
+        },
+        {
+          "id": "store_draft",
+          "type": "service_task",
+          "name": "Store Draft for Review Desk",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/contracts/${variables.contract_id}/store-draft",
+            "body": {
+              "draft_url": "${variables.draft_url}",
+              "status": "ready_for_review"
+            }
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-contract-review-risk",
+    "category": "legal",
+    "icon": "shield-alert",
+    "tags": ["legal", "contracts", "clm", "review", "risk"],
+    "name_i18n": {
+      "en": "Review & Risk Assessment",
+      "ar": "المراجعة وتقييم المخاطر"
+    },
+    "description_i18n": {
+      "en": "Runs a structured contract review: automated risk scoring, a reviewer risk assessment across legal/commercial/regulatory dimensions, specialist sign-off for high-risk items, and a consolidated risk memo.",
+      "ar": "يجري مراجعة منظّمة للعقد: تسجيل آلي للمخاطر، وتقييم مخاطر من المراجع عبر الأبعاد القانونية والتجارية والتنظيمية، واعتماد المختص للبنود عالية المخاطر، ومذكرة مخاطر موحّدة."
+    },
+    "definition": {
+      "name": "Review & Risk Assessment",
+      "description": "Automated risk scoring, multidimensional reviewer assessment, specialist sign-off, and risk memo.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "contract_id": { "type": "string" },
+        "risk_score": { "type": "number", "default": 0 },
+        "risk_level": { "type": "string", "default": "medium" }
+      },
+      "steps": [
+        {
+          "id": "auto_risk_score",
+          "type": "service_task",
+          "name": "Automated Risk Scoring",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/contracts/${variables.contract_id}/risk-score",
+            "body": {
+              "contract_id": "${variables.contract_id}"
+            },
+            "max_retries": 1
+          },
+          "transitions": [
+            { "target": "reviewer_assessment" }
+          ]
+        },
+        {
+          "id": "reviewer_assessment",
+          "type": "human_task",
+          "name": "Reviewer Risk Assessment",
+          "config": {
+            "assignee_role": "legal_counsel",
+            "sla_hours": 48,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "legal_risk", "type": "select", "label": "Legal Risk", "required": true, "options": ["low", "medium", "high"] },
+              { "name": "commercial_risk", "type": "select", "label": "Commercial Risk", "required": true, "options": ["low", "medium", "high"] },
+              { "name": "regulatory_risk", "type": "select", "label": "Regulatory Risk", "required": true, "options": ["low", "medium", "high"] },
+              { "name": "overall_risk_level", "type": "select", "label": "Overall Risk Level", "required": true, "options": ["low", "medium", "high"] },
+              { "name": "findings", "type": "textarea", "label": "Findings", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "risk_gate" }
+          ]
+        },
+        {
+          "id": "risk_gate",
+          "type": "condition",
+          "name": "High-Risk Gate",
+          "config": {
+            "expression": "steps.reviewer_assessment.output.overall_risk_level == 'high'"
+          },
+          "transitions": [
+            { "condition": "steps.reviewer_assessment.output.overall_risk_level == 'high'", "target": "specialist_signoff" },
+            { "target": "risk_memo" }
+          ]
+        },
+        {
+          "id": "specialist_signoff",
+          "type": "approval_chain",
+          "name": "Specialist Sign-Off (High Risk)",
+          "config": {
+            "approvers": [ { "role": "legal_director" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 24
+          },
+          "transitions": [
+            { "target": "risk_memo" }
+          ]
+        },
+        {
+          "id": "risk_memo",
+          "type": "human_task",
+          "name": "Consolidated Risk Memo",
+          "config": {
+            "assignee_role": "legal_counsel",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "memo_summary", "type": "textarea", "label": "Risk Memo Summary", "required": true },
+              { "name": "recommendation", "type": "select", "label": "Recommendation", "required": true, "options": ["proceed", "proceed_with_conditions", "renegotiate", "reject"] }
+            ]
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-contract-negotiation-redlining",
+    "category": "legal",
+    "icon": "git-pull-request-arrow",
+    "tags": ["legal", "contracts", "clm", "negotiation", "redlining"],
+    "name_i18n": {
+      "en": "Negotiation & Redlining",
+      "ar": "التفاوض والتعديلات التتبعية"
+    },
+    "description_i18n": {
+      "en": "Manages a negotiation round-trip: send the marked-up draft to the counterparty, wait for their returned redlines, reconcile changes, escalate deviations beyond fallback positions, and converge on an agreed version.",
+      "ar": "يدير دورة تفاوض كاملة: إرسال المسودة المعلّمة إلى الطرف الآخر، وانتظار التعديلات المرتجعة منه، وتسوية التغييرات، وتصعيد الانحرافات التي تتجاوز المواقف الاحتياطية، والوصول إلى نسخة متفق عليها."
+    },
+    "definition": {
+      "name": "Negotiation & Redlining",
+      "description": "Counterparty redline round-trip, reconciliation, fallback-deviation escalation, and convergence.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "contract_id": { "type": "string" },
+        "negotiation_round": { "type": "number", "default": 1 },
+        "within_fallback": { "type": "boolean", "default": true }
+      },
+      "steps": [
+        {
+          "id": "send_markup",
+          "type": "service_task",
+          "name": "Send Marked-Up Draft to Counterparty",
+          "config": {
+            "service": "email",
+            "method": "POST",
+            "url": "/api/v1/integrations/email/send",
+            "body": {
+              "template": "contract_redline_outbound",
+              "contract_id": "${variables.contract_id}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "await_redlines" }
+          ]
+        },
+        {
+          "id": "await_redlines",
+          "type": "event_task",
+          "name": "Await Counterparty Redlines",
+          "config": {
+            "topic": "lex.contract.redlines_received",
+            "mode": "wait",
+            "correlation_field": "contract_id",
+            "timeout_hours": 120
+          },
+          "transitions": [
+            { "target": "reconcile" }
+          ]
+        },
+        {
+          "id": "reconcile",
+          "type": "human_task",
+          "name": "Reconcile Redlines & Check Fallback",
+          "config": {
+            "assignee_role": "legal_counsel",
+            "sla_hours": 24,
+            "escalation_role": "legal_section_head",
+            "form_fields": [
+              { "name": "within_fallback", "type": "boolean", "label": "Within Approved Fallback Positions?", "required": true },
+              { "name": "open_points", "type": "textarea", "label": "Open Negotiation Points", "required": false },
+              { "name": "reconciliation_notes", "type": "textarea", "label": "Reconciliation Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.reconcile.output.within_fallback == true", "target": "agreed_version" },
+            { "target": "escalate_deviation" }
+          ]
+        },
+        {
+          "id": "escalate_deviation",
+          "type": "approval_chain",
+          "name": "Escalate Fallback Deviation",
+          "config": {
+            "approvers": [ { "role": "legal_director" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 24
+          },
+          "transitions": [
+            { "target": "send_markup" }
+          ]
+        },
+        {
+          "id": "agreed_version",
+          "type": "service_task",
+          "name": "Record Agreed Version",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/contracts/${variables.contract_id}/agreed-version",
+            "body": {
+              "contract_id": "${variables.contract_id}",
+              "status": "agreed"
+            }
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-contract-esign-execution",
+    "category": "legal",
+    "icon": "signature",
+    "tags": ["legal", "contracts", "clm", "e-signature", "execution", "ksa"],
+    "name_i18n": {
+      "en": "E-Signature & Execution",
+      "ar": "التوقيع الإلكتروني والتنفيذ"
+    },
+    "description_i18n": {
+      "en": "Executes a fully-approved contract: pre-execution checklist, internal signatory authorization, e-signature ceremony via the certified provider, Nafath identity binding for KSA parties, and execution confirmation with repository update.",
+      "ar": "ينفّذ عقداً معتمداً بالكامل: قائمة تحقق قبل التنفيذ، وتفويض الموقّع الداخلي، ومراسم التوقيع الإلكتروني عبر مزود معتمد، وربط الهوية عبر نفاذ للأطراف السعودية، وتأكيد التنفيذ مع تحديث المستودع."
+    },
+    "definition": {
+      "name": "E-Signature & Execution",
+      "description": "Pre-execution checklist, signatory authorization, certified e-sign, Nafath binding, and confirmation.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "contract_id": { "type": "string" },
+        "envelope_id": { "type": "string" },
+        "signed": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "pre_exec_checklist",
+          "type": "human_task",
+          "name": "Pre-Execution Checklist",
+          "config": {
+            "assignee_role": "contract_admin",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "approvals_complete", "type": "boolean", "label": "All Approvals Complete?", "required": true },
+              { "name": "final_version_attached", "type": "boolean", "label": "Final Version Attached?", "required": true },
+              { "name": "signatory_name", "type": "text", "label": "Authorized Signatory", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "signatory_authorization" }
+          ]
+        },
+        {
+          "id": "signatory_authorization",
+          "type": "approval_chain",
+          "name": "Internal Signatory Authorization (DoA)",
+          "config": {
+            "approvers": [ { "role": "authorized_signatory" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 24
+          },
+          "transitions": [
+            { "target": "create_envelope" }
+          ]
+        },
+        {
+          "id": "create_envelope",
+          "type": "service_task",
+          "name": "Create E-Signature Envelope (emdha)",
+          "config": {
+            "service": "esign",
+            "method": "POST",
+            "url": "/api/v1/integrations/esign/envelopes",
+            "body": {
+              "contract_id": "${variables.contract_id}",
+              "signatory": "${steps.pre_exec_checklist.output.signatory_name}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "await_signatures" }
+          ]
+        },
+        {
+          "id": "await_signatures",
+          "type": "event_task",
+          "name": "Await Signature Completion (Nafath-bound)",
+          "config": {
+            "topic": "lex.contract.envelope_signed",
+            "mode": "wait",
+            "correlation_field": "envelope_id",
+            "timeout_hours": 168
+          },
+          "transitions": [
+            { "target": "confirm_execution" }
+          ]
+        },
+        {
+          "id": "confirm_execution",
+          "type": "service_task",
+          "name": "Confirm Execution & Update Repository",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/contracts/${variables.contract_id}/execute",
+            "body": {
+              "contract_id": "${variables.contract_id}",
+              "envelope_id": "${variables.envelope_id}",
+              "status": "executed"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-contract-repository-onboarding",
+    "category": "legal",
+    "icon": "archive",
+    "tags": ["legal", "contracts", "clm", "repository", "metadata", "ksa"],
+    "name_i18n": {
+      "en": "Repository Onboarding & Metadata Capture",
+      "ar": "إدراج العقد في المستودع والتقاط البيانات الوصفية"
+    },
+    "description_i18n": {
+      "en": "Onboards an executed contract into the central repository: captures structured metadata, extracts key dates and obligations automatically, applies retention and classification per PDPL, archives to the e-archive, and indexes for search.",
+      "ar": "يُدرج العقد المنفّذ في المستودع المركزي: يلتقط البيانات الوصفية المنظّمة، ويستخرج التواريخ والالتزامات الرئيسة آلياً، ويطبّق سياسة الاحتفاظ والتصنيف وفق نظام حماية البيانات الشخصية، ويؤرشف في الأرشيف الإلكتروني، ويفهرس للبحث."
+    },
+    "definition": {
+      "name": "Repository Onboarding & Metadata Capture",
+      "description": "Metadata capture, auto-extraction of dates/obligations, PDPL retention/classification, e-archive, and indexing.",
+      "trigger_config": {
+        "type": "event",
+        "topic": "lex.contract.executed"
+      },
+      "variables": {
+        "contract_id": { "type": "string" },
+        "retention_years": { "type": "number", "default": 10 }
+      },
+      "steps": [
+        {
+          "id": "capture_metadata",
+          "type": "human_task",
+          "name": "Capture Structured Metadata",
+          "config": {
+            "assignee_role": "contract_admin",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "contract_category", "type": "select", "label": "Category", "required": true, "options": ["service", "supply", "lease", "nda", "employment", "license", "other"] },
+              { "name": "effective_date", "type": "date", "label": "Effective Date", "required": true },
+              { "name": "expiry_date", "type": "date", "label": "Expiry Date", "required": true },
+              { "name": "owner_department", "type": "text", "label": "Owning Department", "required": true },
+              { "name": "data_classification", "type": "select", "label": "Data Classification (PDPL)", "required": true, "options": ["public", "internal", "confidential", "restricted"] }
+            ]
+          },
+          "transitions": [
+            { "target": "auto_extract" }
+          ]
+        },
+        {
+          "id": "auto_extract",
+          "type": "service_task",
+          "name": "Auto-Extract Key Dates & Obligations",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/contracts/${variables.contract_id}/extract-metadata",
+            "body": {
+              "contract_id": "${variables.contract_id}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "apply_retention" }
+          ]
+        },
+        {
+          "id": "apply_retention",
+          "type": "service_task",
+          "name": "Apply Retention & Classification",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/contracts/${variables.contract_id}/retention",
+            "body": {
+              "retention_years": "${variables.retention_years}",
+              "classification": "${steps.capture_metadata.output.data_classification}"
+            }
+          },
+          "transitions": [
+            { "target": "archive" }
+          ]
+        },
+        {
+          "id": "archive",
+          "type": "service_task",
+          "name": "Archive to E-Archive & Index",
+          "config": {
+            "service": "earchive",
+            "method": "POST",
+            "url": "/api/v1/integrations/earchive/documents",
+            "body": {
+              "contract_id": "${variables.contract_id}",
+              "index": true
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-contract-obligation-tracking",
+    "category": "legal",
+    "icon": "list-checks",
+    "tags": ["legal", "contracts", "clm", "obligations", "milestones", "sla"],
+    "name_i18n": {
+      "en": "Obligation & Milestone Tracking",
+      "ar": "تتبّع الالتزامات والمراحل"
+    },
+    "description_i18n": {
+      "en": "Monitors post-execution obligations and milestones: scheduled check, reminder ahead of each due date, owner confirmation of fulfilment, and escalation when an obligation is overdue or breached.",
+      "ar": "يراقب الالتزامات والمراحل بعد التنفيذ: فحص مجدوَل، وتذكير قبل كل تاريخ استحقاق، وتأكيد المالك للوفاء، وتصعيد عند تأخّر الالتزام أو الإخلال به."
+    },
+    "definition": {
+      "name": "Obligation & Milestone Tracking",
+      "description": "Scheduled obligation check, pre-due reminder, fulfilment confirmation, and overdue escalation.",
+      "trigger_config": {
+        "type": "schedule",
+        "cron": "0 6 * * *"
+      },
+      "variables": {
+        "contract_id": { "type": "string" },
+        "obligation_id": { "type": "string" },
+        "fulfilled": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "evaluate_due",
+          "type": "service_task",
+          "name": "Evaluate Upcoming Obligations",
+          "config": {
+            "service": "lex",
+            "method": "GET",
+            "url": "/api/v1/lex/contracts/${variables.contract_id}/obligations/due",
+            "max_retries": 1
+          },
+          "transitions": [
+            { "target": "remind" }
+          ]
+        },
+        {
+          "id": "remind",
+          "type": "service_task",
+          "name": "Send Pre-Due Reminder",
+          "config": {
+            "service": "notification",
+            "method": "POST",
+            "url": "/api/v1/notifications",
+            "body": {
+              "template": "obligation_due_reminder",
+              "obligation_id": "${variables.obligation_id}"
+            }
+          },
+          "transitions": [
+            { "target": "confirm_fulfilment" }
+          ]
+        },
+        {
+          "id": "confirm_fulfilment",
+          "type": "human_task",
+          "name": "Confirm Obligation Fulfilment",
+          "config": {
+            "assignee_role": "obligation_owner",
+            "sla_hours": 72,
+            "escalation_role": "contract_manager",
+            "form_fields": [
+              { "name": "fulfilled", "type": "boolean", "label": "Obligation Fulfilled?", "required": true },
+              { "name": "evidence_url", "type": "text", "label": "Evidence URL", "required": false },
+              { "name": "fulfilment_notes", "type": "textarea", "label": "Notes", "required": false }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.confirm_fulfilment.output.fulfilled == true", "target": "record_status" },
+            { "target": "escalate_overdue" }
+          ]
+        },
+        {
+          "id": "escalate_overdue",
+          "type": "human_task",
+          "name": "Escalate Overdue / Breached Obligation",
+          "config": {
+            "assignee_role": "contract_manager",
+            "sla_hours": 24,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "action_taken", "type": "select", "label": "Action", "required": true, "options": ["cure_notice", "waiver", "penalty", "escalate_legal"] },
+              { "name": "escalation_notes", "type": "textarea", "label": "Escalation Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "record_status" }
+          ]
+        },
+        {
+          "id": "record_status",
+          "type": "service_task",
+          "name": "Record Obligation Status",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/contracts/${variables.contract_id}/obligations/${variables.obligation_id}/status",
+            "body": {
+              "fulfilled": "${steps.confirm_fulfilment.output.fulfilled}"
+            }
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-contract-renewal",
+    "category": "legal",
+    "icon": "refresh-cw",
+    "tags": ["legal", "contracts", "clm", "renewal", "auto-renewal", "sla"],
+    "name_i18n": {
+      "en": "Renewal / Auto-Renewal Management",
+      "ar": "إدارة التجديد / التجديد التلقائي"
+    },
+    "description_i18n": {
+      "en": "Manages contract renewal ahead of expiry: detects the renewal window, captures an owner renew/terminate decision, routes a value-based DoA approval for renewals, and either issues the renewal or serves a non-renewal notice before the auto-renewal deadline.",
+      "ar": "يدير تجديد العقد قبل انتهائه: يكتشف نافذة التجديد، ويلتقط قرار المالك بالتجديد أو الإنهاء، ويوجّه اعتماد تفويض الصلاحيات المبني على القيمة للتجديدات، ثم يُصدر التجديد أو يبلّغ بعدم التجديد قبل موعد التجديد التلقائي."
+    },
+    "definition": {
+      "name": "Renewal / Auto-Renewal Management",
+      "description": "Renewal-window detection, renew/terminate decision, DoA approval, and issue/non-renewal notice.",
+      "trigger_config": {
+        "type": "schedule",
+        "cron": "0 7 * * 1"
+      },
+      "variables": {
+        "contract_id": { "type": "string" },
+        "renewal_value": { "type": "number", "default": 0 },
+        "auto_renew": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "detect_window",
+          "type": "service_task",
+          "name": "Detect Renewal Window",
+          "config": {
+            "service": "lex",
+            "method": "GET",
+            "url": "/api/v1/lex/contracts/${variables.contract_id}/renewal-window",
+            "max_retries": 1
+          },
+          "transitions": [
+            { "target": "renew_decision" }
+          ]
+        },
+        {
+          "id": "renew_decision",
+          "type": "human_task",
+          "name": "Renew / Terminate Decision",
+          "config": {
+            "assignee_role": "contract_owner",
+            "sla_hours": 120,
+            "escalation_role": "contract_manager",
+            "form_fields": [
+              { "name": "decision", "type": "select", "label": "Decision", "required": true, "options": ["renew", "renegotiate", "do_not_renew"] },
+              { "name": "renewal_value", "type": "number", "label": "Proposed Renewal Value (SAR)", "required": false },
+              { "name": "decision_rationale", "type": "textarea", "label": "Rationale", "required": true }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.renew_decision.output.decision == 'do_not_renew'", "target": "non_renewal_notice" },
+            { "target": "doa_gate" }
+          ]
+        },
+        {
+          "id": "doa_gate",
+          "type": "condition",
+          "name": "Renewal DoA Threshold Gate",
+          "config": {
+            "expression": "variables.renewal_value > 500000"
+          },
+          "transitions": [
+            { "condition": "variables.renewal_value > 500000", "target": "executive_approval" },
+            { "target": "manager_approval" }
+          ]
+        },
+        {
+          "id": "manager_approval",
+          "type": "approval_chain",
+          "name": "Manager Renewal Approval",
+          "config": {
+            "approvers": [ { "role": "contract_manager" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "issue_renewal" }
+          ]
+        },
+        {
+          "id": "executive_approval",
+          "type": "approval_chain",
+          "name": "Executive Renewal Approval (above DoA)",
+          "config": {
+            "approvers": [ { "role": "legal_director" }, { "role": "chief_executive" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 72
+          },
+          "transitions": [
+            { "target": "issue_renewal" }
+          ]
+        },
+        {
+          "id": "issue_renewal",
+          "type": "service_task",
+          "name": "Issue Renewal",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/contracts/${variables.contract_id}/renew",
+            "body": {
+              "renewal_value": "${steps.renew_decision.output.renewal_value}",
+              "status": "renewed"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "non_renewal_notice",
+          "type": "service_task",
+          "name": "Serve Non-Renewal Notice",
+          "config": {
+            "service": "email",
+            "method": "POST",
+            "url": "/api/v1/integrations/email/send",
+            "body": {
+              "template": "contract_non_renewal_notice",
+              "contract_id": "${variables.contract_id}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-contract-amendment",
+    "category": "legal",
+    "icon": "file-diff",
+    "tags": ["legal", "contracts", "clm", "amendment", "variation"],
+    "name_i18n": {
+      "en": "Amendment / Variation",
+      "ar": "التعديل / التغيير على العقد"
+    },
+    "description_i18n": {
+      "en": "Handles a change to a live contract: captures the variation request and impact, legal review of the change, value-impact DoA approval, drafting of the amendment addendum, and execution that links back to the parent contract.",
+      "ar": "يعالج تغييراً على عقد قائم: يلتقط طلب التغيير وأثره، ويراجع التغيير قانونياً، ويعتمد التغيير عبر تفويض الصلاحيات حسب أثره المالي، ويصوغ ملحق التعديل، وينفّذه مع ربطه بالعقد الأصلي."
+    },
+    "definition": {
+      "name": "Amendment / Variation",
+      "description": "Variation request, legal review, value-impact DoA approval, addendum drafting, and linked execution.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "contract_id": { "type": "string" },
+        "amendment_id": { "type": "string" },
+        "value_impact": { "type": "number", "default": 0 }
+      },
+      "steps": [
+        {
+          "id": "request_variation",
+          "type": "human_task",
+          "name": "Capture Variation Request & Impact",
+          "config": {
+            "assignee_role": "contract_owner",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "change_description", "type": "textarea", "label": "Change Description", "required": true },
+              { "name": "value_impact", "type": "number", "label": "Value Impact (SAR)", "required": true },
+              { "name": "affected_clauses", "type": "textarea", "label": "Affected Clauses", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "legal_review" }
+          ]
+        },
+        {
+          "id": "legal_review",
+          "type": "human_task",
+          "name": "Legal Review of Change",
+          "config": {
+            "assignee_role": "legal_counsel",
+            "sla_hours": 24,
+            "escalation_role": "legal_section_head",
+            "form_fields": [
+              { "name": "review_cleared", "type": "boolean", "label": "Cleared for Approval?", "required": true },
+              { "name": "review_notes", "type": "textarea", "label": "Review Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.legal_review.output.review_cleared == true", "target": "doa_gate" },
+            { "target": "request_variation" }
+          ]
+        },
+        {
+          "id": "doa_gate",
+          "type": "condition",
+          "name": "Value-Impact DoA Gate",
+          "config": {
+            "expression": "variables.value_impact > 250000"
+          },
+          "transitions": [
+            { "condition": "variables.value_impact > 250000", "target": "executive_approval" },
+            { "target": "manager_approval" }
+          ]
+        },
+        {
+          "id": "manager_approval",
+          "type": "approval_chain",
+          "name": "Manager Approval (within DoA)",
+          "config": {
+            "approvers": [ { "role": "contract_manager" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 24
+          },
+          "transitions": [
+            { "target": "draft_addendum" }
+          ]
+        },
+        {
+          "id": "executive_approval",
+          "type": "approval_chain",
+          "name": "Executive Approval (above DoA)",
+          "config": {
+            "approvers": [ { "role": "legal_director" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "draft_addendum" }
+          ]
+        },
+        {
+          "id": "draft_addendum",
+          "type": "human_task",
+          "name": "Draft Amendment Addendum",
+          "config": {
+            "assignee_role": "contract_drafter",
+            "sla_hours": 16,
+            "form_fields": [
+              { "name": "addendum_url", "type": "text", "label": "Addendum Document URL", "required": true },
+              { "name": "drafting_notes", "type": "textarea", "label": "Drafting Notes", "required": false }
+            ]
+          },
+          "transitions": [
+            { "target": "execute_amendment" }
+          ]
+        },
+        {
+          "id": "execute_amendment",
+          "type": "service_task",
+          "name": "Execute Amendment (Linked to Parent)",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/contracts/${variables.contract_id}/amendments/${variables.amendment_id}/execute",
+            "body": {
+              "addendum_url": "${steps.draft_addendum.output.addendum_url}",
+              "status": "executed"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-contract-termination",
+    "category": "legal",
+    "icon": "file-x",
+    "tags": ["legal", "contracts", "clm", "termination", "exit"],
+    "name_i18n": {
+      "en": "Termination / Exit",
+      "ar": "إنهاء العقد / الخروج"
+    },
+    "description_i18n": {
+      "en": "Manages a contract exit: captures the termination basis, legal assessment of grounds and liabilities, executive approval of the exit, notice service to the counterparty within the contractual period, and close-out of obligations in the repository.",
+      "ar": "يدير الخروج من العقد: يلتقط أساس الإنهاء، ويقيّم قانونياً الأسباب والالتزامات، ويعتمد الخروج تنفيذياً، ويبلّغ الطرف الآخر ضمن مدة الإشعار التعاقدية، ويغلق الالتزامات في المستودع."
+    },
+    "definition": {
+      "name": "Termination / Exit",
+      "description": "Termination basis capture, legal grounds/liability assessment, executive approval, notice, and close-out.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "contract_id": { "type": "string" },
+        "termination_type": { "type": "string", "default": "for_convenience" }
+      },
+      "steps": [
+        {
+          "id": "capture_basis",
+          "type": "human_task",
+          "name": "Capture Termination Basis",
+          "config": {
+            "assignee_role": "contract_owner",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "termination_type", "type": "select", "label": "Termination Type", "required": true, "options": ["for_cause", "for_convenience", "mutual", "expiry"] },
+              { "name": "termination_reason", "type": "textarea", "label": "Reason", "required": true },
+              { "name": "target_exit_date", "type": "date", "label": "Target Exit Date", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "legal_assessment" }
+          ]
+        },
+        {
+          "id": "legal_assessment",
+          "type": "human_task",
+          "name": "Legal Assessment of Grounds & Liabilities",
+          "config": {
+            "assignee_role": "legal_counsel",
+            "sla_hours": 48,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "grounds_valid", "type": "boolean", "label": "Termination Grounds Valid?", "required": true },
+              { "name": "liability_exposure", "type": "number", "label": "Liability Exposure (SAR)", "required": false },
+              { "name": "assessment_notes", "type": "textarea", "label": "Assessment Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "exit_approval" }
+          ]
+        },
+        {
+          "id": "exit_approval",
+          "type": "approval_chain",
+          "name": "Executive Exit Approval",
+          "config": {
+            "approvers": [ { "role": "legal_director" }, { "role": "chief_executive" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 72
+          },
+          "transitions": [
+            { "target": "serve_notice" }
+          ]
+        },
+        {
+          "id": "serve_notice",
+          "type": "service_task",
+          "name": "Serve Termination Notice",
+          "config": {
+            "service": "email",
+            "method": "POST",
+            "url": "/api/v1/integrations/email/send",
+            "body": {
+              "template": "contract_termination_notice",
+              "contract_id": "${variables.contract_id}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "close_out" }
+          ]
+        },
+        {
+          "id": "close_out",
+          "type": "service_task",
+          "name": "Close Out Obligations in Repository",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/contracts/${variables.contract_id}/terminate",
+            "body": {
+              "termination_type": "${steps.capture_basis.output.termination_type}",
+              "status": "terminated"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-contract-nda-fasttrack",
+    "category": "legal",
+    "icon": "file-lock",
+    "tags": ["legal", "contracts", "clm", "nda", "fast-track", "ksa"],
+    "name_i18n": {
+      "en": "NDA / Confidentiality Fast-Track",
+      "ar": "المسار السريع لاتفاقية عدم الإفصاح / السرية"
+    },
+    "description_i18n": {
+      "en": "A streamlined NDA path: capture parties and direction, auto-generate from the standard NDA template, light-touch counsel check that branches to full review only on deviations, fast e-signature, and repository filing.",
+      "ar": "مسار مبسّط لاتفاقية عدم الإفصاح: يلتقط الأطراف واتجاه السرية، ويولّد آلياً من القالب المعياري، ويجري فحصاً مخفّفاً من المستشار يتفرّع إلى مراجعة كاملة عند الانحرافات فقط، ثم توقيعاً إلكترونياً سريعاً وحفظاً في المستودع."
+    },
+    "definition": {
+      "name": "NDA / Confidentiality Fast-Track",
+      "description": "Standard-template NDA generation, light counsel check with deviation branch, fast e-sign, and filing.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "nda_id": { "type": "string" },
+        "is_standard": { "type": "boolean", "default": true }
+      },
+      "steps": [
+        {
+          "id": "capture_parties",
+          "type": "human_task",
+          "name": "Capture Parties & Direction",
+          "config": {
+            "assignee_role": "business_requester",
+            "sla_hours": 2,
+            "form_fields": [
+              { "name": "counterparty", "type": "text", "label": "Counterparty", "required": true },
+              { "name": "direction", "type": "select", "label": "Direction", "required": true, "options": ["one_way_inbound", "one_way_outbound", "mutual"] },
+              { "name": "term_months", "type": "number", "label": "Confidentiality Term (months)", "required": true },
+              { "name": "uses_standard_template", "type": "boolean", "label": "Use Standard NDA Template?", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "generate_nda" }
+          ]
+        },
+        {
+          "id": "generate_nda",
+          "type": "service_task",
+          "name": "Auto-Generate NDA from Standard Template",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/contracts/nda/${variables.nda_id}/generate",
+            "body": {
+              "counterparty": "${steps.capture_parties.output.counterparty}",
+              "direction": "${steps.capture_parties.output.direction}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "counsel_check" }
+          ]
+        },
+        {
+          "id": "counsel_check",
+          "type": "human_task",
+          "name": "Light-Touch Counsel Check",
+          "config": {
+            "assignee_role": "legal_counsel",
+            "sla_hours": 8,
+            "escalation_role": "legal_section_head",
+            "form_fields": [
+              { "name": "is_standard", "type": "boolean", "label": "Conforms to Standard (No Deviations)?", "required": true },
+              { "name": "check_notes", "type": "textarea", "label": "Notes", "required": false }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.counsel_check.output.is_standard == true", "target": "fast_esign" },
+            { "target": "full_review" }
+          ]
+        },
+        {
+          "id": "full_review",
+          "type": "approval_chain",
+          "name": "Full Review (Deviations)",
+          "config": {
+            "approvers": [ { "role": "legal_section_head" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 24
+          },
+          "transitions": [
+            { "target": "fast_esign" }
+          ]
+        },
+        {
+          "id": "fast_esign",
+          "type": "service_task",
+          "name": "Fast E-Signature",
+          "config": {
+            "service": "esign",
+            "method": "POST",
+            "url": "/api/v1/integrations/esign/envelopes",
+            "body": {
+              "nda_id": "${variables.nda_id}",
+              "expedited": true
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "file_nda" }
+          ]
+        },
+        {
+          "id": "file_nda",
+          "type": "service_task",
+          "name": "File NDA in Repository",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/contracts/nda/${variables.nda_id}/file",
+            "body": {
+              "status": "executed"
+            }
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-contract-vendor-procurement-review",
+    "category": "legal",
+    "icon": "package-check",
+    "tags": ["legal", "contracts", "clm", "vendor", "procurement", "ksa"],
+    "name_i18n": {
+      "en": "Vendor / Procurement Contract Review",
+      "ar": "مراجعة عقود الموردين / المشتريات"
+    },
+    "description_i18n": {
+      "en": "Reviews a vendor/procurement contract end-to-end: verifies the vendor's commercial registration with the Ministry of Commerce, runs sanctions/compliance screening, performs legal and procurement-policy review, applies value-based DoA approval, and clears the contract for execution.",
+      "ar": "يراجع عقد المورد / المشتريات من البداية إلى النهاية: يتحقق من السجل التجاري للمورد لدى وزارة التجارة، ويجري فحص العقوبات والامتثال، ويراجع العقد قانونياً وفق سياسة المشتريات، ويطبّق اعتماد تفويض الصلاحيات المبني على القيمة، ثم يُخلي العقد للتنفيذ."
+    },
+    "definition": {
+      "name": "Vendor / Procurement Contract Review",
+      "description": "MoC CR verification, sanctions screening, legal + procurement review, value-based DoA approval, and clearance.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "contract_id": { "type": "string" },
+        "vendor_cr": { "type": "string" },
+        "contract_value": { "type": "number", "default": 0 }
+      },
+      "steps": [
+        {
+          "id": "verify_cr",
+          "type": "service_task",
+          "name": "Verify Vendor CR (Ministry of Commerce)",
+          "config": {
+            "service": "moc",
+            "method": "POST",
+            "url": "/api/v1/integrations/moc/cr-verify",
+            "body": {
+              "vendor_cr": "${variables.vendor_cr}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "sanctions_screen" }
+          ]
+        },
+        {
+          "id": "sanctions_screen",
+          "type": "service_task",
+          "name": "Sanctions / Compliance Screening",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/contracts/${variables.contract_id}/sanctions-screen",
+            "body": {
+              "vendor_cr": "${variables.vendor_cr}"
+            },
+            "max_retries": 1
+          },
+          "transitions": [
+            { "target": "screen_gate" }
+          ]
+        },
+        {
+          "id": "screen_gate",
+          "type": "condition",
+          "name": "Screening Gate",
+          "config": {
+            "expression": "steps.sanctions_screen.output.cleared == true"
+          },
+          "transitions": [
+            { "condition": "steps.sanctions_screen.output.cleared == true", "target": "legal_procurement_review" },
+            { "target": "compliance_hold" }
+          ]
+        },
+        {
+          "id": "compliance_hold",
+          "type": "human_task",
+          "name": "Compliance Hold Resolution",
+          "config": {
+            "assignee_role": "compliance_officer",
+            "sla_hours": 24,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "hold_cleared", "type": "boolean", "label": "Hold Cleared?", "required": true },
+              { "name": "resolution_notes", "type": "textarea", "label": "Resolution Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "legal_procurement_review" }
+          ]
+        },
+        {
+          "id": "legal_procurement_review",
+          "type": "human_task",
+          "name": "Legal & Procurement-Policy Review",
+          "config": {
+            "assignee_role": "legal_counsel",
+            "sla_hours": 48,
+            "escalation_role": "legal_section_head",
+            "form_fields": [
+              { "name": "policy_compliant", "type": "boolean", "label": "Procurement-Policy Compliant?", "required": true },
+              { "name": "risk_level", "type": "select", "label": "Risk Level", "required": true, "options": ["low", "medium", "high"] },
+              { "name": "review_notes", "type": "textarea", "label": "Review Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "doa_gate" }
+          ]
+        },
+        {
+          "id": "doa_gate",
+          "type": "condition",
+          "name": "Procurement DoA Gate",
+          "config": {
+            "expression": "variables.contract_value > 1000000"
+          },
+          "transitions": [
+            { "condition": "variables.contract_value > 1000000", "target": "executive_approval" },
+            { "target": "manager_approval" }
+          ]
+        },
+        {
+          "id": "manager_approval",
+          "type": "approval_chain",
+          "name": "Manager Approval (within DoA)",
+          "config": {
+            "approvers": [ { "role": "procurement_manager" }, { "role": "legal_manager" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "clear_for_execution" }
+          ]
+        },
+        {
+          "id": "executive_approval",
+          "type": "approval_chain",
+          "name": "Executive Approval (above DoA)",
+          "config": {
+            "approvers": [ { "role": "legal_director" }, { "role": "chief_executive" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 72
+          },
+          "transitions": [
+            { "target": "clear_for_execution" }
+          ]
+        },
+        {
+          "id": "clear_for_execution",
+          "type": "service_task",
+          "name": "Clear Contract for Execution",
+          "config": {
+            "service": "lex",
+            "method": "POST",
+            "url": "/api/v1/lex/contracts/${variables.contract_id}/clear",
+            "body": {
+              "contract_id": "${variables.contract_id}",
+              "status": "cleared_for_execution"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  }
+]

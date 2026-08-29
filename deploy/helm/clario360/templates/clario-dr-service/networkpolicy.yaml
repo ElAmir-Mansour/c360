@@ -1,0 +1,74 @@
+{{- if and .Values.clarioDrService.enabled .Values.networkPolicies.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "clario360.componentName" (dict "root" . "component" "clario-dr-service") }}-netpol
+  namespace: {{ include "clario360.namespace" . }}
+  labels:
+    {{- include "clario360.componentLabels" (dict "root" . "component" "clario-dr-service") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "clario360.componentSelectorLabels" (dict "root" . "component" "clario-dr-service") | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "clario360.componentSelectorLabels" (dict "root" . "component" "api-gateway") | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 8097
+    {{- with .Values.clarioDrService.networkPolicy.agentIngressCidrs }}
+    - from:
+        {{- range . }}
+        - ipBlock:
+            cidr: {{ . | quote }}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: 8098
+    {{- end }}
+  egress:
+    - ports:
+        - protocol: TCP
+          port: 5432
+    - ports:
+        - protocol: TCP
+          port: 6379
+    - ports:
+        - protocol: TCP
+          port: 9092
+    - ports:
+        - protocol: TCP
+          port: 9000
+        - protocol: TCP
+          port: 443
+    - ports:
+        - protocol: TCP
+          port: 8200
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "clario360.componentName" (dict "root" . "component" "api-gateway") }}-to-dr-netpol
+  namespace: {{ include "clario360.namespace" . }}
+  labels:
+    {{- include "clario360.componentLabels" (dict "root" . "component" "api-gateway") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "clario360.componentSelectorLabels" (dict "root" . "component" "api-gateway") | nindent 6 }}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "clario360.componentSelectorLabels" (dict "root" . "component" "clario-dr-service") | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 8097
+{{- end }}

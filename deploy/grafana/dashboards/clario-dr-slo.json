@@ -1,0 +1,340 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "description": "ClarioDR (DataStream Disaster Recovery) SLO board: RPO, failover RTO, replication lag, recovery-point validation, throughput and stream health. Source: DESIGN_DataStream_DR.md §11.",
+  "panels": [
+    {
+      "title": "Worst Live RPO",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "max(dr_rpo_seconds)",
+          "legendFormat": "max RPO"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 240 },
+              { "color": "red", "value": 300 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Worst Validation Ratio",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "targets": [
+        {
+          "expr": "min(dr_recovery_point_validation_ratio)",
+          "legendFormat": "min validation"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0.99,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 0.999 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Failover RTO p95 (real)",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(dr_failover_rto_seconds_bucket{mode=\"real\"}[1d])) by (le))",
+          "legendFormat": "p95 RTO"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 600 },
+              { "color": "red", "value": 900 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Unhealthy Streams",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+      "targets": [
+        {
+          "expr": "count(dr_stream_status{status=~\"degraded|error\"} == 1) or vector(0)",
+          "legendFormat": "unhealthy"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "RPO per Consistency Group (SLO 300s)",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 6 },
+      "targets": [
+        {
+          "expr": "max by (group) (dr_rpo_seconds)",
+          "legendFormat": "{{ group }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "thresholdsStyle": { "mode": "line" }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 240 },
+              { "color": "red", "value": 300 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["last", "max"] }
+      }
+    },
+    {
+      "title": "Failover / Drill RTO Distribution",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 6 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(dr_failover_rto_seconds_bucket[1d])) by (mode, le))",
+          "legendFormat": "p50 {{ mode }}"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(dr_failover_rto_seconds_bucket[1d])) by (mode, le))",
+          "legendFormat": "p95 {{ mode }}"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(dr_failover_rto_seconds_bucket[1d])) by (mode, le))",
+          "legendFormat": "p99 {{ mode }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "thresholdsStyle": { "mode": "line" }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 900 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["last", "max"] }
+      }
+    },
+    {
+      "title": "Replication Lag per Stream",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 15 },
+      "targets": [
+        {
+          "expr": "max by (stream) (dr_replication_lag_seconds)",
+          "legendFormat": "{{ stream }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "thresholdsStyle": { "mode": "line" }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 10 },
+              { "color": "red", "value": 60 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["last", "max"] }
+      }
+    },
+    {
+      "title": "Recovery-Point Validation Ratio per Group (SLO 0.999)",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 15 },
+      "targets": [
+        {
+          "expr": "min by (group) (dr_recovery_point_validation_ratio)",
+          "legendFormat": "{{ group }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0.99,
+          "max": 1,
+          "custom": {
+            "drawStyle": "line",
+            "thresholdsStyle": { "mode": "line" }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 0.999 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["last", "min"] }
+      }
+    },
+    {
+      "title": "Frames Shipped (rate/s)",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 8, "x": 0, "y": 24 },
+      "targets": [
+        {
+          "expr": "sum by (stream) (rate(dr_frames_shipped_total[5m]))",
+          "legendFormat": "{{ stream }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "fps",
+          "custom": { "drawStyle": "line", "fillOpacity": 10 }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      }
+    },
+    {
+      "title": "Bytes Shipped (rate/s)",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 8, "x": 8, "y": 24 },
+      "targets": [
+        {
+          "expr": "sum by (stream) (rate(dr_bytes_shipped_total[5m]))",
+          "legendFormat": "{{ stream }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": { "drawStyle": "line", "fillOpacity": 10 }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      }
+    },
+    {
+      "title": "Transport Resumes (rate/min)",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 8, "x": 16, "y": 24 },
+      "targets": [
+        {
+          "expr": "sum by (transport) (rate(dr_transport_resumes_total[15m])) * 60",
+          "legendFormat": "{{ transport }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "line", "fillOpacity": 10 },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 5 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      }
+    },
+    {
+      "title": "Stream Status",
+      "type": "state-timeline",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 33 },
+      "targets": [
+        {
+          "expr": "dr_stream_status == 1",
+          "legendFormat": "{{ stream }} — {{ status }}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "fillOpacity": 80 },
+          "mappings": [
+            { "type": "value", "options": { "1": { "text": "active", "color": "green" } } }
+          ]
+        }
+      },
+      "options": {
+        "showValue": "never",
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      }
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["clario-dr", "datastream", "dr", "slo"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timezone": "",
+  "title": "ClarioDR — DR SLO Board",
+  "uid": "clario-dr-slo",
+  "version": 1
+}

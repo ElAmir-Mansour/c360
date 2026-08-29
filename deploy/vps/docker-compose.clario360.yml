@@ -1,0 +1,292 @@
+# =============================================================================
+# Clario 360 — Dedicated production infra for a SHARED VPS (109.199.103.82)
+# -----------------------------------------------------------------------------
+# Run with:  docker compose -p clario360 --env-file /opt/clario360/clario360.env \
+#              -f docker-compose.clario360.yml up -d
+#
+# Design rules (do NOT relax — this box also runs digiweb/boacrm/cba-uat):
+#   * Dedicated compose project name "clario360" → isolated network + volumes.
+#   * Container names clario360-prod-*  → never collide with neighbours.
+#   * EVERY host port is bound to 127.0.0.1 ONLY (the box has no firewall).
+#   * Host ports are remapped off the dev defaults to dodge the ports already
+#     taken on this box (5433/5434 pg, 6380/6381 redis, 9000/9001 minio,
+#     9200 ES, 8182 keycloak, 4222/8222 nats, 3002 talent-portal).
+#   * mem_limit on every service so the full stack fits the ~9 GiB free RAM.
+#   * Observability (prometheus/grafana/jaeger/dashboards), schema-registry and
+#     keycloak are intentionally OMITTED. ClamAV is required for upload safety.
+# =============================================================================
+
+# Pin the project name so volumes/networks are clario360_* even on a manual
+# `docker compose up` without -p (deploy.sh always passes -p clario360 anyway).
+name: clario360
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 16 — database-per-service. POSTGRES_DB=clario360 makes the
+  # entrypoint create the bare `clario360` DB (workflow-engine migrates its
+  # tables into it; audit-service also connects to it) BEFORE the init script
+  # creates platform_core/cyber_db/… (which would conflict if POSTGRES_DB were
+  # platform_core).
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: clario360-prod-postgres
+    restart: unless-stopped
+    command: ["postgres", "-c", "shared_buffers=256MB", "-c", "max_connections=200"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set in clario360.env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in clario360.env}
+      POSTGRES_DB: clario360
+    ports:
+      - "127.0.0.1:5440:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../docker/init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro
+      - ./initdb/02-clario360-extra.sql:/docker-entrypoint-initdb.d/02-clario360-extra.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d clario360"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    mem_limit: 1g
+
+  # ---------------------------------------------------------------------------
+  # Redis 7.2 — ephemeral (rate-limit, idempotency, leader locks, DEK cache, WS).
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7.2-alpine
+    container_name: clario360-prod-redis
+    restart: unless-stopped
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru", "--save", "", "--appendonly", "no"]
+    ports:
+      - "127.0.0.1:6390:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    mem_limit: 320m
+
+  # ---------------------------------------------------------------------------
+  # Kafka 4.0 (KRaft, single node). External listener advertised as
+  # localhost:9094 so the HOST pm2 services reach it on 127.0.0.1:9094.
+  # MANDATORY: file-service Fatals at boot if Kafka is unreachable.
+  # ---------------------------------------------------------------------------
+  kafka:
+    image: bitnamilegacy/kafka:4.0.0-debian-12-r10
+    container_name: clario360-prod-kafka
+    restart: unless-stopped
+    environment:
+      KAFKA_CFG_NODE_ID: "1"
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CFG_NUM_PARTITIONS: "3"
+      KAFKA_CFG_DEFAULT_REPLICATION_FACTOR: "1"
+      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_KRAFT_CLUSTER_ID: clario360-kraft-cluster-id
+      # Raised from 512m for the larger (47 GB) box. 512m heap + 768m mem_limit
+      # was too tight: under a full-stack restart storm Kafka did a slow ~9s
+      # unclean recovery of 200+ partitions and crash-looped on
+      # DUPLICATE_BROKER_REGISTRATION. 1.5g heap inside a 3g limit leaves room
+      # for page cache + off-heap during recovery.
+      KAFKA_HEAP_OPTS: "-Xmx1536m -Xms1536m"
+    ports:
+      - "127.0.0.1:9094:9094"
+    volumes:
+      - kafka-data:/bitnami/kafka
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 6
+      # Longer grace: unclean recovery of 200+ partitions can take well over 30s,
+      # and being marked unhealthy mid-recovery was part of the crash loop.
+      start_period: 120s
+    mem_limit: 3g
+
+  # ---------------------------------------------------------------------------
+  # MinIO (primary object store: file/data/audit/dr buckets).
+  # ---------------------------------------------------------------------------
+  minio:
+    image: minio/minio:latest
+    container_name: clario360-prod-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?set in clario360.env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set in clario360.env}
+    ports:
+      - "127.0.0.1:9100:9000"
+      - "127.0.0.1:9101:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    mem_limit: 512m
+
+  # ---------------------------------------------------------------------------
+  # ClamAV — required malware scanner for all uploaded legal documents.
+  # The Go file-service runs on the host under PM2, so publish clamd to loopback.
+  # ---------------------------------------------------------------------------
+  clamav:
+    image: clamav/clamav:stable
+    container_name: clario360-prod-clamav
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3310:3310"
+    volumes:
+      - clamav-data:/var/lib/clamav
+    healthcheck:
+      test: ["CMD-SHELL", "clamdscan --ping 3 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    mem_limit: 1536m
+
+  # dr-store-init — WORM bucket `dr-recovery-points` (governance 7d).
+  dr-store-init:
+    image: minio/mc:RELEASE.2025-07-16T15-35-03Z
+    container_name: clario360-prod-dr-store-init
+    depends_on:
+      minio: { condition: service_healthy }
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        BUCKET="$${DR_WORM_BUCKET:-dr-recovery-points}"
+        mc alias set dr http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
+        if ! mc ls "dr/$$BUCKET" >/dev/null 2>&1; then mc mb --with-lock "dr/$$BUCKET"; fi
+        mc version enable "dr/$$BUCKET"
+        mc retention set --default governance "7d" "dr/$$BUCKET"
+        SENTINEL="__dr_self_test/sentinel-$$(date +%s).txt"
+        echo "dr-worm-sentinel" | mc pipe "dr/$$BUCKET/$$SENTINEL"
+        echo "dr bucket ready"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?set in clario360.env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set in clario360.env}
+      DR_WORM_BUCKET: dr-recovery-points
+    restart: "no"
+
+  # ---------------------------------------------------------------------------
+  # MinIO (SIEM cold store) — separate instance.
+  # ---------------------------------------------------------------------------
+  minio-siem:
+    image: quay.io/minio/minio:RELEASE.2025-06-13T11-33-47Z
+    container_name: clario360-prod-minio-siem
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${SIEM_MINIO_ROOT_USER:-clario_siem_minio}
+      MINIO_ROOT_PASSWORD: ${SIEM_MINIO_ROOT_PASSWORD:?set in clario360.env}
+    ports:
+      - "127.0.0.1:9104:9000"
+      - "127.0.0.1:9105:9001"
+    volumes:
+      - minio-siem-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    mem_limit: 512m
+
+  # siem-store-init — WORM bucket `siem-cold` (compliance 7y).
+  siem-store-init:
+    image: minio/mc:RELEASE.2025-07-16T15-35-03Z
+    container_name: clario360-prod-siem-store-init
+    depends_on:
+      minio-siem: { condition: service_healthy }
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        mc alias set siem http://minio-siem:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
+        if ! mc ls siem/siem-cold >/dev/null 2>&1; then mc mb --with-lock siem/siem-cold; fi
+        mc retention set --default compliance "7y" siem/siem-cold
+        mc version enable siem/siem-cold
+        SENTINEL="__siem_self_test/sentinel-$$(date +%s).txt"
+        echo "siem-02-sentinel" | mc pipe siem/siem-cold/$$SENTINEL
+        echo "siem-cold bucket ready"
+    environment:
+      MINIO_ROOT_USER: ${SIEM_MINIO_ROOT_USER:-clario_siem_minio}
+      MINIO_ROOT_PASSWORD: ${SIEM_MINIO_ROOT_PASSWORD:?set in clario360.env}
+    restart: "no"
+
+  # ---------------------------------------------------------------------------
+  # OpenSearch 2.15 (SIEM hot store). Heap pinned 1g; memlock REQUIRED.
+  # ---------------------------------------------------------------------------
+  opensearch:
+    image: opensearchproject/opensearch:2.15.0
+    container_name: clario360-prod-opensearch
+    restart: unless-stopped
+    environment:
+      cluster.name: clario360-siem
+      node.name: opensearch-1
+      discovery.type: single-node
+      bootstrap.memory_lock: "true"
+      OPENSEARCH_JAVA_OPTS: "-Xms1g -Xmx1g"
+      DISABLE_SECURITY_PLUGIN: "true"
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+      DISABLE_PERFORMANCE_ANALYZER_AGENT_CLI: "true"
+    ulimits:
+      memlock: { soft: -1, hard: -1 }
+      nofile:  { soft: 65536, hard: 65536 }
+    ports:
+      - "127.0.0.1:9210:9200"
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health | grep -E '\"status\":\"(yellow|green)\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    mem_limit: 1536m
+
+  # ---------------------------------------------------------------------------
+  # Vault 1.17 (dev mode — transit + PKI for SIEM/DR; in-memory, regenerates on
+  # restart which is acceptable: pki.Manager self-provisions mounts at runtime).
+  # ---------------------------------------------------------------------------
+  vault:
+    image: hashicorp/vault:1.17
+    container_name: clario360-prod-vault
+    restart: unless-stopped
+    cap_add: ["IPC_LOCK"]
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_DEV_ROOT_TOKEN_ID:?set in clario360.env}
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+      VAULT_ADDR: http://0.0.0.0:8200
+    command: ["server", "-dev"]
+    ports:
+      - "127.0.0.1:8210:8200"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "--spider", "http://127.0.0.1:8200/v1/sys/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    mem_limit: 256m
+
+volumes:
+  postgres-data:
+  redis-data:
+  kafka-data:
+  minio-data:
+  clamav-data:
+  minio-siem-data:
+  opensearch-data:

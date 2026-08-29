@@ -1,0 +1,3 @@
+-- DEV demo helper: per-table per-tenant timestamp alignment (newest -> now()) for the demo tenant.
+-- Run per DB: docker exec -i clario360-postgres psql -U clario -d <db> -v tnt="'<tenant_uuid>'" -f this.sql
+-- Skips hash-chained/WORM tables. Idempotent (no-op once aligned). See session notes.

@@ -1,0 +1,97 @@
+{{/*
+=======================================================================
+Clario360 Platform — Helm Test: Shared ConfigMap Compatibility
+=======================================================================
+Verifies the canonical and legacy shared ConfigMap names expose the same
+core keys used by workloads.
+*/}}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "clario360.fullname" . }}-test-shared-configmap
+  namespace: {{ include "clario360.namespace" . }}
+  labels:
+    {{- include "clario360.labels" . | nindent 4 }}
+    app.kubernetes.io/component: test-shared-configmap
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    runAsGroup: 65534
+    fsGroup: 65534
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: test-shared-configmap
+      image: busybox:1.36
+      imagePullPolicy: IfNotPresent
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "=== Clario360 Shared ConfigMap Compatibility Test ==="
+          test -n "$CANONICAL_KAFKA_BROKERS"
+          test -n "$LEGACY_KAFKA_BROKERS"
+          test "$CANONICAL_KAFKA_BROKERS" = "$LEGACY_KAFKA_BROKERS"
+          test -n "$CANONICAL_REDIS_HOST"
+          test -n "$LEGACY_REDIS_HOST"
+          test "$CANONICAL_REDIS_HOST" = "$LEGACY_REDIS_HOST"
+          test -n "$CANONICAL_REDIS_ADDR"
+          test -n "$LEGACY_REDIS_ADDR"
+          test "$CANONICAL_REDIS_ADDR" = "$LEGACY_REDIS_ADDR"
+          test -n "$CANONICAL_DATABASE_HOST"
+          test -n "$LEGACY_DATABASE_HOST"
+          test "$CANONICAL_DATABASE_HOST" = "$LEGACY_DATABASE_HOST"
+          echo "Shared ConfigMaps are present and compatible."
+      env:
+        - name: CANONICAL_KAFKA_BROKERS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "clario360.sharedConfigMapName" . }}
+              key: KAFKA_BROKERS
+        - name: LEGACY_KAFKA_BROKERS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "clario360.legacySharedConfigMapName" . }}
+              key: KAFKA_BROKERS
+        - name: CANONICAL_REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "clario360.sharedConfigMapName" . }}
+              key: REDIS_HOST
+        - name: LEGACY_REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "clario360.legacySharedConfigMapName" . }}
+              key: REDIS_HOST
+        - name: CANONICAL_REDIS_ADDR
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "clario360.sharedConfigMapName" . }}
+              key: REDIS_ADDR
+        - name: LEGACY_REDIS_ADDR
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "clario360.legacySharedConfigMapName" . }}
+              key: REDIS_ADDR
+        - name: CANONICAL_DATABASE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "clario360.sharedConfigMapName" . }}
+              key: DATABASE_HOST
+        - name: LEGACY_DATABASE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "clario360.legacySharedConfigMapName" . }}
+              key: DATABASE_HOST
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        runAsNonRoot: true
+        runAsUser: 65534
+        capabilities:
+          drop:
+            - ALL

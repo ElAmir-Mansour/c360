@@ -1,0 +1,495 @@
+{
+  "corpus": "WatheeqTech Reference Library",
+  "jurisdiction": "SA",
+  "count": 33,
+  "documents": [
+    {
+      "source_filename": "نظام الاستثمار ولائحته التنفيذية_copy.pdf",
+      "title_ar": "نظام الاستثمار ولائحته التنفيذية",
+      "title_en": "Investment Law & its Executive Regulation",
+      "category": "systems-regulations",
+      "doc_type": "system",
+      "authority": "وزارة الاستثمار",
+      "tags": [
+        "استثمار",
+        "أنظمة",
+        "لائحة تنفيذية"
+      ],
+      "metadata": {
+        "includes_regulation": true
+      }
+    },
+    {
+      "source_filename": "نظام المحاماة ولوائحه التنفيذية_copy.pdf",
+      "title_ar": "نظام المحاماة ولوائحه التنفيذية",
+      "title_en": "Code of Law Practice & its Regulations",
+      "category": "systems-regulations",
+      "doc_type": "system",
+      "authority": "وزارة العدل",
+      "tags": [
+        "محاماة",
+        "مهنة قانونية",
+        "لائحة تنفيذية"
+      ],
+      "metadata": {
+        "includes_regulation": true,
+        "effective_hijri": "1422-07-28",
+        "effective_gregorian": "2001-10-15"
+      }
+    },
+    {
+      "source_filename": "نظام المرافعات أمام ديوان المظالم ولائحته التنفيذية_copy.pdf",
+      "title_ar": "نظام المرافعات أمام ديوان المظالم ولائحته التنفيذية",
+      "title_en": "Law of Procedure before the Board of Grievances & its Regulation",
+      "category": "systems-regulations",
+      "doc_type": "system",
+      "authority": "ديوان المظالم",
+      "tags": [
+        "مرافعات",
+        "قضاء إداري",
+        "ديوان المظالم"
+      ],
+      "metadata": {
+        "includes_regulation": true
+      }
+    },
+    {
+      "source_filename": "نظام المنافسة ولائحته التنفيذية_copy.pdf",
+      "title_ar": "نظام المنافسة ولائحته التنفيذية",
+      "title_en": "Competition Law & its Executive Regulation",
+      "category": "systems-regulations",
+      "doc_type": "system",
+      "authority": "الهيئة العامة للمنافسة",
+      "tags": [
+        "منافسة",
+        "مكافحة الاحتكار",
+        "لائحة تنفيذية"
+      ],
+      "metadata": {
+        "includes_regulation": true,
+        "effective_hijri": "1440-06-29",
+        "effective_gregorian": "2019-03-06"
+      }
+    },
+    {
+      "source_filename": "نظام الهيئة العامة للولاية على أموال القاصرين ومن في حكمهم_copy.pdf",
+      "title_ar": "نظام الهيئة العامة للولاية على أموال القاصرين ومن في حكمهم",
+      "title_en": "Law of the General Authority for Guardianship of Minors' Funds",
+      "category": "systems-regulations",
+      "doc_type": "system",
+      "authority": "الهيئة العامة للولاية على أموال القاصرين ومن في حكمهم",
+      "tags": [
+        "ولاية",
+        "قاصرين",
+        "أموال"
+      ],
+      "metadata": {}
+    },
+    {
+      "source_filename": "نظام رسوم الأراضي البيضاء والعقارات الشاغرة_copy.pdf",
+      "title_ar": "نظام رسوم الأراضي البيضاء والعقارات الشاغرة",
+      "title_en": "White Land & Vacant Property Fees Law",
+      "category": "systems-regulations",
+      "doc_type": "system",
+      "authority": "وزارة الشؤون البلدية والقروية والإسكان",
+      "tags": [
+        "عقاري",
+        "أراضٍ بيضاء",
+        "رسوم"
+      ],
+      "metadata": {}
+    },
+    {
+      "source_filename": "نظام ملكية الوحدات العقارية وفرزها وإدارتها_copy.pdf",
+      "title_ar": "نظام ملكية الوحدات العقارية وفرزها وإدارتها",
+      "title_en": "Law of Ownership, Partition & Management of Real-estate Units",
+      "category": "systems-regulations",
+      "doc_type": "system",
+      "authority": "وزارة الشؤون البلدية والقروية والإسكان",
+      "tags": [
+        "عقاري",
+        "ملكية",
+        "إدارة أملاك"
+      ],
+      "metadata": {}
+    },
+    {
+      "source_filename": "نظام هيئة الرقابة ومكافحة الفساد_copy.pdf",
+      "title_ar": "نظام هيئة الرقابة ومكافحة الفساد",
+      "title_en": "Law of the Oversight & Anti-Corruption Authority (Nazaha)",
+      "category": "systems-regulations",
+      "doc_type": "system",
+      "authority": "هيئة الرقابة ومكافحة الفساد",
+      "tags": [
+        "نزاهة",
+        "مكافحة الفساد",
+        "رقابة"
+      ],
+      "metadata": {}
+    },
+    {
+      "source_filename": "أنظمة الزكاة وضريبة القيمة المضافة والتصرفات العقارية_copy.pdf",
+      "title_ar": "أنظمة الزكاة وضريبة القيمة المضافة والتصرفات العقارية",
+      "title_en": "Zakat, VAT & Real-estate Transactions — statutes (compendium)",
+      "category": "systems-regulations",
+      "doc_type": "system",
+      "authority": "هيئة الزكاة والضريبة والجمارك",
+      "tags": [
+        "زكاة",
+        "ضريبة القيمة المضافة",
+        "تصرفات عقارية"
+      ],
+      "metadata": {
+        "compendium": true
+      }
+    },
+    {
+      "source_filename": "أنظمة جرائم الوظيفة العامة والأموال_copy.pdf",
+      "title_ar": "أنظمة جرائم الوظيفة العامة والأموال",
+      "title_en": "Public-office & Public-funds Crimes — statutes (compendium)",
+      "category": "systems-regulations",
+      "doc_type": "system",
+      "authority": "هيئة الرقابة ومكافحة الفساد",
+      "tags": [
+        "جرائم مالية",
+        "وظيفة عامة",
+        "نزاهة"
+      ],
+      "metadata": {
+        "compendium": true
+      }
+    },
+    {
+      "source_filename": "مجلة قضاء العدد 38_copy.pdf",
+      "title_ar": "مجلة قضاء العدد 38",
+      "title_en": "Qadaa Journal, Issue 38",
+      "category": "judicial-journal",
+      "doc_type": "judicial-journal",
+      "authority": "وزارة العدل",
+      "tags": [
+        "مجلة قضاء",
+        "أحكام قضائية",
+        "اجتهاد قضائي"
+      ],
+      "metadata": {
+        "issue": "38"
+      }
+    },
+    {
+      "source_filename": "مجلة قضاء العدد 39_copy.pdf",
+      "title_ar": "مجلة قضاء العدد 39",
+      "title_en": "Qadaa Journal, Issue 39",
+      "category": "judicial-journal",
+      "doc_type": "judicial-journal",
+      "authority": "وزارة العدل",
+      "tags": [
+        "مجلة قضاء",
+        "أحكام قضائية",
+        "اجتهاد قضائي"
+      ],
+      "metadata": {
+        "issue": "39"
+      }
+    },
+    {
+      "source_filename": "مجلة قضاء العدد 40_copy.pdf",
+      "title_ar": "مجلة قضاء العدد 40",
+      "title_en": "Qadaa Journal, Issue 40",
+      "category": "judicial-journal",
+      "doc_type": "judicial-journal",
+      "authority": "وزارة العدل",
+      "tags": [
+        "مجلة قضاء",
+        "أحكام قضائية",
+        "اجتهاد قضائي"
+      ],
+      "metadata": {
+        "issue": "40"
+      }
+    },
+    {
+      "source_filename": "مجلة قضاء العدد 41_copy.pdf",
+      "title_ar": "مجلة قضاء العدد 41",
+      "title_en": "Qadaa Journal, Issue 41",
+      "category": "judicial-journal",
+      "doc_type": "judicial-journal",
+      "authority": "وزارة العدل",
+      "tags": [
+        "مجلة قضاء",
+        "أحكام قضائية",
+        "اجتهاد قضائي"
+      ],
+      "metadata": {
+        "issue": "41"
+      }
+    },
+    {
+      "source_filename": "مجلة قضاء العدد 43_copy.pdf",
+      "title_ar": "مجلة قضاء العدد 43",
+      "title_en": "Qadaa Journal, Issue 43",
+      "category": "judicial-journal",
+      "doc_type": "judicial-journal",
+      "authority": "وزارة العدل",
+      "tags": [
+        "مجلة قضاء",
+        "أحكام قضائية",
+        "اجتهاد قضائي"
+      ],
+      "metadata": {
+        "issue": "43"
+      }
+    },
+    {
+      "source_filename": "__أحكام رجوع الكفيل على المدين__copy.pdf",
+      "title_ar": "أحكام رجوع الكفيل على المدين",
+      "title_en": "Rules of the Guarantor's Recourse against the Debtor",
+      "category": "research",
+      "doc_type": "research",
+      "authority": "",
+      "tags": [
+        "كفالة",
+        "ضمان",
+        "التزامات"
+      ],
+      "metadata": {}
+    },
+    {
+      "source_filename": "_أثر القرائن الفقهية في ترجيح الدعوى المالية_copy.pdf",
+      "title_ar": "أثر القرائن الفقهية في ترجيح الدعوى المالية",
+      "title_en": "Effect of Jurisprudential Presumptions on Weighing Financial Claims",
+      "category": "research",
+      "doc_type": "research",
+      "authority": "",
+      "tags": [
+        "إثبات",
+        "قرائن",
+        "دعوى مالية"
+      ],
+      "metadata": {}
+    },
+    {
+      "source_filename": "التوقيع على بياض_copy.pdf",
+      "title_ar": "التوقيع على بياض",
+      "title_en": "Signing on Blank",
+      "category": "research",
+      "doc_type": "research",
+      "authority": "",
+      "tags": [
+        "إثبات",
+        "عقود",
+        "توقيع"
+      ],
+      "metadata": {}
+    },
+    {
+      "source_filename": "الحماية القانونية لحق المساهم في الإعلام_copy.pdf",
+      "title_ar": "الحماية القانونية لحق المساهم في الإعلام",
+      "title_en": "Legal Protection of the Shareholder's Right to Information",
+      "category": "research",
+      "doc_type": "research",
+      "authority": "",
+      "tags": [
+        "شركات",
+        "مساهمون",
+        "حوكمة"
+      ],
+      "metadata": {}
+    },
+    {
+      "source_filename": "الحماية القضائية للمتضرر في القضاء الإداري السعودي_copy.pdf",
+      "title_ar": "الحماية القضائية للمتضرر في القضاء الإداري السعودي",
+      "title_en": "Judicial Protection of the Aggrieved in Saudi Administrative Justice",
+      "category": "research",
+      "doc_type": "research",
+      "authority": "",
+      "tags": [
+        "قضاء إداري",
+        "ديوان المظالم",
+        "تعويض"
+      ],
+      "metadata": {}
+    },
+    {
+      "source_filename": "الدفوع الموضوعية في دعاوى الأحوال الشخصية غير الزوجية__copy.pdf",
+      "title_ar": "الدفوع الموضوعية في دعاوى الأحوال الشخصية غير الزوجية",
+      "title_en": "Substantive Defenses in Non-marital Personal-status Suits",
+      "category": "research",
+      "doc_type": "research",
+      "authority": "",
+      "tags": [
+        "أحوال شخصية",
+        "دفوع",
+        "تقاضي"
+      ],
+      "metadata": {}
+    },
+    {
+      "source_filename": "الطعن في الأحكام القضائية_copy.pdf",
+      "title_ar": "الطعن في الأحكام القضائية",
+      "title_en": "Appeal against Judicial Rulings",
+      "category": "research",
+      "doc_type": "research",
+      "authority": "",
+      "tags": [
+        "طعن",
+        "استئناف",
+        "أحكام"
+      ],
+      "metadata": {}
+    },
+    {
+      "source_filename": "المسؤولية الطبية في ضوء النظام السعودي_copy.pdf",
+      "title_ar": "المسؤولية الطبية في ضوء النظام السعودي",
+      "title_en": "Medical Liability under the Saudi System",
+      "category": "research",
+      "doc_type": "research",
+      "authority": "",
+      "tags": [
+        "مسؤولية طبية",
+        "تعويض",
+        "صحة"
+      ],
+      "metadata": {}
+    },
+    {
+      "source_filename": "الميثاق العائلي في نظام الشركات_copy.pdf",
+      "title_ar": "الميثاق العائلي في نظام الشركات",
+      "title_en": "The Family Charter under the Companies Law",
+      "category": "research",
+      "doc_type": "research",
+      "authority": "",
+      "tags": [
+        "شركات",
+        "حوكمة",
+        "شركات عائلية"
+      ],
+      "metadata": {}
+    },
+    {
+      "source_filename": "أحكام العزل من نظارة الوقف_copy.pdf",
+      "title_ar": "أحكام العزل من نظارة الوقف",
+      "title_en": "Rules of Dismissal from Waqf Custodianship",
+      "category": "research",
+      "doc_type": "research",
+      "authority": "",
+      "tags": [
+        "وقف",
+        "نظارة",
+        "ولاية"
+      ],
+      "metadata": {}
+    },
+    {
+      "source_filename": "تمويل التقاضي_copy.pdf",
+      "title_ar": "تمويل التقاضي",
+      "title_en": "Litigation Funding",
+      "category": "research",
+      "doc_type": "research",
+      "authority": "",
+      "tags": [
+        "تقاضي",
+        "تمويل",
+        "منازعات"
+      ],
+      "metadata": {}
+    },
+    {
+      "source_filename": "جدلية الاستقالة في عقود العمل_copy.pdf",
+      "title_ar": "جدلية الاستقالة في عقود العمل",
+      "title_en": "The Resignation Dialectic in Labour Contracts",
+      "category": "research",
+      "doc_type": "research",
+      "authority": "",
+      "tags": [
+        "عمل",
+        "استقالة",
+        "عقود عمل"
+      ],
+      "metadata": {}
+    },
+    {
+      "source_filename": "حالة التشريعات في المملكة العربية السعودية_copy.pdf",
+      "title_ar": "حالة التشريعات في المملكة العربية السعودية",
+      "title_en": "The State of Legislation in the Kingdom",
+      "category": "research",
+      "doc_type": "research",
+      "authority": "",
+      "tags": [
+        "تشريع",
+        "أنظمة",
+        "سياسة تشريعية"
+      ],
+      "metadata": {}
+    },
+    {
+      "source_filename": "دعوى عدم استحقاق السند التنفيذي_copy.pdf",
+      "title_ar": "دعوى عدم استحقاق السند التنفيذي",
+      "title_en": "Claim of Non-entitlement of an Enforcement Instrument",
+      "category": "research",
+      "doc_type": "research",
+      "authority": "",
+      "tags": [
+        "تنفيذ",
+        "سند تنفيذي",
+        "منازعات"
+      ],
+      "metadata": {}
+    },
+    {
+      "source_filename": "ضمانات أطراف الدعوى_copy.pdf",
+      "title_ar": "ضمانات أطراف الدعوى",
+      "title_en": "Guarantees of the Parties to a Suit",
+      "category": "research",
+      "doc_type": "research",
+      "authority": "",
+      "tags": [
+        "تقاضي",
+        "ضمانات",
+        "مرافعات"
+      ],
+      "metadata": {}
+    },
+    {
+      "source_filename": "ما يلزم التسبيب له من وسائل الإثبات وإجراءاته_copy.pdf",
+      "title_ar": "ما يلزم التسبيب له من وسائل الإثبات وإجراءاته",
+      "title_en": "Means & Procedures of Evidence Requiring Reasoning",
+      "category": "research",
+      "doc_type": "research",
+      "authority": "",
+      "tags": [
+        "إثبات",
+        "تسبيب",
+        "إجراءات"
+      ],
+      "metadata": {}
+    },
+    {
+      "source_filename": "مسالك تسبيب الأحكام القضائية_copy.pdf",
+      "title_ar": "مسالك تسبيب الأحكام القضائية",
+      "title_en": "Approaches to Reasoning Judicial Rulings",
+      "category": "research",
+      "doc_type": "research",
+      "authority": "",
+      "tags": [
+        "تسبيب",
+        "أحكام",
+        "قضاء"
+      ],
+      "metadata": {}
+    },
+    {
+      "source_filename": "معايير حماية العلامة التجارية وإجراءات تسجيلها_copy.pdf",
+      "title_ar": "معايير حماية العلامة التجارية وإجراءات تسجيلها",
+      "title_en": "Standards of Trademark Protection & Registration",
+      "category": "research",
+      "doc_type": "research",
+      "authority": "",
+      "tags": [
+        "ملكية فكرية",
+        "علامة تجارية",
+        "تسجيل"
+      ],
+      "metadata": {}
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+.track {
+  inline-size: 100%;
+  block-size: var(--wt-space-base);
+  overflow: hidden;
+  background: var(--wt-track);
+  border-radius: var(--wt-radius-pill);
+}
+
+.escalationSize {
+  block-size: calc(
+    var(--wt-space-base) + var(--wt-card-border-width) + var(--wt-card-border-width)
+  );
+}
+
+.fill {
+  block-size: 100%;
+  border-radius: inherit;
+}
+
+.critical {
+  background: var(--wt-critical);
+}
+
+.high {
+  background: var(--wt-high);
+}
+
+.medium {
+  background: var(--wt-medium);
+}
+
+.optimal {
+  background: var(--wt-ok);
+}
+
+.skeleton {
+  inline-size: 100%;
+  block-size: var(--wt-space-base);
+  border-radius: var(--wt-radius-pill);
+}
+
+.skeletonEscalationSize {
+  block-size: calc(
+    var(--wt-space-base) + var(--wt-card-border-width) + var(--wt-card-border-width)
+  );
+}

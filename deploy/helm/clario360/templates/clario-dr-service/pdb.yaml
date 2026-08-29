@@ -1,0 +1,18 @@
+{{- if .Values.clarioDrService.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "clario360.componentName" (dict "root" . "component" "clario-dr-service") }}
+  namespace: {{ include "clario360.namespace" . }}
+  labels:
+    {{- include "clario360.componentLabels" (dict "root" . "component" "clario-dr-service") | nindent 4 }}
+spec:
+  {{- if .Values.clarioDrService.pdb.minAvailable }}
+  minAvailable: {{ .Values.clarioDrService.pdb.minAvailable }}
+  {{- else }}
+  maxUnavailable: {{ .Values.clarioDrService.pdb.maxUnavailable | default 1 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "clario360.componentSelectorLabels" (dict "root" . "component" "clario-dr-service") | nindent 6 }}
+{{- end }}

@@ -1,0 +1,20 @@
+# Production overlays for the SIEM data plane.
+# Use with: docker compose -f docker-compose.yml -f docker-compose.prod.yml ...
+services:
+  opensearch:
+    environment:
+      # Enable security plugin in prod
+      DISABLE_SECURITY_PLUGIN: "false"
+      DISABLE_INSTALL_DEMO_CONFIG: "false"
+      OPENSEARCH_JAVA_OPTS: "-Xms4g -Xmx4g"
+      # Set strong admin password via secrets in real deployments
+      OPENSEARCH_INITIAL_ADMIN_PASSWORD: ${OPENSEARCH_INITIAL_ADMIN_PASSWORD:?must be set}
+    volumes:
+      - ./secrets/opensearch:/usr/share/opensearch/config/certs:ro
+  minio-siem:
+    environment:
+      MINIO_ROOT_USER: ${SIEM_MINIO_ROOT_USER:?must be set in prod}
+      MINIO_ROOT_PASSWORD: ${SIEM_MINIO_ROOT_PASSWORD:?must be set in prod}
+  vault-dev:
+    # Do NOT run vault dev in prod
+    profiles: ["__never__"]

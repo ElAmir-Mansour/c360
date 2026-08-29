@@ -1,0 +1,205 @@
+package events
+
+// Topics holds all Kafka topic names for the Clario 360 platform.
+// Naming convention: {domain}.{entity}.events
+var Topics = struct {
+	// Platform
+	IAMEvents          string
+	OnboardingEvents   string
+	AuditEvents        string
+	NotificationEvents string
+	IntegrationEvents  string
+	WorkflowEvents     string
+	AutomationEvents   string
+	FileEvents         string
+	AIEvents           string
+	NotebookEvents     string
+	LicenseEvents      string
+
+	// Cybersecurity
+	AssetEvents         string
+	VulnerabilityEvents string
+	ThreatEvents        string
+	AlertEvents         string
+	RuleEvents          string
+	CtemEvents          string
+	RiskEvents          string
+	RemediationEvents   string
+	DSPMEvents          string
+	VCISOEvents         string
+	UEBAEvents          string
+
+	// Data
+	DataSourceEvents    string
+	DataAccessEvents    string
+	DarkDataEvents      string
+	PipelineEvents      string
+	QualityEvents       string
+	ContradictionEvents string
+	LineageEvents       string
+
+	// Enterprise
+	ActaEvents  string
+	LexEvents   string
+	VisusEvents string
+
+	// Clario Migrate
+	MigrateEvents string
+
+	// DataStream / ClarioDR
+	DREvents   string
+	DRProgress string
+	DRAlerts   string
+
+	// Dead Letter
+	DeadLetter string
+}{
+	// Platform
+	IAMEvents:          "platform.iam.events",
+	OnboardingEvents:   "platform.onboarding.events",
+	AuditEvents:        "platform.audit.events",
+	NotificationEvents: "platform.notification.events",
+	IntegrationEvents:  "platform.integration.events",
+	WorkflowEvents:     "platform.workflow.events",
+	AutomationEvents:   "platform.automation.events",
+	FileEvents:         "platform.file.events",
+	AIEvents:           "platform.ai.events",
+	NotebookEvents:     "platform.notebook.events",
+	LicenseEvents:      "platform.license.events",
+
+	// Cybersecurity
+	AssetEvents:         "cyber.asset.events",
+	VulnerabilityEvents: "cyber.vulnerability.events",
+	ThreatEvents:        "cyber.threat.events",
+	AlertEvents:         "cyber.alert.events",
+	RuleEvents:          "cyber.rule.events",
+	CtemEvents:          "cyber.ctem.events",
+	RiskEvents:          "cyber.risk.events",
+	RemediationEvents:   "cyber.remediation.events",
+	DSPMEvents:          "cyber.dspm.events",
+	VCISOEvents:         "cyber.vciso.events",
+	UEBAEvents:          "cyber.ueba.events",
+
+	// Data
+	DataSourceEvents:    "data.source.events",
+	DataAccessEvents:    "data.access_events",
+	DarkDataEvents:      "data.darkdata.events",
+	PipelineEvents:      "data.pipeline.events",
+	QualityEvents:       "data.quality.events",
+	ContradictionEvents: "data.contradiction.events",
+	LineageEvents:       "data.lineage.events",
+
+	// Enterprise
+	ActaEvents:  "enterprise.acta.events",
+	LexEvents:   "enterprise.lex.events",
+	VisusEvents: "enterprise.visus.events",
+
+	// Clario Migrate (Wave 5, H1): wave/cutover/rollback/gate lifecycle events.
+	MigrateEvents: "migrate.events",
+
+	// DataStream / ClarioDR (DESIGN_DataStream_DR.md §8)
+	DREvents:   "datastream.dr.events",   // lifecycle: stream.created, failover.gate1.passed, attestation.issued
+	DRProgress: "datastream.dr.progress", // high-volume telemetry: bytes shipped, lag, throughput
+	DRAlerts:   "datastream.dr.alerts",   // RPO breach, stream degraded, cert expiring
+
+	// Dead Letter
+	DeadLetter: "platform.dead-letter",
+}
+
+// Legacy topic constants for backward compatibility with existing service code.
+const (
+	TopicAuditLog      = "platform.audit.events"
+	TopicUserCreated   = "platform.iam.events"
+	TopicUserUpdated   = "platform.iam.events"
+	TopicUserDeleted   = "platform.iam.events"
+	TopicTenantCreated = "platform.iam.events"
+	TopicWorkflowStart = "platform.workflow.events"
+	TopicWorkflowEnd   = "platform.workflow.events"
+	TopicCyberAlert    = "cyber.alert.events"
+	TopicCyberRule     = "cyber.rule.events"
+	TopicDataPipeline  = "data.pipeline.events"
+	TopicActaDocument  = "enterprise.acta.events"
+	TopicLexCase       = "enterprise.lex.events"
+	TopicVisusReport   = "enterprise.visus.events"
+)
+
+// AllTopics returns all topic names for admin operations (e.g., topic creation).
+func AllTopics() []string {
+	return []string{
+		Topics.IAMEvents,
+		Topics.OnboardingEvents,
+		Topics.AuditEvents,
+		Topics.NotificationEvents,
+		Topics.IntegrationEvents,
+		Topics.WorkflowEvents,
+		Topics.AutomationEvents,
+		Topics.FileEvents,
+		Topics.AIEvents,
+		Topics.NotebookEvents,
+		Topics.LicenseEvents,
+		Topics.AssetEvents,
+		Topics.VulnerabilityEvents,
+		Topics.ThreatEvents,
+		Topics.AlertEvents,
+		Topics.RuleEvents,
+		Topics.CtemEvents,
+		Topics.RiskEvents,
+		Topics.RemediationEvents,
+		Topics.DSPMEvents,
+		Topics.VCISOEvents,
+		Topics.UEBAEvents,
+		Topics.DataSourceEvents,
+		Topics.DataAccessEvents,
+		Topics.DarkDataEvents,
+		Topics.PipelineEvents,
+		Topics.QualityEvents,
+		Topics.ContradictionEvents,
+		Topics.LineageEvents,
+		Topics.ActaEvents,
+		Topics.LexEvents,
+		Topics.VisusEvents,
+		Topics.MigrateEvents,
+		Topics.DREvents,
+		Topics.DRProgress,
+		Topics.DRAlerts,
+		Topics.DeadLetter,
+	}
+}
+
+// TopicConfig holds per-topic Kafka configuration for admin operations.
+type TopicConfig struct {
+	Name              string
+	NumPartitions     int32
+	ReplicationFactor int16
+	RetentionMs       int64 // -1 for infinite
+}
+
+// DefaultTopicConfigs returns recommended configurations for all topics.
+func DefaultTopicConfigs() []TopicConfig {
+	configs := make([]TopicConfig, 0, len(AllTopics()))
+	for _, topic := range AllTopics() {
+		cfg := TopicConfig{
+			Name:              topic,
+			NumPartitions:     6,
+			ReplicationFactor: 3,
+			RetentionMs:       7 * 24 * 60 * 60 * 1000, // 7 days
+		}
+
+		switch topic {
+		case Topics.DeadLetter:
+			cfg.RetentionMs = 30 * 24 * 60 * 60 * 1000 // 30 days
+			cfg.NumPartitions = 3
+		case Topics.AuditEvents:
+			cfg.RetentionMs = 90 * 24 * 60 * 60 * 1000 // 90 days
+		case Topics.DRProgress:
+			// High-volume replication telemetry (bytes/lag/throughput): fan out
+			// across more partitions for throughput and keep only a short window
+			// — losing an old progress sample is harmless (§8).
+			cfg.NumPartitions = 12
+			cfg.RetentionMs = 24 * 60 * 60 * 1000 // 1 day
+		}
+
+		configs = append(configs, cfg)
+	}
+	return configs
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clario360.io/siem/events/sources/source.heartbeat.gap.json",
+  "title": "siem.source.heartbeat.gap",
+  "description": "Data payload of the siem.source.heartbeat.gap CloudEvent. Emitted when a previously-active source has not heartbeated within the configured gap threshold.",
+  "type": "object",
+  "required": ["source_id", "tenant_id", "last_seen_at", "gap_seconds"],
+  "properties": {
+    "source_id":    {"type": "string", "format": "uuid"},
+    "tenant_id":    {"type": "string", "format": "uuid"},
+    "source_name":  {"type": "string"},
+    "last_seen_at": {"type": "string", "format": "date-time"},
+    "gap_seconds":  {"type": "integer", "minimum": 0}
+  }
+}

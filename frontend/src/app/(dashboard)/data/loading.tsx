@@ -1,0 +1,5 @@
+import { PageLoader } from '@/components/common/page-loader';
+
+export default function Loading() {
+  return <PageLoader withChart kpis={5} />;
+}

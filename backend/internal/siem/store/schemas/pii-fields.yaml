@@ -1,0 +1,42 @@
+version: 1
+schema_id: "clario-pii-1.0"
+description: |
+  Canonical list of ECS field paths considered PII under the
+  Nigeria Data Protection Act (NDPA) 2023 and CBN regulator
+  requirements. EncryptDocument MUST encrypt every path here
+  before indexing. DecryptDocument MUST be the only path that
+  reveals plaintext.
+
+# Personal identifiers (BVN/NIN go in id_number; never log).
+fields:
+  - user.full_name
+  - user.email
+  - user.phone_number
+  - user.id_number             # BVN/NIN/passport
+  - source.user.full_name
+  - source.user.email
+  - destination.user.full_name
+  - destination.user.email
+  - client.user.full_name
+  - client.user.email
+  # Financial identifiers
+  - account.number
+  - account.holder
+  - cardholder.pan
+  - cardholder.name
+  - swift.message.bic          # extension; sensitive in CBN context
+  - rtgs.payment.beneficiary
+  # PII-adjacent device/network identifiers when correlated to identity
+  - host.mac
+  - source.ip                  # PII under NDPA only when tied to an identifiable subject;
+                               # encrypt to be safe; allow_in_clear at query time via reveal flag
+  - destination.ip
+
+# Documented exemptions (NOT encrypted) — fields that look like PII but
+# the regulator treats as event metadata or that need range queries.
+not_pii:
+  - "@timestamp"
+  - event.start
+  - event.end
+  - host.name
+  - tenant_id

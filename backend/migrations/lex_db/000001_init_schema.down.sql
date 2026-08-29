@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS expiry_notifications;
+DROP TABLE IF EXISTS compliance_alerts;
+DROP TABLE IF EXISTS compliance_rules;
+DROP TABLE IF EXISTS document_versions;
+DROP TABLE IF EXISTS legal_documents;
+DROP TABLE IF EXISTS contract_analyses;
+DROP TABLE IF EXISTS contract_clauses;
+DROP TABLE IF EXISTS contract_versions;
+DROP TABLE IF EXISTS contracts;

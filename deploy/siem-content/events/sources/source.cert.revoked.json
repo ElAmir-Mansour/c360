@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clario360.io/siem/events/sources/source.cert.revoked.json",
+  "title": "siem.source.cert.revoked",
+  "description": "Data payload of the siem.source.cert.revoked CloudEvent.",
+  "type": "object",
+  "required": ["source_id", "tenant_id", "cert_serial", "mtls_thumbprint", "revoked_at", "reason"],
+  "properties": {
+    "source_id":       {"type": "string", "format": "uuid"},
+    "tenant_id":       {"type": "string", "format": "uuid"},
+    "cert_serial":     {"type": "string"},
+    "mtls_thumbprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "revoked_at":      {"type": "string", "format": "date-time"},
+    "reason":          {"type": "string"}
+  }
+}

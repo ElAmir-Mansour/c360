@@ -1,0 +1,99 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "iam-service"
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets: ["iam-service:9091"]
+        labels:
+          service: "iam-service"
+
+  - job_name: "api-gateway"
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets: ["api-gateway:9090"]
+        labels:
+          service: "api-gateway"
+
+  - job_name: "audit-service"
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets: ["audit-service:9092"]
+        labels:
+          service: "audit-service"
+
+  - job_name: "workflow-engine"
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets: ["workflow-engine:9093"]
+        labels:
+          service: "workflow-engine"
+
+  - job_name: "notification-service"
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets: ["notification-service:9094"]
+        labels:
+          service: "notification-service"
+
+  - job_name: "file-service"
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets: ["file-service:9095"]
+        labels:
+          service: "file-service"
+
+  - job_name: "license-service"
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets: ["license-service:9096"]
+        labels:
+          service: "license-service"
+
+  - job_name: "clario-dr-service"
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets: ["clario-dr-service:9097"]
+        labels:
+          service: "clario-dr-service"
+          suite: "datastream"
+
+  # Automation engine: the admin server exposes /metrics on the x98 admin port
+  # (AUTO_ADMIN_PORT, default 9098). In the local pm2 layout HTTP is remapped to
+  # 8099 to avoid the clario-dr mTLS :8098 clash, but the admin/metrics port keeps
+  # the x98 default. In Kubernetes the deployment carries prometheus.io/scrape pod
+  # annotations on port 9098, so a cluster Prometheus discovers it automatically.
+  - job_name: "automation-service"
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets: ["automation-service:9098"]
+        labels:
+          service: "automation-service"
+
+  # Clario Migrate: the admin server exposes /metrics on the admin port
+  # (MIGRATE_ADMIN_PORT, default 9100). On the VPS pm2 box it is remapped to 9099
+  # to avoid the host minio :9100 clash; the docker/k8s deployment keeps it on the
+  # admin port and carries prometheus.io/scrape pod annotations for discovery.
+  - job_name: "migrate-service"
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets: ["migrate-service:9099"]
+        labels:
+          service: "migrate-service"
+          suite: "migrate"

@@ -1,0 +1,78 @@
+# One-command local run: `docker compose up --build`
+# then, in another shell: `curl -X POST localhost:8000/ingest -d '{}' -H 'content-type: application/json'`
+#
+# The corpus PDFs live outside this directory and are gitignored; they are
+# mounted read-only into the container for the local (no-LEX) ingestion path.
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: second_brain
+      POSTGRES_PASSWORD: second_brain
+      POSTGRES_DB: second_brain
+    ports:
+      - "5433:5432"
+    volumes:
+      - sb_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U second_brain"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  second-brain:
+    build:
+      context: .
+      args:
+        # Set PREFETCH_MODELS=true to bake the embedding + reranker models into
+        # the image for an offline / air-gapped (sovereign) deployment.
+        PREFETCH_MODELS: ${PREFETCH_MODELS:-false}
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      AI_DATABASE_URL: postgresql://second_brain:second_brain@db:5432/second_brain
+      # --- Pluggable LLM provider ---------------------------------------------
+      # "anthropic" (default) OR "openai_compatible" to point at a KSA-hosted,
+      # in-Kingdom Arabic model (ALLaM/Jais/Falcon) via an OpenAI-format endpoint.
+      AI_LLM_PROVIDER: ${AI_LLM_PROVIDER:-anthropic}
+      AI_LLM_BASE_URL: ${AI_LLM_BASE_URL:-}
+      AI_LLM_API_KEY: ${AI_LLM_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AI_LLM_MODEL: ${AI_LLM_MODEL:-claude-opus-4-8}
+      AI_EMBEDDING_MODEL: ${AI_EMBEDDING_MODEL:-intfloat/multilingual-e5-large}
+      AI_EMBEDDING_DIM: ${AI_EMBEDDING_DIM:-1024}
+      # Retrieval quality: hybrid (vector + keyword) + optional cross-encoder rerank.
+      RETRIEVAL_MODE: ${RETRIEVAL_MODE:-hybrid}
+      RERANK_ENABLED: ${RERANK_ENABLED:-true}
+      RERANK_MODEL: ${RERANK_MODEL:-BAAI/bge-reranker-v2-m3}
+      # Guardrails + cost caps.
+      GUARDRAIL_MIN_SCORE: ${GUARDRAIL_MIN_SCORE:-0.30}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-30}
+      # Observability: JSON logs + Prometheus /metrics.
+      LOG_JSON: ${LOG_JSON:-true}
+      METRICS_ENABLED: ${METRICS_ENABLED:-true}
+      # Corpus source: set LEX_API_URL to pull from the lex service, else the
+      # mounted local corpus below is used.
+      LEX_API_URL: ${LEX_API_URL:-}
+      LEX_API_TOKEN: ${LEX_API_TOKEN:-}
+      LEX_TENANT_ID: ${LEX_TENANT_ID:-}
+      LIBRARY_PATH: /corpus/WatheeqTech Library
+      MANIFEST_PATH: /corpus/reference_library_manifest.json
+      # Offline model cache: set HF_HUB_OFFLINE=1 (and TRANSFORMERS_OFFLINE=1)
+      # once models are staged (built with PREFETCH_MODELS=true, or via the
+      # sb_models volume below) to run with NO model-download internet egress.
+      HF_HOME: /models
+      HF_HUB_OFFLINE: ${HF_HUB_OFFLINE:-0}
+      TRANSFORMERS_OFFLINE: ${TRANSFORMERS_OFFLINE:-0}
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount the ClarioWatheeq docs dir (contains the Library/ subdir + manifest).
+      - "../../docs/ClarioWatheeq:/corpus:ro"
+      # Persist the downloaded embedding model across restarts.
+      - sb_models:/models
+
+volumes:
+  sb_pgdata:
+  sb_models:

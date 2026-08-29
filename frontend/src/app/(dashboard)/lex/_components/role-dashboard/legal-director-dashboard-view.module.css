@@ -1,0 +1,153 @@
+.dashboard {
+  display: grid;
+  min-inline-size: 0;
+  gap: calc(var(--wt-space-base) * 4);
+  color: var(--wt-teal-900);
+}
+
+.hero {
+  display: grid;
+  min-inline-size: 0;
+  gap: calc(var(--wt-space-base) * 2);
+}
+
+.roleContext {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--wt-space-base);
+}
+
+.roleEyebrow {
+  margin: 0;
+  color: var(--wt-teal-700);
+  font-size: var(--wt-font-size-label);
+  font-weight: 700;
+  line-height: var(--wt-line-height-label);
+  letter-spacing: var(--wt-letter-spacing-label);
+  text-transform: uppercase;
+}
+
+.rolePill {
+  display: inline-flex;
+  align-items: center;
+  max-inline-size: 100%;
+  padding-block: var(--wt-space-base);
+  padding-inline: calc(var(--wt-space-base) * 2);
+  overflow-wrap: anywhere;
+  color: var(--wt-teal-900);
+  font-size: var(--wt-font-size-caption);
+  font-weight: 700;
+  line-height: var(--wt-line-height-caption);
+  background: var(--wt-surface);
+  border: var(--wt-card-border-width) solid var(--wt-teal-300);
+  border-radius: var(--wt-radius-pill);
+}
+
+.headingGroup {
+  min-inline-size: 0;
+}
+
+.heading {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--wt-font-size-heading);
+  font-weight: 700;
+  line-height: var(--wt-line-height-heading);
+}
+
+.subtitle {
+  margin-block: var(--wt-space-base) 0;
+  margin-inline: 0;
+  overflow-wrap: anywhere;
+  color: var(--wt-teal-700);
+  font-size: var(--wt-font-size-body);
+  line-height: var(--wt-line-height-body);
+}
+
+.kpiStrip {
+  display: grid;
+  min-inline-size: 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: calc(var(--wt-space-base) * 3);
+}
+
+.panelGrid {
+  display: grid;
+  min-inline-size: 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: calc(var(--wt-space-base) * 3);
+}
+
+.panelColumn {
+  display: grid;
+  min-inline-size: 0;
+  align-content: start;
+  gap: calc(var(--wt-space-base) * 3);
+}
+
+.panelColumn > * {
+  min-inline-size: 0;
+}
+
+/*
+ * Team Workload is a panel plus the control that scopes it. They are grouped so
+ * the time window visibly governs this panel alone — the only source on the
+ * dashboard that accepts a date range.
+ */
+.teamWorkload {
+  display: grid;
+  min-inline-size: 0;
+  align-content: start;
+  gap: calc(var(--wt-space-base) * 2);
+}
+
+.teamWorkloadControl {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  min-inline-size: 0;
+}
+
+/*
+ * The assistant is a full-width band rather than a grid cell: it carries its own
+ * two-column split (session rail + conversation) and would be squeezed into a
+ * scroll trap inside one of the 57/43 analytics columns.
+ */
+.aiAgent {
+  min-inline-size: 0;
+}
+
+.managerTasks {
+  min-inline-size: 0;
+}
+
+.schedule {
+  min-inline-size: 0;
+}
+
+.domains {
+  min-inline-size: 0;
+}
+
+@media (min-width: 40rem) {
+  .kpiStrip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 48rem) {
+  .kpiStrip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 64rem) {
+  .kpiStrip {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .panelGrid {
+    grid-template-columns: minmax(0, 57fr) minmax(0, 43fr);
+  }
+}

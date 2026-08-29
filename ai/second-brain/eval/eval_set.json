@@ -1,0 +1,106 @@
+{
+  "corpus": "WatheeqTech Reference Library",
+  "jurisdiction": "SA",
+  "description": "Curated Arabic Q&A eval set over the WatheeqTech Saudi legal corpus. `expected_docs` are stable title fragments (matched by normalised substring, not exact doc_id). `expected_keywords` should appear in a grounded answer. One item is deliberately out-of-corpus to test the refuse-when-out-of-corpus guardrail.",
+  "items": [
+    {
+      "id": "invest-01",
+      "question": "ما الهدف من نظام الاستثمار في المملكة العربية السعودية؟",
+      "expected_docs": ["نظام الاستثمار"],
+      "expected_keywords": ["الاستثمار", "المستثمر"],
+      "category": "systems-regulations"
+    },
+    {
+      "id": "competition-01",
+      "question": "ما هي الممارسات المحظورة بموجب نظام المنافسة؟",
+      "expected_docs": ["نظام المنافسة"],
+      "expected_keywords": ["المنافسة", "المحظورة"],
+      "category": "systems-regulations"
+    },
+    {
+      "id": "advocacy-01",
+      "question": "ما شروط قيد المحامي في جدول المحامين الممارسين وفق نظام المحاماة؟",
+      "expected_docs": ["نظام المحاماة"],
+      "expected_keywords": ["المحامي", "القيد"],
+      "category": "systems-regulations"
+    },
+    {
+      "id": "whiteland-01",
+      "question": "كيف تُحتسب رسوم الأراضي البيضاء؟",
+      "expected_docs": ["رسوم الأراضي البيضاء"],
+      "expected_keywords": ["الأراضي البيضاء", "الرسوم"],
+      "category": "systems-regulations"
+    },
+    {
+      "id": "realestate-units-01",
+      "question": "ما أحكام إدارة الوحدات العقارية المفرزة والاتحاد الملاك؟",
+      "expected_docs": ["ملكية الوحدات العقارية"],
+      "expected_keywords": ["الوحدات العقارية", "الإدارة"],
+      "category": "systems-regulations"
+    },
+    {
+      "id": "anticorruption-01",
+      "question": "ما اختصاصات هيئة الرقابة ومكافحة الفساد؟",
+      "expected_docs": ["الرقابة ومكافحة الفساد"],
+      "expected_keywords": ["الفساد", "الرقابة"],
+      "category": "systems-regulations"
+    },
+    {
+      "id": "diwan-01",
+      "question": "كيف تُرفع الدعوى أمام ديوان المظالم؟",
+      "expected_docs": ["المرافعات أمام ديوان المظالم"],
+      "expected_keywords": ["ديوان المظالم", "الدعوى"],
+      "category": "systems-regulations"
+    },
+    {
+      "id": "zakat-vat-01",
+      "question": "ما المقصود بضريبة القيمة المضافة على التصرفات العقارية؟",
+      "expected_docs": ["الزكاة وضريبة القيمة المضافة"],
+      "expected_keywords": ["ضريبة القيمة المضافة", "العقارية"],
+      "category": "systems-regulations"
+    },
+    {
+      "id": "trademark-01",
+      "question": "ما إجراءات ومعايير حماية العلامة التجارية وتسجيلها؟",
+      "expected_docs": ["العلامة التجارية"],
+      "expected_keywords": ["العلامة التجارية", "التسجيل"],
+      "category": "research"
+    },
+    {
+      "id": "medical-liability-01",
+      "question": "ما أساس المسؤولية الطبية في النظام السعودي؟",
+      "expected_docs": ["المسؤولية الطبية"],
+      "expected_keywords": ["المسؤولية الطبية", "الخطأ"],
+      "category": "research"
+    },
+    {
+      "id": "appeal-01",
+      "question": "ما طرق الطعن في الأحكام القضائية؟",
+      "expected_docs": ["الطعن في الأحكام"],
+      "expected_keywords": ["الطعن", "الأحكام"],
+      "category": "research"
+    },
+    {
+      "id": "guarantor-01",
+      "question": "متى يرجع الكفيل على المدين الأصيل؟",
+      "expected_docs": ["رجوع الكفيل على المدين"],
+      "expected_keywords": ["الكفيل", "المدين"],
+      "category": "research"
+    },
+    {
+      "id": "reasoning-judgments-01",
+      "question": "ما أهمية تسبيب الأحكام القضائية ومسالكه؟",
+      "expected_docs": ["تسبيب الأحكام"],
+      "expected_keywords": ["التسبيب", "الأحكام"],
+      "category": "research"
+    },
+    {
+      "id": "out-of-corpus-01",
+      "question": "ما هي شروط الحصول على تأشيرة العمل في دولة الإمارات العربية المتحدة؟",
+      "expected_docs": [],
+      "expected_keywords": [],
+      "category": "out-of-corpus",
+      "expected_refusal": true
+    }
+  ]
+}

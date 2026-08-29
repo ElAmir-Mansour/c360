@@ -1,0 +1,58 @@
+{{- if .Values.clarioDrService.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "clario360.componentName" (dict "root" . "component" "clario-dr-service") }}-config
+  namespace: {{ include "clario360.namespace" . }}
+  labels:
+    {{- include "clario360.componentLabels" (dict "root" . "component" "clario-dr-service") | nindent 4 }}
+data:
+  DR_HTTP_PORT: "8097"
+  DR_ADMIN_PORT: "9097"
+  DR_DEPLOYMENT_PROFILE: {{ .Values.clarioDrService.deploymentProfile | default "standard" | quote }}
+  DR_REGULATED_MODE: {{ .Values.clarioDrService.regulatedMode | default false | quote }}
+  DR_MTLS_LISTEN_ADDR: {{ .Values.clarioDrService.mtls.listenAddr | default ":8098" | quote }}
+  DR_MTLS_INGEST_ENABLED: {{ .Values.clarioDrService.mtls.enabled | default false | quote }}
+  DR_MTLS_CA_BUNDLE_PATH: {{ .Values.clarioDrService.mtls.caBundlePath | default "/etc/clario-dr/mtls/ca.crt" | quote }}
+  DR_MTLS_SERVER_CERT_PATH: {{ .Values.clarioDrService.mtls.serverCertPath | default "/etc/clario-dr/mtls/tls.crt" | quote }}
+  DR_MTLS_SERVER_KEY_PATH: {{ .Values.clarioDrService.mtls.serverKeyPath | default "/etc/clario-dr/mtls/tls.key" | quote }}
+  DR_MTLS_CRL_REFRESH: {{ .Values.clarioDrService.mtls.crlRefresh | default "1m" | quote }}
+  DR_DB_MIN_CONNS: {{ .Values.clarioDrService.dbMinConns | default "2" | quote }}
+  DR_DB_MAX_CONNS: {{ .Values.clarioDrService.dbMaxConns | default "10" | quote }}
+  DR_KAFKA_GROUP_ID: {{ .Values.clarioDrService.kafkaGroupId | default "clario-dr-service" | quote }}
+  DR_ENROLL_TOKEN_KEY_NAME: {{ .Values.clarioDrService.enrollToken.keyName | default "dr-enrollment-jwt" | quote }}
+  DR_ENROLL_TOKEN_PRIVATE_KEY_PATH: {{ .Values.clarioDrService.enrollToken.privateKeyPath | default "" | quote }}
+  DR_ENROLL_TOKEN_ALLOW_EPHEMERAL: {{ .Values.clarioDrService.enrollToken.allowEphemeral | default false | quote }}
+  DR_MINIO_ENDPOINT: {{ .Values.minio.endpoint | default .Values.global.minio.endpoint | quote }}
+  DR_MINIO_USE_SSL: {{ .Values.minio.useSSL | default .Values.global.minio.useSsl | quote }}
+  DR_MINIO_REGION: {{ .Values.clarioDrService.minio.region | default "us-east-1" | quote }}
+  DR_WORM_BUCKET: {{ .Values.clarioDrService.minio.wormBucket | default "dr-recovery-points" | quote }}
+  DR_RECOVERY_RETENTION: {{ .Values.clarioDrService.recoveryRetention | default "168h" | quote }}
+  DR_LEGAL_HOLD_COUNT: {{ .Values.clarioDrService.legalHoldCount | default "3" | quote }}
+  DR_RECOVERY_DRIVER: {{ .Values.clarioDrService.recoveryDriver.type | default "verify" | quote }}
+  DR_RECOVERY_ENSURE_COMMAND: {{ .Values.clarioDrService.recoveryDriver.ensureCommand | default list | toJson | quote }}
+  DR_RECOVERY_TEARDOWN_COMMAND: {{ .Values.clarioDrService.recoveryDriver.teardownCommand | default list | toJson | quote }}
+  DR_RECOVERY_COMMAND_TIMEOUT: {{ .Values.clarioDrService.recoveryDriver.timeout | default "10m" | quote }}
+  DR_VAULT_ADDR: {{ .Values.clarioDrService.vault.addr | default "" | quote }}
+  DR_VAULT_AUTH_METHOD: {{ .Values.clarioDrService.vault.authMethod | default "token" | quote }}
+  DR_VAULT_TRANSIT_PATH: {{ .Values.clarioDrService.vault.transitPath | default "transit/" | quote }}
+  DR_VAULT_NAMESPACE: {{ .Values.clarioDrService.vault.namespace | default "" | quote }}
+  DR_PKI_ROOT_MOUNT: {{ .Values.clarioDrService.pki.rootMount | default "pki-dr-root" | quote }}
+  DR_PKI_INTERMEDIATE_PREFIX: {{ .Values.clarioDrService.pki.intermediatePrefix | default "pki-dr-intermediate-" | quote }}
+  DR_AGENT_CERT_TTL: {{ .Values.clarioDrService.pki.leafTtl | default "8760h" | quote }}
+  DR_AGENT_INTERMEDIATE_TTL: {{ .Values.clarioDrService.pki.intermediateTtl | default "43800h" | quote }}
+  DR_PKI_ROLE_NAME: {{ .Values.clarioDrService.pki.roleName | default "dr-agent-leaf" | quote }}
+  DR_AGENT_CERT_DOMAIN_SUFFIX: {{ .Values.clarioDrService.pki.domainSuffix | default "agents.dr.clario360.local" | quote }}
+  DR_AGENT_CERT_ROTATION_OVERLAP: {{ .Values.clarioDrService.pki.leafOverlap | default "5m" | quote }}
+  DR_RPO_MONITOR_INTERVAL: {{ .Values.clarioDrService.rpoMonitor.interval | default "30s" | quote }}
+  DR_RPO_MONITOR_LEADER_TTL: {{ .Values.clarioDrService.rpoMonitor.leaderTtl | default "30s" | quote }}
+  DR_RPO_MONITOR_LEADER_RENEW: {{ .Values.clarioDrService.rpoMonitor.leaderRenew | default "10s" | quote }}
+  DR_FAILOVER_DRIVER_ENABLED: {{ .Values.clarioDrService.failoverDriver.enabled | default false | quote }}
+  DR_FAILOVER_DRIVER_INTERVAL: {{ .Values.clarioDrService.failoverDriver.interval | default "2s" | quote }}
+  DR_FAILOVER_DRIVER_LEADER_TTL: {{ .Values.clarioDrService.failoverDriver.leaderTtl | default "30s" | quote }}
+  DR_FAILOVER_DRIVER_LEADER_RENEW: {{ .Values.clarioDrService.failoverDriver.leaderRenew | default "10s" | quote }}
+  DR_FAILOVER_DRIVER_UNSAFE_SINGLE_NODE: {{ .Values.clarioDrService.failoverDriver.unsafeSingleNode | default false | quote }}
+  {{- with .Values.clarioDrService.config }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+{{- end }}

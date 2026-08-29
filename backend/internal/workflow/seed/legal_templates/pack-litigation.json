@@ -1,0 +1,1215 @@
+[
+  {
+    "id": "tmpl-statement-of-claim-filing",
+    "category": "legal",
+    "icon": "scroll-text",
+    "tags": ["legal", "litigation", "disputes", "ksa", "najiz", "filing"],
+    "name_i18n": {
+      "en": "Statement of Claim Preparation & Filing (Najiz)",
+      "ar": "إعداد وتقديم لائحة الدعوى (ناجز)"
+    },
+    "description_i18n": {
+      "en": "Drafts the statement of claim, attaches evidence, secures Delegation-of-Authority approval to litigate, files the case on the Najiz portal, and records the returned case reference.",
+      "ar": "يُعدّ لائحة الدعوى، ويرفق الأدلة، ويحصل على اعتماد تفويض الصلاحيات للتقاضي، ويقيّد الدعوى عبر منصة ناجز، ويسجّل رقم القضية المعاد."
+    },
+    "definition": {
+      "name": "Statement of Claim Preparation & Filing (Najiz)",
+      "description": "Draft, approve, and file a statement of claim through the Najiz portal.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "case_id": { "type": "string" },
+        "claim_value": { "type": "number", "default": 0 },
+        "court": { "type": "string", "default": "commercial" },
+        "najiz_reference": { "type": "string" }
+      },
+      "steps": [
+        {
+          "id": "draft_claim",
+          "type": "human_task",
+          "name": "Draft Statement of Claim",
+          "config": {
+            "assignee_role": "litigation_counsel",
+            "sla_hours": 48,
+            "escalation_role": "litigation_lead",
+            "form_fields": [
+              { "name": "claim_summary", "type": "textarea", "label": "Claim Summary & Legal Grounds", "required": true },
+              { "name": "relief_sought", "type": "textarea", "label": "Relief Sought", "required": true },
+              { "name": "claim_value", "type": "number", "label": "Claim Value (SAR)", "required": true },
+              { "name": "target_court", "type": "select", "label": "Competent Court", "required": true, "options": ["commercial", "labor", "administrative", "civil", "enforcement"] }
+            ]
+          },
+          "transitions": [
+            { "target": "attach_evidence" }
+          ]
+        },
+        {
+          "id": "attach_evidence",
+          "type": "human_task",
+          "name": "Compile & Attach Evidence Bundle",
+          "config": {
+            "assignee_role": "litigation_paralegal",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "evidence_index", "type": "textarea", "label": "Evidence Index", "required": true },
+              { "name": "bundle_url", "type": "text", "label": "Evidence Bundle URL", "required": true },
+              { "name": "translation_required", "type": "boolean", "label": "Certified Translation Required?", "required": false }
+            ]
+          },
+          "transitions": [
+            { "target": "doa_to_litigate" }
+          ]
+        },
+        {
+          "id": "doa_to_litigate",
+          "type": "approval_chain",
+          "name": "DoA Approval to Litigate",
+          "config": {
+            "approvers": [ { "role": "litigation_lead" }, { "role": "legal_director" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "file_najiz" }
+          ]
+        },
+        {
+          "id": "file_najiz",
+          "type": "service_task",
+          "name": "File Case on Najiz",
+          "config": {
+            "service": "najiz",
+            "method": "POST",
+            "url": "/api/v1/lex/integrations/najiz/cases/${variables.case_id}/file",
+            "body": {
+              "case_id": "${variables.case_id}",
+              "court": "${steps.draft_claim.output.target_court}",
+              "claim_value": "${steps.draft_claim.output.claim_value}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "record_reference" }
+          ]
+        },
+        {
+          "id": "record_reference",
+          "type": "human_task",
+          "name": "Record Najiz Case Reference",
+          "config": {
+            "assignee_role": "litigation_paralegal",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "najiz_reference", "type": "text", "label": "Najiz Case Reference", "required": true },
+              { "name": "filing_date", "type": "date", "label": "Filing Date", "required": true },
+              { "name": "first_hearing_date", "type": "date", "label": "Notified First Hearing Date", "required": false }
+            ]
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-defendant-first-response",
+    "category": "legal",
+    "icon": "shield",
+    "tags": ["legal", "litigation", "disputes", "ksa", "najiz", "defense"],
+    "name_i18n": {
+      "en": "Defendant First-Response Memo & Defense",
+      "ar": "مذكرة الرد الأولى للمدعى عليه والدفاع"
+    },
+    "description_i18n": {
+      "en": "Reviews a served claim against the deadline, builds the defense strategy and first-response memo, secures sign-off, and submits the response on Najiz before the procedural deadline.",
+      "ar": "يراجع الدعوى المبلّغة مقابل الموعد النظامي، ويبني استراتيجية الدفاع ومذكرة الرد الأولى، ويحصل على الاعتماد، ويقدّم الرد عبر ناجز قبل انتهاء الموعد الإجرائي."
+    },
+    "definition": {
+      "name": "Defendant First-Response Memo & Defense",
+      "description": "Assess a served claim, prepare and approve the defense memo, and submit on Najiz.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "case_id": { "type": "string" },
+        "response_deadline": { "type": "string" },
+        "is_urgent": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "assess_claim",
+          "type": "human_task",
+          "name": "Assess Served Claim & Deadline",
+          "config": {
+            "assignee_role": "litigation_counsel",
+            "sla_hours": 24,
+            "escalation_role": "litigation_lead",
+            "form_fields": [
+              { "name": "claim_received_date", "type": "date", "label": "Claim Received Date", "required": true },
+              { "name": "response_deadline", "type": "date", "label": "Response Deadline", "required": true },
+              { "name": "is_urgent", "type": "boolean", "label": "Tight Deadline (Expedite)?", "required": true },
+              { "name": "preliminary_assessment", "type": "textarea", "label": "Preliminary Assessment", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "urgency_gate" }
+          ]
+        },
+        {
+          "id": "urgency_gate",
+          "type": "condition",
+          "name": "Deadline Urgency Gate",
+          "config": {
+            "expression": "steps.assess_claim.output.is_urgent == true"
+          },
+          "transitions": [
+            { "condition": "steps.assess_claim.output.is_urgent == true", "target": "deadline_timer" },
+            { "target": "build_defense" }
+          ]
+        },
+        {
+          "id": "deadline_timer",
+          "type": "timer",
+          "name": "Expedite SLA Reminder",
+          "config": {
+            "duration": "12h",
+            "reason": "Tight procedural deadline — expedite defense preparation"
+          },
+          "transitions": [
+            { "target": "build_defense" }
+          ]
+        },
+        {
+          "id": "build_defense",
+          "type": "human_task",
+          "name": "Build Defense Strategy & First-Response Memo",
+          "config": {
+            "assignee_role": "litigation_counsel",
+            "sla_hours": 48,
+            "form_fields": [
+              { "name": "defense_grounds", "type": "textarea", "label": "Defense Grounds", "required": true },
+              { "name": "counterclaim_considered", "type": "boolean", "label": "Counterclaim Considered?", "required": false },
+              { "name": "memo_url", "type": "text", "label": "First-Response Memo URL", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "approve_defense" }
+          ]
+        },
+        {
+          "id": "approve_defense",
+          "type": "approval_chain",
+          "name": "Defense Memo Sign-Off",
+          "config": {
+            "approvers": [ { "role": "litigation_lead" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 24
+          },
+          "transitions": [
+            { "target": "submit_response" }
+          ]
+        },
+        {
+          "id": "submit_response",
+          "type": "service_task",
+          "name": "Submit Response on Najiz",
+          "config": {
+            "service": "najiz",
+            "method": "POST",
+            "url": "/api/v1/lex/integrations/najiz/cases/${variables.case_id}/responses",
+            "body": {
+              "case_id": "${variables.case_id}",
+              "memo_url": "${steps.build_defense.output.memo_url}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-hearing-management",
+    "category": "legal",
+    "icon": "calendar-clock",
+    "tags": ["legal", "litigation", "disputes", "ksa", "najiz", "hearings"],
+    "name_i18n": {
+      "en": "Hearing Management & Pleading Exchange",
+      "ar": "إدارة الجلسات وتبادل المذكرات"
+    },
+    "description_i18n": {
+      "en": "Syncs the next hearing from Najiz, prepares and files the pleading, sends a pre-hearing reminder timer, and records the hearing outcome and any adjournment, looping until the case is ready for judgment.",
+      "ar": "يزامن الجلسة القادمة من ناجز، ويُعدّ المذكرة ويقدّمها، ويرسل تذكيراً مؤقتاً قبل الجلسة، ويسجّل نتيجة الجلسة وأي تأجيل، مع التكرار حتى جاهزية القضية للحكم."
+    },
+    "definition": {
+      "name": "Hearing Management & Pleading Exchange",
+      "description": "Track hearings, exchange pleadings, and record outcomes across the litigation lifecycle.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "case_id": { "type": "string" },
+        "hearing_date": { "type": "string" },
+        "case_ready_for_judgment": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "sync_hearing",
+          "type": "service_task",
+          "name": "Sync Next Hearing from Najiz",
+          "config": {
+            "service": "najiz",
+            "method": "GET",
+            "url": "/api/v1/lex/integrations/najiz/cases/${variables.case_id}/next-hearing",
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "prepare_pleading" }
+          ]
+        },
+        {
+          "id": "prepare_pleading",
+          "type": "human_task",
+          "name": "Prepare Pleading / Memo for Hearing",
+          "config": {
+            "assignee_role": "litigation_counsel",
+            "sla_hours": 48,
+            "escalation_role": "litigation_lead",
+            "form_fields": [
+              { "name": "pleading_type", "type": "select", "label": "Pleading Type", "required": true, "options": ["reply", "rejoinder", "evidence_submission", "request", "closing"] },
+              { "name": "pleading_url", "type": "text", "label": "Pleading Document URL", "required": true },
+              { "name": "pleading_summary", "type": "textarea", "label": "Pleading Summary", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "file_pleading" }
+          ]
+        },
+        {
+          "id": "file_pleading",
+          "type": "service_task",
+          "name": "File Pleading on Najiz",
+          "config": {
+            "service": "najiz",
+            "method": "POST",
+            "url": "/api/v1/lex/integrations/najiz/cases/${variables.case_id}/pleadings",
+            "body": {
+              "case_id": "${variables.case_id}",
+              "pleading_url": "${steps.prepare_pleading.output.pleading_url}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "prehearing_reminder" }
+          ]
+        },
+        {
+          "id": "prehearing_reminder",
+          "type": "timer",
+          "name": "Pre-Hearing Reminder",
+          "config": {
+            "duration": "24h",
+            "reason": "Send pre-hearing preparation reminder to lead counsel"
+          },
+          "transitions": [
+            { "target": "record_outcome" }
+          ]
+        },
+        {
+          "id": "record_outcome",
+          "type": "human_task",
+          "name": "Record Hearing Outcome",
+          "config": {
+            "assignee_role": "litigation_counsel",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "hearing_outcome", "type": "select", "label": "Hearing Outcome", "required": true, "options": ["adjourned", "evidence_phase", "pleadings_closed", "reserved_for_judgment"] },
+              { "name": "next_hearing_date", "type": "date", "label": "Next Hearing Date", "required": false },
+              { "name": "case_ready_for_judgment", "type": "boolean", "label": "Case Ready for Judgment?", "required": true },
+              { "name": "outcome_notes", "type": "textarea", "label": "Outcome Notes", "required": false }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.record_outcome.output.case_ready_for_judgment == true", "target": "end" },
+            { "target": "sync_hearing" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-court-expert-assignment",
+    "category": "legal",
+    "icon": "microscope",
+    "tags": ["legal", "litigation", "disputes", "ksa", "najiz", "expert"],
+    "name_i18n": {
+      "en": "Expert / Court-Expert Assignment",
+      "ar": "تعيين الخبير / خبير المحكمة"
+    },
+    "description_i18n": {
+      "en": "Manages appointment of a party or court-appointed expert: scopes the engagement, approves fees within DoA, tracks the expert report against deadline, and prepares objections or acceptance to the report.",
+      "ar": "يدير تعيين خبير الطرف أو خبير المحكمة: يحدد نطاق المهمة، ويعتمد الأتعاب ضمن تفويض الصلاحيات، ويتابع تقرير الخبير مقابل الموعد، ويُعدّ الاعتراض على التقرير أو قبوله."
+    },
+    "definition": {
+      "name": "Expert / Court-Expert Assignment",
+      "description": "Scope, fund, track, and respond to an expert engagement in a litigation matter.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "case_id": { "type": "string" },
+        "expert_fee": { "type": "number", "default": 0 },
+        "court_appointed": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "scope_engagement",
+          "type": "human_task",
+          "name": "Scope Expert Engagement",
+          "config": {
+            "assignee_role": "litigation_counsel",
+            "sla_hours": 24,
+            "escalation_role": "litigation_lead",
+            "form_fields": [
+              { "name": "expert_type", "type": "select", "label": "Expert Type", "required": true, "options": ["accounting", "engineering", "valuation", "medical", "technical", "handwriting"] },
+              { "name": "court_appointed", "type": "boolean", "label": "Court-Appointed Expert?", "required": true },
+              { "name": "scope_of_work", "type": "textarea", "label": "Scope of Work / Questions", "required": true },
+              { "name": "expert_fee", "type": "number", "label": "Estimated Fee (SAR)", "required": false }
+            ]
+          },
+          "transitions": [
+            { "target": "fee_gate" }
+          ]
+        },
+        {
+          "id": "fee_gate",
+          "type": "condition",
+          "name": "Fee DoA Threshold Gate",
+          "config": {
+            "expression": "variables.expert_fee > 50000"
+          },
+          "transitions": [
+            { "condition": "variables.expert_fee > 50000", "target": "approve_fee" },
+            { "target": "track_report" }
+          ]
+        },
+        {
+          "id": "approve_fee",
+          "type": "approval_chain",
+          "name": "Expert Fee Approval (DoA)",
+          "config": {
+            "approvers": [ { "role": "litigation_lead" }, { "role": "legal_director" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "track_report" }
+          ]
+        },
+        {
+          "id": "track_report",
+          "type": "timer",
+          "name": "Await Expert Report (SLA)",
+          "config": {
+            "duration": "720h",
+            "reason": "Standard 30-day window for expert report delivery"
+          },
+          "transitions": [
+            { "target": "review_report" }
+          ]
+        },
+        {
+          "id": "review_report",
+          "type": "human_task",
+          "name": "Review Expert Report & Decide Response",
+          "config": {
+            "assignee_role": "litigation_counsel",
+            "sla_hours": 72,
+            "form_fields": [
+              { "name": "report_url", "type": "text", "label": "Expert Report URL", "required": true },
+              { "name": "response", "type": "select", "label": "Response to Report", "required": true, "options": ["accept", "object", "request_clarification"] },
+              { "name": "objection_grounds", "type": "textarea", "label": "Objection / Comments", "required": false }
+            ]
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-judgment-appeal-decision",
+    "category": "legal",
+    "icon": "gavel",
+    "tags": ["legal", "litigation", "disputes", "ksa", "najiz", "appeal"],
+    "name_i18n": {
+      "en": "Judgment Receipt & Appeal/Objection Decision",
+      "ar": "استلام الحكم وقرار الاستئناف / الاعتراض"
+    },
+    "description_i18n": {
+      "en": "Captures a received judgment, analyses prospects of appeal against the objection deadline, routes the appeal/objection decision through DoA, and either drafts and files the appeal memorandum on Najiz or records acceptance of the judgment.",
+      "ar": "يقيّد الحكم المستلم، ويحلّل فرص الاستئناف مقابل موعد الاعتراض، ويوجّه قرار الاستئناف/الاعتراض عبر تفويض الصلاحيات، ثم يُعدّ ويقدّم مذكرة الاستئناف عبر ناجز أو يسجّل قبول الحكم."
+    },
+    "definition": {
+      "name": "Judgment Receipt & Appeal/Objection Decision",
+      "description": "Record a judgment, decide on appeal within the deadline, and file or accept.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "case_id": { "type": "string" },
+        "judgment_value": { "type": "number", "default": 0 },
+        "appeal_decision": { "type": "string", "default": "pending" }
+      },
+      "steps": [
+        {
+          "id": "capture_judgment",
+          "type": "human_task",
+          "name": "Capture Received Judgment",
+          "config": {
+            "assignee_role": "litigation_counsel",
+            "sla_hours": 8,
+            "escalation_role": "litigation_lead",
+            "form_fields": [
+              { "name": "judgment_summary", "type": "textarea", "label": "Judgment Summary", "required": true },
+              { "name": "outcome", "type": "select", "label": "Outcome", "required": true, "options": ["won", "lost", "partial"] },
+              { "name": "judgment_value", "type": "number", "label": "Awarded Amount (SAR)", "required": false },
+              { "name": "objection_deadline", "type": "date", "label": "Objection / Appeal Deadline", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "analyze_appeal" }
+          ]
+        },
+        {
+          "id": "analyze_appeal",
+          "type": "human_task",
+          "name": "Analyse Appeal Prospects",
+          "config": {
+            "assignee_role": "litigation_lead",
+            "sla_hours": 48,
+            "form_fields": [
+              { "name": "appeal_recommended", "type": "boolean", "label": "Appeal / Objection Recommended?", "required": true },
+              { "name": "prospects_analysis", "type": "textarea", "label": "Prospects of Success Analysis", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "appeal_gate" }
+          ]
+        },
+        {
+          "id": "appeal_gate",
+          "type": "condition",
+          "name": "Appeal Decision Gate",
+          "config": {
+            "expression": "steps.analyze_appeal.output.appeal_recommended == true"
+          },
+          "transitions": [
+            { "condition": "steps.analyze_appeal.output.appeal_recommended == true", "target": "approve_appeal" },
+            { "target": "record_acceptance" }
+          ]
+        },
+        {
+          "id": "approve_appeal",
+          "type": "approval_chain",
+          "name": "DoA Approval to Appeal",
+          "config": {
+            "approvers": [ { "role": "legal_director" }, { "role": "chief_executive" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "file_appeal" }
+          ]
+        },
+        {
+          "id": "file_appeal",
+          "type": "service_task",
+          "name": "Draft & File Appeal Memorandum on Najiz",
+          "config": {
+            "service": "najiz",
+            "method": "POST",
+            "url": "/api/v1/lex/integrations/najiz/cases/${variables.case_id}/appeals",
+            "body": {
+              "case_id": "${variables.case_id}",
+              "decision": "appeal"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "record_acceptance",
+          "type": "human_task",
+          "name": "Record Acceptance of Judgment",
+          "config": {
+            "assignee_role": "litigation_counsel",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "acceptance_notes", "type": "textarea", "label": "Acceptance Rationale", "required": true },
+              { "name": "proceed_to_enforcement", "type": "boolean", "label": "Proceed to Enforcement?", "required": false }
+            ]
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-judgment-enforcement",
+    "category": "legal",
+    "icon": "hammer",
+    "tags": ["legal", "litigation", "disputes", "ksa", "najiz", "enforcement"],
+    "name_i18n": {
+      "en": "Judgment Enforcement / Execution",
+      "ar": "تنفيذ الحكم"
+    },
+    "description_i18n": {
+      "en": "Opens an execution file on the Najiz enforcement court, requests precautionary or executive measures, tracks debtor response against an SLA timer, and records recovery or escalates to further enforcement actions.",
+      "ar": "يفتح ملف تنفيذ لدى محكمة التنفيذ عبر ناجز، ويطلب الإجراءات التحفظية أو التنفيذية، ويتابع استجابة المدين مقابل مؤقت اتفاقية مستوى الخدمة، ويسجّل التحصيل أو يصعّد لإجراءات تنفيذ إضافية."
+    },
+    "definition": {
+      "name": "Judgment Enforcement / Execution",
+      "description": "Open an execution file, request measures, track the debtor, and record recovery.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "case_id": { "type": "string" },
+        "award_amount": { "type": "number", "default": 0 },
+        "recovered": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "open_execution",
+          "type": "human_task",
+          "name": "Prepare Execution Request",
+          "config": {
+            "assignee_role": "enforcement_counsel",
+            "sla_hours": 24,
+            "escalation_role": "litigation_lead",
+            "form_fields": [
+              { "name": "executive_deed_ref", "type": "text", "label": "Executive Deed / Judgment Reference", "required": true },
+              { "name": "award_amount", "type": "number", "label": "Amount to Enforce (SAR)", "required": true },
+              { "name": "debtor_name", "type": "text", "label": "Debtor", "required": true },
+              { "name": "requested_measures", "type": "multiselect", "label": "Requested Measures", "required": true, "options": ["account_freeze", "travel_ban", "asset_seizure", "salary_deduction", "property_attachment"] }
+            ]
+          },
+          "transitions": [
+            { "target": "file_execution" }
+          ]
+        },
+        {
+          "id": "file_execution",
+          "type": "service_task",
+          "name": "Open Execution File on Najiz",
+          "config": {
+            "service": "najiz",
+            "method": "POST",
+            "url": "/api/v1/lex/integrations/najiz/executions",
+            "body": {
+              "case_id": "${variables.case_id}",
+              "award_amount": "${steps.open_execution.output.award_amount}",
+              "measures": "${steps.open_execution.output.requested_measures}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "debtor_window" }
+          ]
+        },
+        {
+          "id": "debtor_window",
+          "type": "timer",
+          "name": "Debtor Compliance Window (SLA)",
+          "config": {
+            "duration": "120h",
+            "reason": "Statutory window for debtor to comply before measures escalate"
+          },
+          "transitions": [
+            { "target": "assess_recovery" }
+          ]
+        },
+        {
+          "id": "assess_recovery",
+          "type": "human_task",
+          "name": "Assess Recovery Status",
+          "config": {
+            "assignee_role": "enforcement_counsel",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "recovered", "type": "boolean", "label": "Amount Recovered?", "required": true },
+              { "name": "recovered_amount", "type": "number", "label": "Recovered Amount (SAR)", "required": false },
+              { "name": "status_notes", "type": "textarea", "label": "Status / Next Measures", "required": true }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.assess_recovery.output.recovered == true", "target": "close_execution" },
+            { "target": "escalate_measures" }
+          ]
+        },
+        {
+          "id": "escalate_measures",
+          "type": "service_task",
+          "name": "Escalate Enforcement Measures",
+          "config": {
+            "service": "najiz",
+            "method": "POST",
+            "url": "/api/v1/lex/integrations/najiz/executions/${variables.case_id}/escalate",
+            "body": {
+              "case_id": "${variables.case_id}"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "debtor_window" }
+          ]
+        },
+        {
+          "id": "close_execution",
+          "type": "human_task",
+          "name": "Record Recovery & Close Execution",
+          "config": {
+            "assignee_role": "enforcement_counsel",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "closure_summary", "type": "textarea", "label": "Closure Summary", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-settlement-adr",
+    "category": "legal",
+    "icon": "handshake",
+    "tags": ["legal", "litigation", "disputes", "ksa", "adr", "settlement"],
+    "name_i18n": {
+      "en": "Settlement Negotiation & ADR",
+      "ar": "التفاوض على التسوية والحلول البديلة للنزاعات"
+    },
+    "description_i18n": {
+      "en": "Runs a negotiation/mediation track: prepares a settlement mandate and walk-away limits, secures DoA approval for the settlement figure, drafts and e-signs the settlement agreement, and either records settlement or returns the matter to litigation.",
+      "ar": "يدير مسار التفاوض/الوساطة: يُعدّ تفويض التسوية وحدود الانسحاب، ويحصل على اعتماد تفويض الصلاحيات لمبلغ التسوية، ويصوغ اتفاقية التسوية ويوقّعها إلكترونياً، ثم يسجّل التسوية أو يعيد القضية إلى التقاضي."
+    },
+    "definition": {
+      "name": "Settlement Negotiation & ADR",
+      "description": "Mandate, negotiate, approve, and execute a settlement or return to litigation.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "case_id": { "type": "string" },
+        "settlement_amount": { "type": "number", "default": 0 },
+        "settled": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "settlement_mandate",
+          "type": "human_task",
+          "name": "Prepare Settlement Mandate",
+          "config": {
+            "assignee_role": "litigation_counsel",
+            "sla_hours": 24,
+            "escalation_role": "litigation_lead",
+            "form_fields": [
+              { "name": "adr_track", "type": "select", "label": "ADR Track", "required": true, "options": ["direct_negotiation", "mediation", "conciliation"] },
+              { "name": "target_amount", "type": "number", "label": "Target Settlement (SAR)", "required": true },
+              { "name": "walkaway_limit", "type": "number", "label": "Walk-Away Limit (SAR)", "required": true },
+              { "name": "mandate_notes", "type": "textarea", "label": "Mandate & Risk Notes", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "negotiate" }
+          ]
+        },
+        {
+          "id": "negotiate",
+          "type": "human_task",
+          "name": "Conduct Negotiation / Mediation",
+          "config": {
+            "assignee_role": "litigation_counsel",
+            "sla_hours": 168,
+            "form_fields": [
+              { "name": "settlement_reached", "type": "boolean", "label": "Settlement Reached?", "required": true },
+              { "name": "settlement_amount", "type": "number", "label": "Agreed Amount (SAR)", "required": false },
+              { "name": "negotiation_log", "type": "textarea", "label": "Negotiation Log", "required": true }
+            ]
+          },
+          "transitions": [
+            { "condition": "steps.negotiate.output.settlement_reached == true", "target": "approve_settlement" },
+            { "target": "return_to_litigation" }
+          ]
+        },
+        {
+          "id": "approve_settlement",
+          "type": "approval_chain",
+          "name": "DoA Approval of Settlement Figure",
+          "config": {
+            "approvers": [ { "role": "legal_director" }, { "role": "chief_financial_officer" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 48
+          },
+          "transitions": [
+            { "target": "execute_settlement" }
+          ]
+        },
+        {
+          "id": "execute_settlement",
+          "type": "service_task",
+          "name": "Draft & E-Sign Settlement Agreement",
+          "config": {
+            "service": "esign",
+            "method": "POST",
+            "url": "/api/v1/lex/legal-cases/${variables.case_id}/settlement/execute",
+            "body": {
+              "case_id": "${variables.case_id}",
+              "amount": "${steps.negotiate.output.settlement_amount}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "return_to_litigation",
+          "type": "human_task",
+          "name": "Return Matter to Litigation",
+          "config": {
+            "assignee_role": "litigation_lead",
+            "sla_hours": 8,
+            "form_fields": [
+              { "name": "return_reason", "type": "textarea", "label": "Reason ADR Failed / Next Steps", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-arbitration-case-management",
+    "category": "legal",
+    "icon": "scale",
+    "tags": ["legal", "litigation", "disputes", "ksa", "arbitration"],
+    "name_i18n": {
+      "en": "Arbitration Case Management",
+      "ar": "إدارة قضايا التحكيم"
+    },
+    "description_i18n": {
+      "en": "Manages an arbitration from request through tribunal constitution, submissions and the evidentiary hearing, to receipt of the award and a DoA decision on enforcement or set-aside, aligned with SCCA / Saudi Arbitration Law.",
+      "ar": "يدير قضية تحكيم من طلب التحكيم وتشكيل هيئة التحكيم والمذكرات وجلسة الإثبات، حتى استلام الحكم وقرار تفويض الصلاحيات بشأن التنفيذ أو الإبطال، بما يتوافق مع المركز السعودي للتحكيم ونظام التحكيم."
+    },
+    "definition": {
+      "name": "Arbitration Case Management",
+      "description": "Run an arbitration lifecycle from request to award and enforcement decision.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "case_id": { "type": "string" },
+        "claim_value": { "type": "number", "default": 0 },
+        "award_received": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "file_request",
+          "type": "human_task",
+          "name": "File / Respond to Arbitration Request",
+          "config": {
+            "assignee_role": "arbitration_counsel",
+            "sla_hours": 72,
+            "escalation_role": "legal_director",
+            "form_fields": [
+              { "name": "role", "type": "select", "label": "Our Role", "required": true, "options": ["claimant", "respondent"] },
+              { "name": "seat_institution", "type": "select", "label": "Seat / Institution", "required": true, "options": ["scca", "icc", "lcia", "ad_hoc"] },
+              { "name": "claim_value", "type": "number", "label": "Amount in Dispute (SAR)", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "constitute_tribunal" }
+          ]
+        },
+        {
+          "id": "constitute_tribunal",
+          "type": "human_task",
+          "name": "Constitute Tribunal & Nominate Arbitrator",
+          "config": {
+            "assignee_role": "arbitration_counsel",
+            "sla_hours": 168,
+            "form_fields": [
+              { "name": "nominated_arbitrator", "type": "text", "label": "Nominated Arbitrator", "required": true },
+              { "name": "independence_confirmed", "type": "boolean", "label": "Independence / No-Conflict Confirmed?", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "submissions" }
+          ]
+        },
+        {
+          "id": "submissions",
+          "type": "human_task",
+          "name": "Prepare Submissions & Evidence",
+          "config": {
+            "assignee_role": "arbitration_counsel",
+            "sla_hours": 336,
+            "form_fields": [
+              { "name": "submission_type", "type": "select", "label": "Submission Type", "required": true, "options": ["statement_of_claim", "statement_of_defense", "reply", "rejoinder", "post_hearing_brief"] },
+              { "name": "submission_url", "type": "text", "label": "Submission Document URL", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "hearing_window" }
+          ]
+        },
+        {
+          "id": "hearing_window",
+          "type": "timer",
+          "name": "Evidentiary Hearing Window",
+          "config": {
+            "duration": "720h",
+            "reason": "Time box for the evidentiary hearing and post-hearing briefs"
+          },
+          "transitions": [
+            { "target": "receive_award" }
+          ]
+        },
+        {
+          "id": "receive_award",
+          "type": "human_task",
+          "name": "Receive & Analyse Arbitral Award",
+          "config": {
+            "assignee_role": "arbitration_counsel",
+            "sla_hours": 72,
+            "form_fields": [
+              { "name": "award_outcome", "type": "select", "label": "Award Outcome", "required": true, "options": ["favorable", "adverse", "split"] },
+              { "name": "recommended_action", "type": "select", "label": "Recommended Action", "required": true, "options": ["enforce", "set_aside", "comply"] },
+              { "name": "award_analysis", "type": "textarea", "label": "Award Analysis", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "decide_enforcement" }
+          ]
+        },
+        {
+          "id": "decide_enforcement",
+          "type": "approval_chain",
+          "name": "DoA Decision on Enforcement / Set-Aside",
+          "config": {
+            "approvers": [ { "role": "legal_director" }, { "role": "chief_executive" } ],
+            "mode": "sequential",
+            "quorum": 2,
+            "sla_hours": 72
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-case-timeline-delay-tracking",
+    "category": "legal",
+    "icon": "timer",
+    "tags": ["legal", "litigation", "disputes", "ksa", "najiz", "deadlines"],
+    "name_i18n": {
+      "en": "Case Timeline & Delay-Event Tracking",
+      "ar": "تتبّع الجدول الزمني للقضية وأحداث التأخير"
+    },
+    "description_i18n": {
+      "en": "Event-driven monitor that syncs a Najiz docket change, classifies the delay or deadline event, fires reminder timers, and escalates an at-risk procedural deadline to the litigation lead before it lapses.",
+      "ar": "مراقب مدفوع بالأحداث يزامن تغيّر سجل القضية في ناجز، ويصنّف حدث التأخير أو الموعد، ويُطلق مؤقتات تذكير، ويصعّد الموعد الإجرائي المعرّض للخطر إلى رئيس قسم التقاضي قبل فواته."
+    },
+    "definition": {
+      "name": "Case Timeline & Delay-Event Tracking",
+      "description": "Track docket events, classify delays, and escalate at-risk deadlines.",
+      "trigger_config": {
+        "type": "event",
+        "topic": "lex.najiz.docket.updated",
+        "dedupe_key_fields": ["case_id", "event_id"],
+        "dedupe_ttl_seconds": 3600
+      },
+      "variables": {
+        "case_id": { "type": "string" },
+        "event_id": { "type": "string" },
+        "deadline_at_risk": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "sync_docket",
+          "type": "service_task",
+          "name": "Sync Docket Change from Najiz",
+          "config": {
+            "service": "najiz",
+            "method": "GET",
+            "url": "/api/v1/lex/integrations/najiz/cases/${variables.case_id}/docket",
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "classify_event" }
+          ]
+        },
+        {
+          "id": "classify_event",
+          "type": "human_task",
+          "name": "Classify Delay / Deadline Event",
+          "config": {
+            "assignee_role": "litigation_paralegal",
+            "sla_hours": 4,
+            "escalation_role": "litigation_counsel",
+            "form_fields": [
+              { "name": "event_type", "type": "select", "label": "Event Type", "required": true, "options": ["hearing_scheduled", "adjournment", "deadline_set", "expert_delay", "service_pending"] },
+              { "name": "deadline_at_risk", "type": "boolean", "label": "Procedural Deadline at Risk?", "required": true },
+              { "name": "due_date", "type": "date", "label": "Action Due Date", "required": false }
+            ]
+          },
+          "transitions": [
+            { "target": "risk_gate" }
+          ]
+        },
+        {
+          "id": "risk_gate",
+          "type": "condition",
+          "name": "Deadline-at-Risk Gate",
+          "config": {
+            "expression": "steps.classify_event.output.deadline_at_risk == true"
+          },
+          "transitions": [
+            { "condition": "steps.classify_event.output.deadline_at_risk == true", "target": "escalate_deadline" },
+            { "target": "reminder_timer" }
+          ]
+        },
+        {
+          "id": "escalate_deadline",
+          "type": "service_task",
+          "name": "Escalate At-Risk Deadline",
+          "config": {
+            "service": "notification",
+            "method": "POST",
+            "url": "/api/v1/notifications",
+            "body": {
+              "template": "litigation_deadline_at_risk",
+              "case_id": "${variables.case_id}",
+              "role": "litigation_lead"
+            },
+            "max_retries": 2
+          },
+          "transitions": [
+            { "target": "reminder_timer" }
+          ]
+        },
+        {
+          "id": "reminder_timer",
+          "type": "timer",
+          "name": "Pre-Deadline Reminder",
+          "config": {
+            "duration": "48h",
+            "reason": "Send a reminder ahead of the recorded procedural deadline"
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tmpl-legal-hold-evidence-preservation",
+    "category": "legal",
+    "icon": "lock",
+    "tags": ["legal", "litigation", "disputes", "ksa", "legal-hold", "evidence", "pdpl"],
+    "name_i18n": {
+      "en": "Litigation / Legal Hold & Evidence Preservation",
+      "ar": "الحجز القانوني وحفظ الأدلة"
+    },
+    "description_i18n": {
+      "en": "Issues a litigation hold: scopes custodians and data sources, gets legal sign-off, dispatches preservation notices to custodians, suspends e-archive retention disposal, and tracks acknowledgements with a follow-up timer.",
+      "ar": "يُصدر حجزاً قانونياً: يحدد الحائزين ومصادر البيانات، ويحصل على اعتماد الإدارة القانونية، ويرسل إشعارات الحفظ للحائزين، ويوقف إتلاف الاحتفاظ في الأرشيف الإلكتروني، ويتابع الإقرارات بمؤقت متابعة."
+    },
+    "definition": {
+      "name": "Litigation / Legal Hold & Evidence Preservation",
+      "description": "Scope, approve, notify, and enforce a legal hold across custodians and the e-archive.",
+      "trigger_config": {
+        "type": "manual"
+      },
+      "variables": {
+        "case_id": { "type": "string" },
+        "hold_id": { "type": "string" },
+        "all_acknowledged": { "type": "boolean", "default": false }
+      },
+      "steps": [
+        {
+          "id": "scope_hold",
+          "type": "human_task",
+          "name": "Scope Custodians & Data Sources",
+          "config": {
+            "assignee_role": "litigation_counsel",
+            "sla_hours": 24,
+            "escalation_role": "litigation_lead",
+            "form_fields": [
+              { "name": "matter_reference", "type": "text", "label": "Matter / Case Reference", "required": true },
+              { "name": "custodians", "type": "textarea", "label": "Custodians (names / departments)", "required": true },
+              { "name": "data_sources", "type": "multiselect", "label": "Data Sources", "required": true, "options": ["email", "file_shares", "erp", "contracts", "messaging", "physical_records"] },
+              { "name": "preservation_scope", "type": "textarea", "label": "Preservation Scope & Date Range", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "approve_hold" }
+          ]
+        },
+        {
+          "id": "approve_hold",
+          "type": "approval_chain",
+          "name": "Legal Hold Sign-Off",
+          "config": {
+            "approvers": [ { "role": "legal_director" } ],
+            "mode": "sequential",
+            "quorum": 1,
+            "sla_hours": 24
+          },
+          "transitions": [
+            { "target": "notify_custodians" }
+          ]
+        },
+        {
+          "id": "notify_custodians",
+          "type": "service_task",
+          "name": "Dispatch Preservation Notices",
+          "config": {
+            "service": "notification",
+            "method": "POST",
+            "url": "/api/v1/lex/legal-holds/${variables.hold_id}/notices",
+            "body": {
+              "hold_id": "${variables.hold_id}",
+              "case_id": "${variables.case_id}",
+              "custodians": "${steps.scope_hold.output.custodians}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "suspend_disposal" }
+          ]
+        },
+        {
+          "id": "suspend_disposal",
+          "type": "service_task",
+          "name": "Suspend E-Archive Retention Disposal",
+          "config": {
+            "service": "earchive",
+            "method": "POST",
+            "url": "/api/v1/lex/integrations/earchive/holds/${variables.hold_id}/suspend-disposal",
+            "body": {
+              "hold_id": "${variables.hold_id}",
+              "data_sources": "${steps.scope_hold.output.data_sources}"
+            },
+            "max_retries": 3
+          },
+          "transitions": [
+            { "target": "ack_window" }
+          ]
+        },
+        {
+          "id": "ack_window",
+          "type": "timer",
+          "name": "Acknowledgement Follow-Up Window",
+          "config": {
+            "duration": "72h",
+            "reason": "Allow custodians to acknowledge before chasing outstanding holds"
+          },
+          "transitions": [
+            { "target": "track_acks" }
+          ]
+        },
+        {
+          "id": "track_acks",
+          "type": "human_task",
+          "name": "Track Acknowledgements & Confirm Hold",
+          "config": {
+            "assignee_role": "litigation_paralegal",
+            "sla_hours": 24,
+            "form_fields": [
+              { "name": "acknowledged_count", "type": "number", "label": "Custodians Acknowledged", "required": true },
+              { "name": "outstanding_custodians", "type": "textarea", "label": "Outstanding Custodians", "required": false },
+              { "name": "hold_confirmed", "type": "boolean", "label": "Hold Fully Confirmed?", "required": true }
+            ]
+          },
+          "transitions": [
+            { "target": "end" }
+          ]
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "name": "End"
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,61 @@
+{
+  "extensions_version": "clario-1.0",
+  "_meta": {
+    "doc": "Clario-specific ECS extensions for CBN regulator alignment. Merged into the ECS template at index-template creation time. Fields here are namespaced under top-level objects that do not appear in ECS 8.11."
+  },
+  "mappings": {
+    "properties": {
+      "tenant_id": { "type": "keyword" },
+
+      "cbn": {
+        "properties": {
+          "control_id":          { "type": "keyword" },
+          "regulator_relevance": { "type": "flattened" }
+        }
+      },
+
+      "data": {
+        "properties": {
+          "residency":          { "type": "keyword" },
+          "residency_override": { "type": "keyword" },
+          "class":              { "type": "keyword" },
+          "retention_years":    { "type": "integer" }
+        }
+      },
+
+      "intel": {
+        "properties": {
+          "matched": {
+            "type": "nested",
+            "properties": {
+              "source":     { "type": "keyword" },
+              "ioc":        { "type": "keyword" },
+              "confidence": { "type": "float" },
+              "matched_at": { "type": "date" }
+            }
+          }
+        }
+      },
+
+      "pii": {
+        "properties": {
+          "encrypted_fields": { "type": "keyword" },
+          "dek_ref":          { "type": "keyword" }
+        }
+      },
+
+      "regulator": {
+        "properties": {
+          "severity": { "type": "keyword" }
+        }
+      },
+
+      "mitre": {
+        "properties": {
+          "tactic":    { "type": "keyword" },
+          "technique": { "type": "keyword" }
+        }
+      }
+    }
+  }
+}

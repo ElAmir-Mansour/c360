@@ -1,0 +1,20 @@
+DROP POLICY IF EXISTS tenant_delete ON migrate_audit_event;
+DROP POLICY IF EXISTS tenant_update ON migrate_audit_event;
+DROP POLICY IF EXISTS tenant_insert ON migrate_audit_event;
+DROP POLICY IF EXISTS tenant_select ON migrate_audit_event;
+DROP TRIGGER IF EXISTS trg_migrate_audit_no_delete ON migrate_audit_event;
+DROP TRIGGER IF EXISTS trg_migrate_audit_no_update ON migrate_audit_event;
+DROP FUNCTION IF EXISTS migrate_audit_no_mutation();
+
+DROP TABLE IF EXISTS migrate_audit_event;
+DROP TABLE IF EXISTS migrate_connector_invocation;
+DROP TABLE IF EXISTS migrate_connector_config;
+DROP TABLE IF EXISTS migrate_gate_check;
+DROP TABLE IF EXISTS migrate_rollback_plan;
+DROP TABLE IF EXISTS migrate_cutover_window;
+DROP TABLE IF EXISTS migrate_wave_move_group;
+DROP TABLE IF EXISTS migrate_wave;
+DROP TABLE IF EXISTS migrate_workload;
+DROP TABLE IF EXISTS migrate_move_group;
+DROP TABLE IF EXISTS migrate_program;
+DROP TABLE IF EXISTS migrate_reference_counter;

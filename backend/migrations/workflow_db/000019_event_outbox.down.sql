@@ -1,0 +1,12 @@
+-- Reverse of 000019_event_outbox.up.sql. Drops the transactional outbox table (and
+-- its indexes, which fall with the table). Reversible: after this migration the
+-- lifecycle audit emits fall back to the best-effort direct-publish path (the
+-- engine's lifecycleCommitter type-assertion still works — a missing table would
+-- surface as a staging error and roll the transition back fail-closed rather than
+-- silently drop — but a managed environment should only run this down when the
+-- outbox is intentionally being removed).
+--
+-- NOTE: in the standalone workflow-engine the table is ALSO ensured at boot by
+-- outbox.EnsureSchema(db); dropping it here will be re-created on next start. This
+-- down is primarily for migrator-managed environments that own the schema fully.
+DROP TABLE IF EXISTS event_outbox;

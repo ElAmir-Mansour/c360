@@ -1,0 +1,39 @@
+.selector {
+  display: flex;
+  min-inline-size: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--wt-space-base) * 2);
+}
+
+.label {
+  min-inline-size: 0;
+  color: var(--wt-teal-700);
+  font-size: var(--wt-font-size-label);
+  font-weight: 700;
+  line-height: var(--wt-line-height-label);
+  letter-spacing: var(--wt-letter-spacing-label);
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.group {
+  display: flex;
+  min-inline-size: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--wt-space-base);
+}
+
+/*
+ * The chip itself is styled from the component as utilities on the shared
+ * Button (see CHIP_CLASS): a module class here would tie on specificity with
+ * the Button's own variant utilities, whereas utilities let tailwind-merge drop
+ * the conflicting platform classes deterministically.
+ */
+
+.icon {
+  flex-shrink: 0;
+  inline-size: calc(var(--wt-space-base) * 1.75);
+  block-size: calc(var(--wt-space-base) * 1.75);
+}

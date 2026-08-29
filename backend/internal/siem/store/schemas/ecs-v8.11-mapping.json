@@ -1,0 +1,268 @@
+{
+  "index_patterns": ["__siem_template_placeholder__"],
+  "version": 1,
+  "_meta": {
+    "schema_version": "ecs-8.11+clario-1.0",
+    "owner": "siem",
+    "doc": "ECS 8.11 baseline subset used by Clario SIEM. The full ECS catalogue (~3000 fields) is intentionally NOT shipped here; only the fields the platform actively reads or writes are mapped. Add fields via the SCHEMA.md process and bump _meta.schema_version."
+  },
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0,
+      "index.mapping.total_fields.limit": 4000,
+      "index.refresh_interval": "5s"
+    },
+    "mappings": {
+      "dynamic": "strict",
+      "properties": {
+        "@timestamp": { "type": "date" },
+        "ecs": {
+          "properties": {
+            "version": { "type": "keyword" }
+          }
+        },
+        "tags":   { "type": "keyword" },
+        "labels": { "type": "flattened" },
+
+        "event": {
+          "properties": {
+            "action":     { "type": "keyword" },
+            "category":   { "type": "keyword" },
+            "kind":       { "type": "keyword" },
+            "outcome":    { "type": "keyword" },
+            "severity":   { "type": "long" },
+            "start":      { "type": "date" },
+            "end":        { "type": "date" },
+            "duration":   { "type": "long" },
+            "reason":     { "type": "text" },
+            "reference":  { "type": "keyword" },
+            "risk_score": { "type": "float" }
+          }
+        },
+
+        "host": {
+          "properties": {
+            "name":         { "type": "keyword" },
+            "hostname":     { "type": "keyword" },
+            "ip":           { "type": "ip" },
+            "mac":          { "type": "keyword" },
+            "id":           { "type": "keyword" },
+            "type":         { "type": "keyword" },
+            "architecture": { "type": "keyword" },
+            "os": {
+              "properties": {
+                "name":     { "type": "keyword" },
+                "version":  { "type": "keyword" },
+                "family":   { "type": "keyword" },
+                "platform": { "type": "keyword" }
+              }
+            }
+          }
+        },
+
+        "user": {
+          "properties": {
+            "id":          { "type": "keyword" },
+            "name":        { "type": "keyword" },
+            "full_name":   { "type": "keyword" },
+            "email":       { "type": "keyword" },
+            "phone_number":{ "type": "keyword" },
+            "id_number":   { "type": "keyword" },
+            "group": {
+              "properties": {
+                "name": { "type": "keyword" }
+              }
+            },
+            "target": {
+              "properties": {
+                "id":   { "type": "keyword" },
+                "name": { "type": "keyword" }
+              }
+            }
+          }
+        },
+
+        "source": {
+          "properties": {
+            "ip":   { "type": "ip" },
+            "port": { "type": "long" },
+            "user": {
+              "properties": {
+                "name":      { "type": "keyword" },
+                "full_name": { "type": "keyword" }
+              }
+            },
+            "geo": {
+              "properties": {
+                "country_iso_code": { "type": "keyword" },
+                "city_name":        { "type": "keyword" }
+              }
+            },
+            "as": {
+              "properties": {
+                "number": { "type": "long" }
+              }
+            }
+          }
+        },
+
+        "destination": {
+          "properties": {
+            "ip":   { "type": "ip" },
+            "port": { "type": "long" },
+            "user": {
+              "properties": {
+                "name":      { "type": "keyword" },
+                "full_name": { "type": "keyword" }
+              }
+            },
+            "geo": {
+              "properties": {
+                "country_iso_code": { "type": "keyword" },
+                "city_name":        { "type": "keyword" }
+              }
+            }
+          }
+        },
+
+        "client": {
+          "properties": {
+            "ip":   { "type": "ip" },
+            "port": { "type": "long" },
+            "user": {
+              "properties": {
+                "name": { "type": "keyword" }
+              }
+            }
+          }
+        },
+
+        "server": {
+          "properties": {
+            "ip":   { "type": "ip" },
+            "port": { "type": "long" }
+          }
+        },
+
+        "network": {
+          "properties": {
+            "protocol":  { "type": "keyword" },
+            "transport": { "type": "keyword" },
+            "direction": { "type": "keyword" },
+            "bytes":     { "type": "long" },
+            "packets":   { "type": "long" }
+          }
+        },
+
+        "process": {
+          "properties": {
+            "pid":          { "type": "long" },
+            "name":         { "type": "keyword" },
+            "executable":   { "type": "keyword" },
+            "command_line": { "type": "text" },
+            "args":         { "type": "keyword" }
+          }
+        },
+
+        "file": {
+          "properties": {
+            "path":      { "type": "keyword" },
+            "name":      { "type": "keyword" },
+            "extension": { "type": "keyword" },
+            "mime_type": { "type": "keyword" },
+            "size":      { "type": "long" },
+            "hash": {
+              "properties": {
+                "sha256": { "type": "keyword" },
+                "md5":    { "type": "keyword" }
+              }
+            }
+          }
+        },
+
+        "url": {
+          "properties": {
+            "full":   { "type": "keyword" },
+            "path":   { "type": "keyword" },
+            "domain": { "type": "keyword" },
+            "query":  { "type": "keyword" }
+          }
+        },
+
+        "http": {
+          "properties": {
+            "request": {
+              "properties": {
+                "method": { "type": "keyword" },
+                "body": {
+                  "properties": {
+                    "bytes": { "type": "long" }
+                  }
+                }
+              }
+            },
+            "response": {
+              "properties": {
+                "status_code": { "type": "long" },
+                "body": {
+                  "properties": {
+                    "bytes": { "type": "long" }
+                  }
+                }
+              }
+            }
+          }
+        },
+
+        "error": {
+          "properties": {
+            "message": { "type": "text" },
+            "type":    { "type": "keyword" },
+            "code":    { "type": "keyword" }
+          }
+        },
+
+        "log": {
+          "properties": {
+            "level":  { "type": "keyword" },
+            "logger": { "type": "keyword" },
+            "origin": {
+              "properties": {
+                "file": {
+                  "properties": {
+                    "name": { "type": "keyword" },
+                    "line": { "type": "long" }
+                  }
+                }
+              }
+            }
+          }
+        },
+
+        "cloud": {
+          "properties": {
+            "provider": { "type": "keyword" },
+            "region":   { "type": "keyword" },
+            "account": {
+              "properties": {
+                "id": { "type": "keyword" }
+              }
+            },
+            "service": {
+              "properties": {
+                "name": { "type": "keyword" }
+              }
+            },
+            "instance": {
+              "properties": {
+                "id":   { "type": "keyword" },
+                "name": { "type": "keyword" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

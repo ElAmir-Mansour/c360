@@ -1,0 +1,44 @@
+# --- Web framework ---
+fastapi>=0.110,<1.0
+uvicorn[standard]>=0.29
+pydantic>=2.6
+pydantic-settings>=2.2
+httpx>=0.27
+
+# --- Generation — pluggable LLM provider ---
+# AI_LLM_PROVIDER=anthropic (default) uses the anthropic SDK. A recent SDK
+# (>=0.69) is recommended for the `output_config`/effort parameter; the provider
+# feature-detects it and degrades gracefully on older releases.
+anthropic>=0.69
+# AI_LLM_PROVIDER=openai_compatible targets any OpenAI-format
+# /v1/chat/completions endpoint (vLLM / TGI / Ollama / OpenAI) — i.e. a KSA-hosted
+# Arabic model (ALLaM / Jais / Falcon) served in-Kingdom. Both SDKs are imported
+# lazily, so only the selected provider's SDK actually needs to be importable.
+openai>=1.30
+
+# --- Vector store (pgvector on Postgres) ---
+psycopg2-binary>=2.9
+pgvector>=0.2.5
+numpy>=1.26
+
+# --- Embeddings + reranking (local multilingual models; pulls torch, ~2GB) ---
+# sentence-transformers ships both the bi-encoder embedder AND the CrossEncoder
+# used for reranking (AI_RERANK_MODEL, e.g. BAAI/bge-reranker-v2-m3). No extra
+# dependency — the reranker degrades gracefully if the model can't be loaded.
+sentence-transformers>=2.7
+# huggingface-hub ships with sentence-transformers; pinned explicitly because
+# scripts/prefetch_models.py imports snapshot_download to stage models offline.
+huggingface-hub>=0.23
+
+# --- Observability ---
+prometheus-client>=0.20
+
+# --- PDF extraction + OCR ---
+pypdf>=4.2
+pdfplumber>=0.11
+pdf2image>=1.17          # needs the `poppler-utils` system package
+pytesseract>=0.3.10      # needs the `tesseract-ocr` + `tesseract-ocr-ara` system packages
+Pillow>=10.0
+
+# --- Tests ---
+pytest>=8.0

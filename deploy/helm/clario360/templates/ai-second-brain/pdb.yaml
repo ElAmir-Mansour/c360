@@ -1,0 +1,18 @@
+{{- if and .Values.aiSecondBrain.enabled .Values.aiSecondBrain.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "clario360.componentName" (dict "root" . "component" "ai-second-brain") }}
+  namespace: {{ include "clario360.namespace" . }}
+  labels:
+    {{- include "clario360.componentLabels" (dict "root" . "component" "ai-second-brain") | nindent 4 }}
+spec:
+  {{- if .Values.aiSecondBrain.pdb.minAvailable }}
+  minAvailable: {{ .Values.aiSecondBrain.pdb.minAvailable }}
+  {{- else }}
+  maxUnavailable: {{ .Values.aiSecondBrain.pdb.maxUnavailable | default 1 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "clario360.componentSelectorLabels" (dict "root" . "component" "ai-second-brain") | nindent 6 }}
+{{- end }}

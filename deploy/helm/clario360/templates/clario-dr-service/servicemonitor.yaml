@@ -1,0 +1,31 @@
+{{- if and .Values.clarioDrService.enabled .Values.clarioDrService.serviceMonitor.enabled .Values.observability.prometheus.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "clario360.fullname" . }}-clario-dr-service
+  {{- if .Values.observability.prometheus.serviceMonitor.namespace }}
+  namespace: {{ .Values.observability.prometheus.serviceMonitor.namespace }}
+  {{- else }}
+  namespace: {{ include "clario360.namespace" . }}
+  {{- end }}
+  labels:
+    {{- include "clario360.componentLabels" (dict "root" . "component" "clario-dr-service") | nindent 4 }}
+    {{- with .Values.observability.prometheus.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  jobLabel: app.kubernetes.io/component
+  namespaceSelector:
+    matchNames:
+      - {{ include "clario360.namespace" . }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: clario-dr-service
+      app.kubernetes.io/part-of: clario360
+  endpoints:
+    - port: admin
+      path: /metrics
+      interval: {{ .Values.observability.prometheus.serviceMonitor.interval | default "30s" }}
+      scrapeTimeout: {{ .Values.observability.prometheus.serviceMonitor.scrapeTimeout | default "10s" }}
+      honorLabels: true
+{{- end }}

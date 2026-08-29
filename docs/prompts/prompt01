@@ -1,0 +1,597 @@
+# PROMPT SIEM-01 (matured) — Service skeleton, RBAC, gateway prefix, baseline migrations
+
+> **Prompt ID:** SIEM-01
+> **Track:** Foundation (gates SIEM-02..30)
+> **Owner:** Cyber & Platform Engineering — Clario360
+> **Status:** Production prompt, agent-ready, zero-stub
+> **Estimated effort:** 1.5–2 engineering days for a senior agent
+> **Risk:** HIGH — this prompt touches shared cross-cutting code (RBAC, gateway, migration runner, compose, monitoring). Regression here breaks every other service.
+> **Reversibility:** Fully reversible via the rollback plan in §13.
+
+---
+
+## 0. Mission
+
+Stand up a new Go service `siem-service` in the Clario360 monorepo that boots cleanly under the **existing** `bootstrap.Bootstrap` pattern, exposes `/healthz`, `/readyz`, `/metrics`, registers under the API gateway at `/api/v1/siem`, ships baseline schemas in a new `siem_db` database, extends the platform RBAC catalogue, and is wired into the local dev stack (Docker, ecosystem manager, Prometheus). At the end of this prompt the service must be **live, observable, authenticated, and idle** — no business endpoints yet, but the next 29 prompts must be able to start building on top of it without touching any of this foundation again.
+
+The deliverable is **production-grade and reversible**. Every change must come with passing tests at three levels (unit, integration, regression-of-existing-services), and the existing platform must build, test, and run identically with the service disabled as it does today.
+
+---
+
+## 1. House conventions (apply to every change in this prompt)
+
+The agent must internalize these *before* writing a single line:
+
+- **Go module mode:** prefix every `go` invocation with `GOWORK=off`. No exceptions, including in CI scripts and Makefile targets you add.
+- **HTTP router:** `chi` v5; mount style consistent with existing services.
+- **Bootstrap:** use `bootstrap.Bootstrap(ctx, cfg)` from `backend/internal/observability/bootstrap/bootstrap.go`. Do not roll your own startup sequence.
+- **Migrations:** `golang-migrate` v4 via the existing `database.RunMigrations(dsn, dir)` helper. Migrations are SQL only — no Go migrations.
+- **Database driver:** `pgx/v5` via `pgxpool`. No `database/sql` direct usage. No GORM.
+- **Kafka:** `Sarama` for producer/consumer. Topic naming, partitioning, and CloudEvents envelope must match `backend/internal/events/event.go`.
+- **Cache / state:** Redis via `go-redis/v9`.
+- **Prometheus:** **per-instance registry** (`prometheus.NewRegistry()` + `promauto.With(reg)`). The global default registry is **forbidden**. Service name in metrics must be `siem_service` (snake_case, sanitized).
+- **Tracing:** OpenTelemetry via the existing tracer factory in `internal/observability/tracing/`.
+- **Logging:** the platform `zap` sugared logger from `internal/observability/log/`; structured fields only; never `fmt.Println`.
+- **Context:** request-scoped `context.Context` plumbed through every layer. No `context.Background()` inside request paths.
+- **Time:** all storage in UTC; presentation in `Africa/Lagos`. Time helpers from `internal/timeutil/`.
+- **Tenant isolation:** every Postgres query, every Kafka message, every Redis key includes `tenant_id`. There is no exception. Tenant id resolved from the JWT claim by gateway middleware.
+- **Errors:** wrap with `%w` and route through the platform error mapper (`internal/httpx/errors.go`). No raw `errors.New` at API boundaries.
+- **Tests:** table-driven; race detector on (`-race`); deterministic (no `time.Sleep` for synchronization — use channels or `testify/eventually`).
+
+If any of these conflict with reality in the codebase as it stands today, **STOP and report** — do not silently invent a different convention. See §11.
+
+---
+
+## 2. Pre-flight reconnaissance (MANDATORY — do not skip)
+
+Before writing or modifying any code, the agent must complete this reconnaissance and produce a `RECON.md` artifact in the working branch describing what was found. The subsequent implementation must be consistent with what is documented in `RECON.md`. This file is reviewed before the diff.
+
+**2.1 Read and summarize each of these:**
+backend/internal/observability/bootstrap/bootstrap.go
+backend/internal/observability/log/
+backend/internal/observability/tracing/
+backend/internal/observability/metrics/
+backend/internal/auth/rbac.go
+backend/internal/auth/middleware.go            (or equivalent JWT middleware)
+backend/internal/gateway/config/routes.go
+backend/internal/gateway/middleware/            (rate limit, auth, tenant resolver)
+backend/internal/events/event.go
+backend/internal/database/migrate.go            (or wherever RunMigrations lives)
+backend/internal/database/pgx.go                (or pool factory)
+backend/internal/httpx/                         (response helpers, error mapper)
+backend/internal/timeutil/
+backend/cmd/<one existing service>/main.go     (use as the template — pick the most recently shipped one)
+docker-compose.yml
+ecosystem.local.js
+deploy/monitoring/prometheus/prometheus.yml     (or wherever scrape targets live)
+Makefile                                        (top-level + backend)
+
+**2.2 For each, record in `RECON.md`:**
+- Exact import path and package name.
+- Exported symbols the new service must call (function signature + brief contract).
+- Anything surprising (e.g., the bootstrap returns a shutdown closer, the auth middleware injects tenant into context under key `X`, the Prom registry is constructed inside bootstrap, etc.).
+- Any **divergence** from the assumptions in this prompt. If found, list it under a `### Divergences` heading and propose a resolution — do not silently adapt.
+
+**2.3 Inventory existing services for port allocation:**
+- Confirm `8092` is unused on the HTTP plane and `9082` is unused on the admin plane. If taken, halt and request reassignment. Do not pick a different port unilaterally.
+
+**2.4 Inventory existing RBAC permissions to avoid collision:**
+- `grep -rn "Permission(" backend/internal/auth/` and `grep -rn "\"siem:" backend/` — confirm none of the new permission strings already exist.
+
+**2.5 Inventory existing migrations:**
+- `ls migrations/` — confirm `siem_db/` does not yet exist.
+- Record the migration runner's contract: directory layout, file naming, transaction semantics, idempotency guarantees.
+
+**Gate:** the agent must not proceed past §2 without `RECON.md` committed. The user-facing review explicitly checks for this file in the diff.
+
+---
+
+## 3. Architectural context
+
+`siem-service` is a peer service to `cyber-service`, `iam-service`, `workflow-engine`, `notification-service`, `file-service`, etc. It will:
+
+- Receive HTTP traffic only via the API gateway (`/api/v1/siem/**` rewritten to the service's `/api/v1/siem/**` upstream).
+- Consume from and produce to Kafka topics defined in SIEM-04. **No topics are created in this prompt** — only the producer/consumer scaffolding.
+- Read/write `siem_db` only. Cross-service data is accessed via the owning service's API; no direct foreign DB reads.
+- Emit chained audit entries via `internal/audit/` for every admin action (no admin actions exist yet — but the wiring must be present and tested with a stub action).
+- Be observable from day one: metrics on admin port, traces on the OTEL collector, structured logs to stdout, log-correlation id propagated from gateway.
+
+In this prompt the service has **no business endpoints**. Its only HTTP surface is `/healthz`, `/readyz`, `/metrics` (admin), plus a single placeholder `GET /api/v1/siem/_meta` returning service version and build info, used by the gateway and the regression tests to confirm wiring end-to-end.
+
+---
+
+## 4. Detailed implementation specification
+
+### 4.1 Entry point — `backend/cmd/siem-service/main.go`
+
+- Loads config (§4.3) via `config.Load()`.
+- Constructs a per-instance Prometheus registry.
+- Calls `bootstrap.Bootstrap(ctx, cfg)` passing:
+  - HTTP listener on `:8092`.
+  - Admin listener on `:9082` (mounts `/healthz`, `/readyz`, `/metrics`, `/debug/pprof` if `cfg.EnablePprof`).
+  - Service name `siem-service`.
+  - The per-instance Prom registry.
+  - Graceful shutdown context with 30s timeout (configurable via `SIEM_SHUTDOWN_TIMEOUT_SEC`).
+- Wires:
+  - Postgres pool to `siem_db` (DSN from env).
+  - Redis client.
+  - Kafka producer (idempotent) and consumer group (group id `siem-service`).
+  - Audit chain client.
+  - Auth middleware (verifies JWT issued by IAM; rejects on missing/invalid).
+  - Tenant resolver middleware (extracts `tenant_id` claim into context; rejects requests without one for `/api/v1/siem/**`).
+  - Request id middleware (propagates `X-Request-Id`, mints one if absent).
+  - Logging middleware (structured request log, redacts auth header).
+  - Tracing middleware (OTEL).
+  - Rate limit middleware bound to the gateway's endpoint groups (read/write/admin).
+- Registers handler routes (see §4.2.4).
+- Calls `database.RunMigrations(dsn, "migrations/siem_db")` exactly once on startup. Failure to migrate is a hard fatal — do not start with a partial schema.
+- Signal handling: `SIGINT`/`SIGTERM` triggers graceful shutdown via the bootstrap-supplied closer.
+
+### 4.2 Package structure under `backend/internal/siem/`
+backend/internal/siem/
+model/
+doc.go                      // package-level docs
+common.go                   // shared types: TenantID, Severity, etc.
+placeholder.go              // empty exported var to keep package compilable; removed in SIEM-03
+repository/
+doc.go
+health_check_repo.go        // sole repo for the placeholder table
+health_check_repo_test.go
+service/
+doc.go
+meta_service.go             // returns build info, version, uptime
+meta_service_test.go
+handler/
+doc.go
+router.go                   // builds the /api/v1/siem chi router; mounted in main.go
+meta_handler.go             // GET /api/v1/siem/_meta
+meta_handler_test.go
+consumer/
+doc.go
+consumer.go                 // base Kafka consumer wrapper (no topics subscribed yet)
+consumer_test.go
+producer/
+doc.go
+producer.go                 // CloudEvents emitter; emits nothing in this prompt but is unit-tested via a fake
+producer_test.go
+config/
+doc.go
+config.go                   // env loader using kelseyhightower/envconfig or the platform's standard loader
+config_test.go
+csql/
+doc.go
+placeholder.go              // empty exported var to keep package compilable; populated in SIEM-17
+internal/
+buildinfo/
+buildinfo.go              // -ldflags-injected Version, Commit, BuildTime
+
+Every package gets a `doc.go` describing the package mission in one paragraph and listing its public types. This is mandatory because subsequent prompts reference these packages by name.
+
+### 4.3 Configuration — `internal/siem/config/config.go`
+
+Env vars (all prefixed `SIEM_` — no other prefix is acceptable):
+
+| Var                              | Type     | Default                              | Required | Notes                                            |
+|----------------------------------|----------|--------------------------------------|----------|--------------------------------------------------|
+| `SIEM_HTTP_PORT`                 | int      | `8092`                               | no       |                                                  |
+| `SIEM_ADMIN_PORT`                | int      | `9082`                               | no       |                                                  |
+| `SIEM_PG_DSN`                    | string   | —                                    | YES      | `postgres://…/siem_db`                            |
+| `SIEM_PG_MAX_CONNS`              | int      | `20`                                 | no       |                                                  |
+| `SIEM_REDIS_ADDR`                | string   | `localhost:6379`                     | no       |                                                  |
+| `SIEM_REDIS_DB`                  | int      | `7`                                  | no       | reserve DB 7 for SIEM, document in `docs/siem/`  |
+| `SIEM_KAFKA_BROKERS`             | csv      | `localhost:9092`                     | no       |                                                  |
+| `SIEM_KAFKA_CLIENT_ID`           | string   | `siem-service`                       | no       |                                                  |
+| `SIEM_KAFKA_TLS_ENABLED`         | bool     | `false`                              | no       |                                                  |
+| `SIEM_OPENSEARCH_URL`            | string   | empty                                | no       | reserved for SIEM-02 — accept empty without crashing |
+| `SIEM_OPENSEARCH_AUTH`           | string   | empty                                | no       | reserved for SIEM-02                              |
+| `SIEM_OTEL_EXPORTER_ENDPOINT`    | string   | `localhost:4317`                     | no       |                                                  |
+| `SIEM_SHUTDOWN_TIMEOUT_SEC`      | int      | `30`                                 | no       |                                                  |
+| `SIEM_ENABLE_PPROF`              | bool     | `false`                              | no       | only enabled in dev compose                       |
+| `SIEM_LOG_LEVEL`                 | string   | `info`                               | no       | `debug|info|warn|error`                          |
+| `SIEM_JWT_ISSUER`                | string   | `iam.clario360.local`                | no       | must match IAM issuer                             |
+| `SIEM_JWT_JWKS_URL`              | string   | —                                    | YES      | IAM JWKS endpoint                                |
+| `SIEM_AUDIT_SERVICE_URL`         | string   | —                                    | YES      | audit chain client target                         |
+
+The config loader must:
+- Fail fast on missing required vars with a single readable error listing all missing.
+- Validate types (no parse errors propagated as zero values).
+- Expose a typed `Config` struct; do not pass `os.Getenv` around.
+- Be unit-tested with table-driven cases for valid/invalid/missing.
+
+### 4.4 RBAC extension — `backend/internal/auth/rbac.go`
+
+Add the following permission constants (exact strings — these are referenced by Vault policy, gateway, frontend, and every later prompt):
+PermSIEMRead             = "siem:read"
+PermSIEMWrite            = "siem:write"
+PermSIEMHunt             = "siem:hunt"
+PermSIEMRespond          = "siem:respond"
+PermSIEMContentAuthor    = "siem:content_author"
+PermSIEMComplianceAttest = "siem:compliance_attest"
+PermSIEMSupervisoryView  = "siem:supervisory_view"
+PermSIEMAdmin            = "siem:admin"
+
+Update the **default role map** in the same file:
+
+| Role            | Add permissions                                                  |
+|-----------------|------------------------------------------------------------------|
+| `analyst`       | `siem:read`, `siem:hunt`                                         |
+| `responder`     | `siem:read`, `siem:hunt`, `siem:respond` (add if role exists; if not, do **not** create) |
+| `content_author`| `siem:read`, `siem:content_author`                               |
+| `compliance`    | `siem:read`, `siem:compliance_attest`                            |
+| `tenant_admin`  | all eight SIEM perms                                             |
+| `super_admin`   | all eight + `siem:supervisory_view`                              |
+
+**Backward compatibility rule:** if a role above does not exist in the current platform, do not create it. Add only the permissions to roles that exist, log a one-line warning in `RECON.md` listing roles you skipped, and stop. Role creation is out of scope for SIEM-01.
+
+A migration **must** be added under `migrations/auth_db/` (or wherever role-permission mapping lives — confirm in §2) to insert the new permissions and the default role-permission rows. The migration must be idempotent (`INSERT … ON CONFLICT DO NOTHING`).
+
+### 4.5 Gateway integration — `backend/internal/gateway/config/routes.go`
+
+Add a new route group:
+{
+Prefix: "/api/v1/siem",
+Upstream: "http://siem-service:8092",
+Bindings: [
+{ Method: "GET",    PathRegex: ".",            Group: EndpointGroupRead  },
+{ Method: "POST",   PathRegex: ".",            Group: EndpointGroupWrite },
+{ Method: "PUT",    PathRegex: ".",            Group: EndpointGroupWrite },
+{ Method: "PATCH",  PathRegex: ".",            Group: EndpointGroupWrite },
+{ Method: "DELETE", PathRegex: ".",            Group: EndpointGroupWrite },
+{ Method: "",      PathRegex: "^/sources(/.)?",   Group: EndpointGroupAdmin },
+{ Method: "",      PathRegex: "^/parsers(/.)?",   Group: EndpointGroupAdmin },
+{ Method: "",      PathRegex: "^/settings(/.*)?",  Group: EndpointGroupAdmin },
+],
+RateLimit: {
+PerTenantRPS: 5 * defaultReadGroupRPS,
+Burst:        2 * (5 * defaultReadGroupRPS),
+},
+RequireAuth:   true,
+RequireTenant: true,
+}
+
+Use the exact symbol names and patterns the existing routes file uses (confirm in §2). Do not invent new helpers. The admin-group bindings for `/sources`, `/parsers`, `/settings` must take precedence over the catch-all write binding — confirm the gateway uses first-match-wins ordering and place admin bindings first.
+
+### 4.6 Database setup — `migrations/siem_db/`
+
+Files:
+- `000001_init.up.sql`:
+```sql
+  CREATE SCHEMA IF NOT EXISTS siem;
+
+  CREATE TABLE IF NOT EXISTS siem.health_check (
+    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id   UUID        NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+  );
+
+  CREATE INDEX IF NOT EXISTS health_check_tenant_idx
+    ON siem.health_check (tenant_id, created_at DESC);
+
+  -- Ensure pgcrypto for gen_random_uuid
+  CREATE EXTENSION IF NOT EXISTS pgcrypto;
+```
+- `000001_init.down.sql`:
+```sql
+  DROP TABLE IF EXISTS siem.health_check;
+  DROP SCHEMA IF EXISTS siem CASCADE;
+```
+
+The migration runner must be invoked at startup. If migration fails for any reason, the service must exit non-zero with the migration error in the log. The readiness probe must reflect "not ready" until migrations are complete.
+
+### 4.7 Infrastructure wiring
+
+**`docker-compose.yml`** (additions only; do not modify existing services' settings):
+```yaml
+  siem-service:
+    build:
+      context: .
+      dockerfile: backend/cmd/siem-service/Dockerfile
+    container_name: clario360-siem-service
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+      kafka:    { condition: service_healthy }
+      iam-service: { condition: service_started }
+    environment:
+      SIEM_PG_DSN: postgres://clario:clario@postgres:5432/siem_db?sslmode=disable
+      SIEM_REDIS_ADDR: redis:6379
+      SIEM_KAFKA_BROKERS: kafka:9092
+      SIEM_JWT_JWKS_URL: http://iam-service:8080/.well-known/jwks.json
+      SIEM_AUDIT_SERVICE_URL: http://audit-service:8085
+      SIEM_LOG_LEVEL: info
+      SIEM_ENABLE_PPROF: "true"
+    ports:
+      - "8092:8092"
+      - "9082:9082"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9082/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+```
+
+Also add a one-shot init container or a Postgres init script that creates `siem_db` if it does not exist. Match the existing pattern used for other service DBs.
+
+**`ecosystem.local.js`** (PM2 entry):
+```js
+{
+  name: "siem-service",
+  script: "./backend/cmd/siem-service/siem-service",
+  env: {
+    GOWORK: "off",
+    SIEM_PG_DSN: "postgres://clario:clario@localhost:5432/siem_db?sslmode=disable",
+    SIEM_REDIS_ADDR: "localhost:6379",
+    SIEM_KAFKA_BROKERS: "localhost:9092",
+    SIEM_JWT_JWKS_URL: "http://localhost:8080/.well-known/jwks.json",
+    SIEM_AUDIT_SERVICE_URL: "http://localhost:8085",
+    SIEM_LOG_LEVEL: "debug",
+    SIEM_ENABLE_PPROF: "true",
+  },
+  watch: false,
+  autorestart: true,
+}
+```
+
+**Prometheus scrape config** (`deploy/monitoring/prometheus/prometheus.yml`):
+```yaml
+  - job_name: 'siem-service'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['siem-service:9082']
+        labels:
+          service: 'siem-service'
+          track:   'siem'
+```
+
+**Dockerfile** (`backend/cmd/siem-service/Dockerfile`): multi-stage, distroless or alpine final image, non-root user, `HEALTHCHECK` matching the compose probe, `LABEL org.opencontainers.image.*` populated. Mirror the most recently shipped service's Dockerfile.
+
+**Makefile targets** at repo root (additions only):
+.PHONY: siem-build siem-run siem-test siem-lint siem-clean
+siem-build:
+GOWORK=off go build -o backend/cmd/siem-service/siem-service ./backend/cmd/siem-service
+siem-run: siem-build
+./backend/cmd/siem-service/siem-service
+siem-test:
+GOWORK=off go test -race -count=1 ./backend/internal/siem/... ./backend/cmd/siem-service/...
+siem-lint:
+GOWORK=off go vet ./backend/internal/siem/... ./backend/cmd/siem-service/...
+GOWORK=off golangci-lint run ./backend/internal/siem/... ./backend/cmd/siem-service/...
+siem-clean:
+rm -f backend/cmd/siem-service/siem-service
+
+### 4.8 Observability baseline
+
+The service must register the following metrics on its per-instance registry at startup (with zero values, so dashboards can be built before SIEM-04 produces real data):
+
+| Metric                                  | Type      | Labels                                   |
+|-----------------------------------------|-----------|------------------------------------------|
+| `siem_service_up`                       | Gauge     | `version`, `commit`                      |
+| `siem_service_start_time_seconds`       | Gauge     | —                                        |
+| `siem_service_build_info`               | Gauge     | `version`, `commit`, `build_time`, `go`  |
+| `siem_http_requests_total`              | Counter   | `method`, `route`, `status`              |
+| `siem_http_request_duration_seconds`    | Histogram | `method`, `route`                        |
+| `siem_db_pool_acquire_seconds`          | Histogram | —                                        |
+| `siem_db_pool_in_use`                   | Gauge     | —                                        |
+| `siem_kafka_producer_messages_total`    | Counter   | `topic`, `result`                        |
+| `siem_kafka_consumer_lag`               | Gauge     | `topic`, `partition`                     |
+| `siem_audit_emit_total`                 | Counter   | `result`                                 |
+| `siem_readiness`                        | Gauge     | `component` (`postgres`, `redis`, `kafka`)|
+
+The `/readyz` endpoint must return 200 **only** when all of `postgres`, `redis`, `kafka` report healthy. Health = a successful `SELECT 1` / `PING` / metadata fetch within the last 5 s. Component status drives `siem_readiness` so Grafana can show the dependency that is failing.
+
+A Grafana dashboard JSON `deploy/monitoring/grafana/siem-service-baseline.json` must ship in this prompt, with panels for: service up, request rate, request latency p95/p99, DB pool, Kafka producer rate, readiness by component.
+
+---
+
+## 5. Testing requirements (mandatory)
+
+The agent does not get to claim done unless **every** layer below is green. Coverage threshold for the `internal/siem/...` packages introduced in this prompt: **≥ 80% line coverage**, enforced in CI.
+
+### 5.1 Unit tests
+
+- `config_test.go`: 8+ cases covering valid load, every missing required var, type-parse failures, default fallbacks, redaction of `SIEM_KAFKA_TLS_*` in `String()`.
+- `meta_service_test.go`: build info is read from the linked symbols; uptime increases monotonically.
+- `meta_handler_test.go`: returns 200 with JSON `{version, commit, build_time, uptime_seconds, tenant_id}`; rejects missing JWT with 401; rejects missing tenant with 403.
+- `health_check_repo_test.go`: insert + select against a `pgxmock` or a testcontainer-backed Postgres.
+- `consumer_test.go`: `Start`/`Stop` lifecycle; clean shutdown under context cancel; metrics increment.
+- `producer_test.go`: emits a CloudEvents-shaped message via a fake `sarama.SyncProducer`; rejects messages missing `tenant_id`.
+- `router_test.go`: middleware chain order (request id → log → trace → auth → tenant → rate limit) verified via injected probes.
+
+### 5.2 Integration tests (`backend/cmd/siem-service/integration_test.go`, build tag `integration`)
+
+Uses **testcontainers-go** to spin Postgres 15, Redis 7, Kafka (kraft), and a minimal IAM stub (`httptest.Server` returning a static JWKS).
+
+- **Startup:** service boots, runs migrations, `/readyz` flips to 200 within 30 s, all three readiness components are healthy.
+- **Migration idempotency:** start, stop, start again — no migration error, no duplicate rows in the migrations bookkeeping table.
+- **JWT round-trip:** call `GET /api/v1/siem/_meta` through the gateway test harness with (a) a valid analyst JWT → 200, (b) a JWT missing `tenant_id` → 403, (c) an unsigned JWT → 401, (d) an expired JWT → 401.
+- **Rate limit:** under burst, request count beyond the configured tenant limit returns 429 with `Retry-After` header; counter visible in `siem_http_requests_total{status="429"}`.
+- **Graceful shutdown:** SIGTERM causes in-flight requests to complete (≤ 30 s) and no goroutines leak (verified via `goleak`).
+- **DB unavailable on boot:** with Postgres down, the service does *not* serve 200 on `/readyz`; it serves on `/healthz` (liveness) until the configured `failure_threshold` is exceeded.
+
+### 5.3 Contract tests
+
+Static-analysis style, run in CI:
+
+- The route table compiles to a set covering `/api/v1/siem/**` and nothing else.
+- RBAC permission constants exist in `rbac.go` *and* are present in the role-permission migration.
+- Every metric registered in code matches the catalogue in §4.8 — no orphans, no missing.
+- Every env var referenced in code is listed in §4.3 and the README; vice versa.
+
+A small script `scripts/check-siem-contract.sh` runs in CI to enforce these.
+
+### 5.4 Smoke tests (executed against `make compose-up`)
+
+A `scripts/smoke/siem-01.sh` that:
+1. Brings up the compose stack.
+2. Mints a test JWT against the IAM dev signer.
+3. Calls `curl -s -o /dev/null -w "%{http_code}\n"` against:
+   - `http://localhost:9082/healthz` → expect `200`.
+   - `http://localhost:9082/readyz` → expect `200`.
+   - `http://localhost:9082/metrics` → expect `200` and body contains `siem_service_build_info`.
+   - `http://localhost:8080/api/v1/siem/_meta` (gateway) with the JWT → expect `200` and JSON body contains the build commit.
+   - Same endpoint without JWT → expect `401`.
+4. Verifies Prometheus is scraping (`/api/v1/targets` shows `siem-service` as `UP`).
+5. Tears the stack down.
+6. Exits non-zero on any failure with a clear diagnostic line.
+
+This script is hooked into CI as a required job.
+
+### 5.5 Regression tests of existing services (CRITICAL)
+
+This prompt touches shared code (`rbac.go`, gateway routes, migrations runner discovery, Makefile, compose). The agent must run and report:
+
+- `GOWORK=off go build ./...` — entire monorepo builds.
+- `GOWORK=off go test -race -count=1 ./...` — entire monorepo test suite green.
+- `make lint` (or the repo's equivalent) green.
+- `make compose-up` brings up the stack with **all** existing services healthy, not just siem-service.
+- For each pre-existing service with an integration test, those tests still pass with siem-service running and with siem-service stopped (proves no implicit coupling).
+- `scripts/check-siem-contract.sh` green.
+- Frontend: if any TypeScript references the auth permissions, `npm run build && npm run typecheck` must still pass. Add the new permission strings to the frontend permission enum if one exists (confirm in §2).
+
+A `REGRESSION.md` report is committed alongside the diff, listing every existing test suite run and its result. Any failure — even an unrelated flake — is investigated and either fixed or documented with a justification.
+
+---
+
+## 6. Anti-patterns / pitfalls (the agent must self-check against this list before submitting)
+
+- ❌ Using `prometheus.DefaultRegisterer` anywhere. Registering on the default registry once contaminates every later test.
+- ❌ Calling `context.Background()` inside an HTTP handler chain.
+- ❌ Swallowing errors with `_ = err`. Every error is either returned, logged with `zap.Error(err)`, or both.
+- ❌ Hardcoded ports, URLs, or DSNs in code. All come from config.
+- ❌ A goroutine spawned without a context-cancel exit path or a `sync.WaitGroup` join.
+- ❌ Mounting `/api/v1/siem/_meta` outside the auth+tenant middleware. There are no anonymous SIEM endpoints, period.
+- ❌ Adding a `siem:*` wildcard permission. Wildcards are forbidden — RBAC is permission-by-permission.
+- ❌ Writing a migration that is not idempotent or has no `.down.sql`.
+- ❌ Bypassing the platform error mapper to return ad-hoc JSON errors.
+- ❌ Logging the JWT, the JWKS, or any header named `Authorization`, `Cookie`, `X-Api-Key`.
+- ❌ Introducing a new Go dependency without justification in `RECON.md`. Prefer what is already in `go.mod`.
+- ❌ Touching any file outside the deliverables manifest in §8 without explicit justification.
+
+---
+
+## 7. Acceptance criteria (verifiable, executable)
+
+The prompt is **accepted** when *all* of the following are demonstrably true in a clean clone:
+
+1. `git clone … && cd … && make compose-up` succeeds; `docker compose ps` shows `siem-service` healthy.
+2. `curl -s http://localhost:9082/healthz` → `200`, body `ok`.
+3. `curl -s http://localhost:9082/readyz` → `200` once dependencies are up; `503` while Postgres is intentionally down.
+4. `curl -s http://localhost:9082/metrics | grep ^siem_service_build_info` → returns a single line with non-empty `version`, `commit`, `build_time`.
+5. `curl -s http://localhost:8080/api/v1/siem/_meta -H "Authorization: Bearer $JWT"` → `200` JSON containing `commit` matching `git rev-parse --short HEAD`.
+6. Same call without `Authorization` → `401`; with a token missing `tenant_id` claim → `403`.
+7. `GOWORK=off go build ./...` exits 0.
+8. `GOWORK=off go test -race -count=1 ./...` exits 0.
+9. `make siem-test` exits 0 with coverage ≥ 80% on `internal/siem/...`.
+10. `scripts/smoke/siem-01.sh` exits 0.
+11. `scripts/check-siem-contract.sh` exits 0.
+12. Prometheus UI shows `siem-service` target `UP` and the Grafana baseline dashboard renders all panels without "No data" except where genuinely zero.
+13. `RECON.md` and `REGRESSION.md` are present in the diff and accurate.
+14. The diff does not modify any service implementation outside `siem-service` other than the explicit additions to `rbac.go`, the gateway routes file, compose, ecosystem, Prometheus config, and the auth-db migration.
+
+---
+
+## 8. Deliverables manifest (the diff must contain exactly these — no more, no less)
+
+**New files:**
+- `backend/cmd/siem-service/main.go`
+- `backend/cmd/siem-service/Dockerfile`
+- `backend/cmd/siem-service/integration_test.go`
+- `backend/internal/siem/` package tree (every file listed in §4.2)
+- `migrations/siem_db/000001_init.up.sql`
+- `migrations/siem_db/000001_init.down.sql`
+- `migrations/auth_db/NNNNNN_siem_permissions.up.sql` (NNNNNN = next sequence; check §2)
+- `migrations/auth_db/NNNNNN_siem_permissions.down.sql`
+- `deploy/monitoring/grafana/siem-service-baseline.json`
+- `scripts/smoke/siem-01.sh`
+- `scripts/check-siem-contract.sh`
+- `docs/siem/README.md` (overview, env vars table, run-locally instructions, troubleshooting)
+- `docs/siem/01-foundation.md` (what SIEM-01 delivers)
+- `RECON.md` (working-branch reconnaissance report)
+- `REGRESSION.md` (test results report)
+
+**Modified files (only these — every edit justified inline in the PR):**
+- `backend/internal/auth/rbac.go`
+- `backend/internal/gateway/config/routes.go`
+- `docker-compose.yml`
+- `ecosystem.local.js`
+- `deploy/monitoring/prometheus/prometheus.yml`
+- `Makefile` (top-level) and `backend/Makefile` if it exists
+- `frontend/src/auth/permissions.ts` (or equivalent — confirm in §2; touch only if it exists)
+- `go.mod` / `go.sum` (only if a strictly necessary new dependency was justified)
+
+Any other modified file is a red flag and must be justified in the PR description, or it's rejected.
+
+---
+
+## 9. PR / commit conventions
+
+- Branch name: `siem-prompt-01-foundation`.
+- Commit message convention: conventional commits, scoped `siem`. Example: `feat(siem): bootstrap siem-service skeleton`.
+- Tag the merge commit with `siem-prompt-01`.
+- PR title: `SIEM-01: Service skeleton, RBAC, gateway prefix, baseline migrations`.
+- PR body must include: a copy of this prompt's §7 (acceptance), each item ticked or with a link to the evidence (CI run, screenshot, log excerpt); a copy of §8 (manifest) ticked file by file; a link to `RECON.md` and `REGRESSION.md`.
+
+---
+
+## 10. Definition of Done (the agent self-certifies this checklist before requesting review)
+
+- [ ] `RECON.md` committed and accurate.
+- [ ] Package tree matches §4.2 exactly.
+- [ ] All env vars from §4.3 implemented, validated, and documented.
+- [ ] RBAC constants added, role map updated, auth-db migration written and reversible.
+- [ ] Gateway route group added with correct precedence and rate limits.
+- [ ] `siem_db` migration applies cleanly, rolls back cleanly, is idempotent.
+- [ ] `docker-compose.yml`, `ecosystem.local.js`, Prometheus config updated.
+- [ ] Grafana baseline dashboard committed and renders.
+- [ ] All unit tests pass; coverage ≥ 80% on new code.
+- [ ] All integration tests pass under `-race`.
+- [ ] Smoke script passes against a fresh compose stack.
+- [ ] Contract script passes.
+- [ ] **Whole-monorepo build and test suite still pass** with no regressions.
+- [ ] `REGRESSION.md` committed listing every existing suite + result.
+- [ ] Frontend typecheck still green (if applicable).
+- [ ] No anti-patterns from §6 present (the agent must explicitly confirm each, one line each, in the PR body).
+- [ ] No files modified outside §8 manifest.
+- [ ] PR body has §7 ticked with evidence.
+
+---
+
+## 11. Stop-and-ask triggers (the agent must halt rather than improvise)
+
+Halt and request human input if any of the following occur:
+
+- `RECON.md` reveals a convention that contradicts §1 (e.g., the platform uses `go-chi/chi` v4 not v5, or uses Prometheus default registry, or migrations are Go-coded).
+- Port `8092` or `9082` is taken.
+- A new permission string already exists in `rbac.go`.
+- The role `analyst` / `tenant_admin` / `super_admin` does not exist (do not invent — ask).
+- An existing service's tests fail under the new branch — even one. (Investigate first, but if root cause is platform-level, ask.)
+- The audit chain client API has changed since the prompt was authored.
+- The gateway route binding model uses different symbol names than §4.5 assumes.
+
+The agent must produce a numbered list of unresolved questions and stop. Do not silently adapt.
+
+---
+
+## 12. Rollback plan
+
+To reverse SIEM-01 cleanly:
+1. `git revert <merge_commit>` on the foundation branch.
+2. `make compose-down && make compose-up` — siem-service no longer present, all other services healthy.
+3. Roll back the auth-db migration: `migrate -path migrations/auth_db -database "$AUTH_DSN" down 1`.
+4. Drop the SIEM database: `psql -c "DROP DATABASE siem_db;"`.
+5. Confirm gateway no longer advertises `/api/v1/siem/**` (`curl` returns 404).
+6. Confirm Prometheus no longer scrapes the missing target (target list does not contain `siem-service`).
+
+The rollback must leave the platform byte-identical to the pre-SIEM-01 state — no orphaned permissions, no orphaned migrations, no orphaned containers.
+
+---
+
+## 13. Notes for the agent
+
+- This prompt is the **foundation gate**. Every later SIEM prompt assumes everything here is bulletproof. Sloppiness here multiplies cost downstream by ~30. Spend the extra hours.
+- When you finish, the user should be able to start SIEM-02 with zero foundational work — no "TODO: fix the metrics registry later," no "TODO: add audit chaining," no skipped tests. **Zero stubs.**
+- The diff is large but bounded; do not bleed into business logic. The temptation to add `siem.sources` table now must be resisted — that is SIEM-03 and only SIEM-03.
+
+*End of matured SIEM-01.*

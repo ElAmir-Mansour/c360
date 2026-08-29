@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Secrets / local config
+.env
+
+# Local model cache (sentence-transformers / HF)
+models/
+.cache/
+
+# Never commit corpus bytes (they live outside this dir and are gitignored at repo root)
+*.pdf

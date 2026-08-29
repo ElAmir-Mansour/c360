@@ -1,0 +1,832 @@
+{
+  "$schema": "https://clario360.local/schemas/watheeq-rtm-coverage.v1.json",
+  "source_workbook": "Clario360 Watheeq RTM v2.xlsx",
+  "generated_on": "2026-06-14",
+  "scope": "Traceability and API/client coverage map for the Watheeq/Lex implementation hooks present in this branch.",
+  "summary": {
+    "traceability_matrix": {
+      "total": 12,
+      "by_status": {
+        "Delivered": 9,
+        "Partial": 2,
+        "Planned": 1
+      },
+      "by_tier": {
+        "NOW": 9,
+        "NEXT": 3
+      },
+      "by_priority": {
+        "Must": 3,
+        "Should": 9
+      },
+      "delivered_coverage": 0.75
+    },
+    "proposed_features": {
+      "total": 100,
+      "by_tier": {
+        "NOW": 20,
+        "NEXT": 48,
+        "LATER": 32
+      },
+      "by_priority": {
+        "Must": 13,
+        "Should": 44,
+        "Could": 43
+      },
+      "now_or_must": 27,
+      "status": {
+        "Proposed": 100
+      }
+    }
+  },
+  "route_inventory": {
+    "gateway": {
+      "prefix": "/api/v1/lex",
+      "aliases": [
+        "/api/v1/watheeq"
+      ],
+      "service": "lex-service",
+      "entitlement": "app.watheeq"
+    },
+    "backend_source": "backend/internal/lex/handler/routes.go",
+    "frontend_client": "frontend/src/lib/enterprise/api.ts",
+    "frontend_pages": [
+      "/lex",
+      "/lex/contracts",
+      "/lex/contracts/[id]",
+      "/lex/documents",
+      "/lex/compliance",
+      "/lex/matters",
+      "/lex/obligations",
+      "/lex/workflow-policies",
+      "/lex/reports",
+      "/lex/signatures",
+      "/lex/clause-library",
+      "/lex/regulations"
+    ],
+    "api_contract": "docs/api/watheeq-lex-service.openapi.yaml",
+    "api_inventory": "docs/api/watheeq-lex-api-inventory.md",
+    "docs_api_state": "openapi_contract_present",
+    "contract_visible_slices": [
+      "GET /api/v1/lex/contracts/{id}/brief",
+      "GET /api/v1/lex/contracts/renewal-warnings",
+      "POST /api/v1/lex/contracts/{id}/classify",
+      "GET /api/v1/lex/contracts/{id}/timeline",
+      "GET /api/v1/lex/contracts/{id}/clause-deviations",
+      "POST /api/v1/lex/matters/conflict-check",
+      "GET /api/v1/lex/documents/repository-summary",
+      "POST /api/v1/lex/documents/bulk-import",
+      "POST /api/v1/lex/clause-library/{id}/governance",
+      "POST /api/v1/lex/regulations/{id}/governance",
+      "LEX_OBLIGATION_REMINDER_PROVIDER_MODE/ENDPOINT/API_KEY/TIMEOUT",
+      "POST /api/v1/lex/workflows/tasks/bulk-decision",
+      "GET /api/v1/lex/workflow-policies/approval",
+      "POST /api/v1/lex/workflow-policies/approval",
+      "GET /api/v1/lex/workflow-policies/approval/recommend",
+      "GET /api/v1/lex/workflow-policies/approval/analytics",
+      "GET /api/v1/lex/signatures/{id}/recipients/{recipientId}/rendering",
+      "GET/POST/PUT/DELETE /api/v1/lex/playbooks",
+      "frontend/src/__tests__/integration/lex-overview-watheeq.test.tsx"
+    ],
+    "route_name_note": "Workbook and entitlement use Watheeq; /api/v1/watheeq is a runtime alias while /api/v1/lex remains backward compatible."
+  },
+  "domain_coverage": {
+    "contracts": {
+      "hook": "route_backed_contract_brief_intelligence_openapi_frontend_sdk",
+      "evidence": [
+        "/api/v1/lex/contracts CRUD/detail routes",
+        "/api/v1/lex/contracts/{id}/brief route",
+        "/api/v1/lex/reports/contracts JSON/CSV route",
+        "/api/v1/lex/contracts/renewal-warnings route",
+        "/api/v1/lex/contracts/{id}/classify route",
+        "/api/v1/lex/contracts/{id}/timeline route",
+        "backend/internal/lex/service/contract_service_test.go::TestContractReportFilters_IncludesAppliedFilters",
+        "backend/internal/lex/handler/report_test.go::TestWriteContractReportCSVShape",
+        "backend/internal/lex/service/contract_service_test.go::TestBuildContractBrief_UsesDetailAnalysisClausesAndMetadata",
+        "backend/internal/lex/service/contract_service_test.go::TestBuildContractRenewalWarningSummary_UsesConfiguredLeadAndSorts",
+        "backend/internal/lex/service/contract_service_test.go::TestClassifyContract_RecommendsAndOverrides",
+        "backend/internal/lex/service/contract_service_test.go::TestBuildContractTimeline_IncludesVersionsAndMetadataEvents",
+        "backend/internal/lex/integration/contract_rtm_routes_test.go::TestContractRenewalWarningsAcceptance",
+        "backend/internal/lex/integration/contract_rtm_routes_test.go::TestContractClassifyAcceptance",
+        "backend/internal/lex/integration/contract_rtm_routes_test.go::TestContractTimelineAcceptance",
+        "backend/internal/lex/integration/contract_rtm_routes_test.go::TestContractRedlineAcrossUploadedVersionsAcceptance",
+        "backend/internal/lex/integration/contract_rtm_routes_test.go::TestContractBriefAndKeyTermAcceptance",
+        "backend/internal/lex/integration/dashboard_test.go::TestDashboardKPIAcceptanceFixture",
+        "frontend getContractBrief/getContractRenewalWarnings/classifyContract/getContractTimeline",
+        "frontend LexContractBrief/LexContractRenewalWarningSummary/LexContractClassificationResult/LexContractTimeline types",
+        "Python SDK lex.contracts.brief/renewal_warnings/classify/timeline",
+        "OpenAPI ContractBriefEnvelope/ContractRenewalWarningSummaryEnvelope/ContractClassificationResultEnvelope/ContractTimelineEnvelope"
+      ],
+      "gap": "No remaining route-backed brief/redline/dashboard fixture gap; richer negotiated key-term schemas remain backlog"
+    },
+    "matters": {
+      "hook": "backend_and_frontend_route_backed_with_conflict_check_and_reports",
+      "evidence": [
+        "/api/v1/lex/matters CRUD/status routes",
+        "/api/v1/lex/matters/conflict-check route",
+        "backend/internal/lex/integration/matter_conflict_check_test.go::TestMatterConflictCheckAcceptance",
+        "/api/v1/lex/matters/{id}/triage route",
+        "backend/internal/lex/integration/matter_triage_test.go::TestMatterTriageWorkflowAcceptance",
+        "matter-contract linking routes",
+        "/api/v1/lex/reports/matters JSON/CSV route",
+        "backend/internal/lex/service/report_test.go",
+        "backend/internal/lex/handler/report_test.go",
+        "/lex/matters page",
+        "frontend listMatters/getMatter/checkMatterConflict",
+        "Python SDK lex.matters.conflict_check",
+        "frontend API constants",
+        "contract Matter Link panel"
+      ],
+      "gap": "No remaining route-backed matter triage/conflict acceptance gap"
+    },
+    "obligations": {
+      "hook": "backend_frontend_sdk_route_backed_with_extraction_reminder_actions_fail_closed_http_provider_dispatcher_and_reports",
+      "evidence": [
+        "/api/v1/lex/obligations CRUD/status routes",
+        "/api/v1/lex/contracts/{id}/obligations/extract deterministic commit route",
+        "/api/v1/lex/contracts/renewal-warnings configurable warning summary route",
+        "backend/internal/lex/integration/contract_rtm_routes_test.go::TestContractRenewalWarningsAcceptance",
+        "/api/v1/lex/obligations/reminders plan route",
+        "/api/v1/lex/obligations/reminders/enqueue outbox route",
+        "/api/v1/lex/obligations/reminders/outbox/dispatch route",
+        "/api/v1/lex/obligations/reminders/outbox/{outboxId}/dispatch route",
+        "/api/v1/lex/obligations/reminders/outbox/{outboxId}/delivery route",
+        "/api/v1/lex/obligations/{id}/reminders/sent route",
+        "/api/v1/lex/reports/obligations JSON/CSV route",
+        "backend/migrations/lex_db/000007_obligation_notification_outbox.up.sql",
+        "backend/internal/lex/service/matter_obligation_service_test.go",
+        "backend/internal/lex/service/obligation_reminder_http.go",
+        "backend/internal/lex/service/obligation_reminder_http_test.go",
+        "LEX_OBLIGATION_REMINDER_PROVIDER_MODE",
+        "LEX_OBLIGATION_REMINDER_PROVIDER_ENDPOINT",
+        "LEX_OBLIGATION_REMINDER_PROVIDER_API_KEY",
+        "LEX_OBLIGATION_REMINDER_PROVIDER_TIMEOUT",
+        "contract/matter-scoped obligation list routes",
+        "/lex/obligations page write/reminder actions",
+        "frontend listObligations/getObligation/createObligation/updateObligation/updateObligationStatus/deleteObligation",
+        "frontend listContractObligations/listMatterObligations/extractContractObligations/getObligationReminderPlan/enqueueObligationReminders/markObligationReminderSent/markObligationReminderDelivery",
+        "Python SDK obligations create/update/delete/status/list_by_contract/list_by_matter/extract_from_contract/reminder_plan/enqueue/mark_sent/mark_delivery",
+        "backend/internal/lex/integration/obligation_rtm_routes_test.go::TestObligationRTMCRUDAndScopedListsAcceptance",
+        "backend/internal/lex/integration/obligation_rtm_routes_test.go::TestObligationRTMExtractionAndReminderRoutesAcceptance",
+        "backend/internal/lex/service/obligation_extraction_autonomous_test.go::TestExtractionChain_EnricherProducesDraftsFromContractTextWithoutManualItems",
+        "backend/internal/lex/integration/obligation_autonomous_extraction_test.go::TestObligationRTMAutonomousExtractionCommitsLLMSuggestions",
+        "frontend API constants",
+        "contract obligations panel",
+        "contracts expiring and renewal warning routes",
+        "compliance alerts"
+      ],
+      "gap": "Live production calendar/email adapter acceptance, attestation, and evidence-vault acceptance not proven"
+    },
+    "clause_library": {
+      "hook": "backend_frontend_sdk_route_backed_ranked_semantic_search_and_governance_decisions",
+      "evidence": [
+        "/api/v1/lex/clause-library CRUD routes",
+        "/api/v1/lex/clause-library/search ranked and semantic search route",
+        "/api/v1/lex/clause-library/{id}/governance route",
+        "bilingual AR/EN clause fields",
+        "version/deprecation metadata",
+        "backend/internal/lex/service/library_service.go deterministic local concept-vector scoring",
+        "backend/internal/lex/repository/library_repo.go semantic search skips keyword pruning",
+        "backend/internal/lex/service/library_service_test.go::TestSemanticClauseLibrarySearchUsesConceptVectors",
+        "backend/internal/lex/repository/library_repo_test.go::TestUseLibraryKeywordPredicateSkipsQueryForSemanticMode",
+        "/lex/clause-library page",
+        "frontend listClauseLibrary/getClauseLibraryEntry/searchClauseLibrary/decideClauseLibraryGovernance",
+        "Python SDK lex.clause_library search semantic params and metadata parsing",
+        "OpenAPI LibraryGovernanceDecisionRequest/ClauseLibraryEnvelope",
+        "frontend API constants",
+        "/contracts/{id}/clauses",
+        "/contracts/{id}/clauses/{clauseId}/review",
+        "Clause Library Readiness panel"
+      ],
+      "gap": "No remaining route-backed governance decision acceptance gap"
+    },
+    "regulation_library": {
+      "hook": "backend_frontend_sdk_route_backed_ranked_semantic_search_and_governance_decisions",
+      "evidence": [
+        "/api/v1/lex/regulations CRUD routes",
+        "/api/v1/lex/regulations/search ranked and semantic search route",
+        "/api/v1/lex/regulations/{id}/governance route",
+        "backend/internal/lex/service/library_service_test.go::TestSemanticRegulationLibrarySearchUsesMappedClauseVectorMetadata",
+        "regulation-to-clause mapping routes",
+        "citation/authority/effective date fields",
+        "/lex/regulations page",
+        "frontend listRegulations/getRegulation/searchRegulations/decideRegulationGovernance",
+        "Python SDK lex.regulations search semantic params and metadata parsing",
+        "OpenAPI LibraryGovernanceDecisionRequest/RegulationEnvelope",
+        "frontend API constants",
+        "/compliance/rules",
+        "Regulation Library UI",
+        "Active Regulations overview"
+      ],
+      "gap": "Automated regulatory update ingestion not proven"
+    },
+    "signatures": {
+      "hook": "backend_and_frontend_route_backed_with_http_dispatch_hmac_and_custody",
+      "evidence": [
+        "/api/v1/lex/signatures list/create/get routes",
+        "/api/v1/lex/signatures/{id}/send route",
+        "/api/v1/lex/signatures/{id}/cancel route",
+        "/api/v1/lex/signatures/{id}/recipients/{recipientId}/actions route",
+        "/api/v1/lex/signatures/{id}/provider-events route with HMAC validation",
+        "/api/v1/lex/signatures/{id}/custody route",
+        "backend/internal/lex/service/signature_service.go::SignatureProviderDispatcher",
+        "backend/internal/lex/service/signature_provider_http.go",
+        "backend/internal/lex/service/signature_provider_http_test.go",
+        "backend/internal/lex/service/signature_service_test.go::TestDeterministicSignatureProviderDispatcherProducesOutboundProof",
+        "backend/internal/lex/service/signature_service_test.go::TestApplySignatureProviderDispatchPersistsProofAndRecipientIDs",
+        "backend/migrations/lex_db/000006_signature_provider_events.up.sql",
+        "backend/migrations/lex_db/000008_signature_custody.up.sql",
+        "/lex/signatures page",
+        "frontend signature types/client methods"
+      ],
+      "gap": "Live Nafath/e-sign credentials and external signed-file vault/indexing are not proven"
+    },
+    "workflow": {
+      "hook": "persistent_doa_policy_catalog_analytics_plus_productized_parallel_quorum_contract_workflow",
+      "evidence": [
+        "/api/v1/lex/contracts/{id}/review route",
+        "/api/v1/lex/workflows route",
+        "/api/v1/lex/workflows/{workflowInstanceID}/tasks/{taskID}/decision route",
+        "backend/internal/lex/service/workflow_service.go",
+        "backend/internal/lex/integration/watheeq_workflow_test.go::TestWatheeqWorkflowApprovalPolicyFormsAuthorityAndOutOfOffice",
+        "frontend/src/app/(dashboard)/lex/contracts/[id]/page.tsx review dialog DoA/form/out-of-office controls",
+        "frontend/src/types/suites.ts typed workflow approval payloads",
+        "backend/internal/workflow/service/engine_service.go approval_chain quorum resume",
+        "backend/internal/workflow/service/task_service.go delegation validation",
+        "backend/internal/workflow/service/engine_service_approval_test.go",
+        "backend/internal/lex/integration/contract_lifecycle_test.go::TestContractFullLifecycle",
+        "backend/internal/lex/integration/contract_lifecycle_test.go::TestContractWorkflowDecisionApproveAdvancesContract",
+        "backend/internal/lex/integration/contract_lifecycle_test.go::TestContractWorkflowDecisionRejectsWrongTenantAndAlreadyDecided",
+        "/api/v1/lex/workflows/tasks/bulk-decision route",
+        "backend/internal/lex/integration/watheeq_workflow_test.go::TestWatheeqWorkflowBulkDecisionAcceptance",
+        "frontend bulkDecideWorkflowTasks client and Review Queue selected-task bulk actions",
+        "Python SDK lex.workflows.bulk_decide",
+        "OpenAPI WorkflowBulkDecisionResultEnvelope",
+        "/api/v1/lex/workflow-policies/approval route",
+        "/api/v1/lex/workflow-policies/approval/recommend route",
+        "/api/v1/lex/workflow-policies/approval/analytics route",
+        "backend/migrations/lex_db/000009_approval_policies.up.sql",
+        "backend/internal/lex/integration/watheeq_workflow_test.go::TestWatheeqWorkflowPersistedApprovalPolicyRoutesAndReview",
+        "frontend listApprovalPolicies/createApprovalPolicy/recommendApprovalPolicy/getApprovalPolicyAnalytics client",
+        "frontend/src/app/(dashboard)/lex/workflow-policies/page.tsx approval-policy admin and analytics UX",
+        "frontend Lex Workflow Policies navigation and breadcrumb",
+        "Python SDK lex.workflows approval policy and analytics methods",
+        "OpenAPI ApprovalPolicyAnalyticsEnvelope",
+        "/api/v1/workflows/forms CRUD routes",
+        "backend/internal/workflow/service/form_service.go tenant-scoped FormService",
+        "backend/internal/workflow/handler/form_handler_test.go"
+      ],
+      "gap": "No remaining route-backed approval-policy workflow analytics gap"
+    },
+    "repository": {
+      "hook": "document_repository_summary_and_bulk_import_route_backed_openapi_frontend_sdk",
+      "evidence": [
+        "/api/v1/lex/documents CRUD/version routes",
+        "/api/v1/lex/documents/repository-summary route",
+        "/api/v1/lex/documents/bulk-import route",
+        "backend/internal/lex/service/document_service_test.go::TestBuildDocumentRepositorySummaryAggregatesMetadata",
+        "backend/internal/lex/service/document_service_test.go::TestPrepareBulkImportDocumentAddsMigrationOCRAndIndexMetadata",
+        "backend/internal/lex/integration/document_repository_rtm_routes_test.go::TestDocumentBulkImportRepositoryAcceptance",
+        "frontend getDocumentRepositorySummary",
+        "frontend bulkImportDocuments",
+        "frontend LexDocumentRepositorySummary types",
+        "frontend LexDocumentBulkImportResult types",
+        "Python SDK lex.documents.repository_summary",
+        "Python SDK lex.documents.bulk_import",
+        "OpenAPI DocumentRepositorySummaryEnvelope",
+        "OpenAPI DocumentBulkImportResultEnvelope"
+      ],
+      "gap": "Live OCR provider processing and external repository indexing acceptance are not proven"
+    },
+    "security": {
+      "hook": "watheeq_permission_alias_tenant_audit_mapping_ingestion_acceptance_passes",
+      "evidence": [
+        "backend/internal/lex/integration/security_acceptance_test.go::TestWatheeqSecurityAcceptancePermissionGuardsAndAlias",
+        "backend/internal/lex/integration/security_acceptance_test.go::TestWatheeqSecurityAcceptanceTenantIsolation",
+        "backend/internal/lex/service/common_test.go::TestWriteEventAddsWatheeqAuditMetadata",
+        "backend/internal/lex/service/common_test.go::TestLexEventSubjectUsesDomainIdentifiers",
+        "backend/internal/audit/consumer/event_mapper_test.go::TestMapCloudEvent_WatheeqDomainEvent",
+        "backend/internal/audit/service/watheeq_ingestion_test.go::TestWatheeqLexCloudEventIngestsWithHashChain",
+        "/api/v1/lex and /api/v1/watheeq alias parity",
+        "lex:read and lex:write permission guards",
+        "tenant isolation not-found/list exclusion checks"
+      ],
+      "gap": "KSA residency, deployment encryption proof, and richer ABAC attributes beyond role/tenant are not proven"
+    }
+  },
+  "traceability_rows": [
+    {
+      "id": "WTQ-001",
+      "theme": "Contracts",
+      "tier": "NOW",
+      "priority": "Must",
+      "workbook_status": "Delivered",
+      "hook": "route_backed_openapi_documented_full_lifecycle_test_passing",
+      "gap": "No remaining core lifecycle acceptance gap; richer negotiated key-term schemas remain backlog"
+    },
+    {
+      "id": "WTQ-002",
+      "theme": "Contracts",
+      "tier": "NOW",
+      "priority": "Should",
+      "workbook_status": "Delivered",
+      "hook": "route_backed_openapi_documented_with_contract_brief",
+      "gap": "Route-backed key-term classification and brief fixtures are now documented; richer negotiated key-term schemas remain backlog"
+    },
+    {
+      "id": "WTQ-003",
+      "theme": "Contracts",
+      "tier": "NOW",
+      "priority": "Should",
+      "workbook_status": "Delivered",
+      "hook": "backend_and_frontend_route_backed_openapi_documented",
+      "gap": "No remaining route-backed redline acceptance fixture gap"
+    },
+    {
+      "id": "WTQ-004",
+      "theme": "Contracts",
+      "tier": "NEXT",
+      "priority": "Must",
+      "workbook_status": "Partial",
+      "hook": "persistent_doa_policy_catalog_admin_ui_analytics_core_forms_admin_and_contract_review_quorum_routing",
+      "gap": "No remaining route-backed approval-policy workflow analytics gap"
+    },
+    {
+      "id": "MAT-001",
+      "theme": "Matters",
+      "tier": "NOW",
+      "priority": "Should",
+      "workbook_status": "Delivered",
+      "hook": "backend_and_frontend_route_backed_with_conflict_check_and_triage_acceptance",
+      "gap": "No remaining route-backed matter triage/conflict acceptance gap"
+    },
+    {
+      "id": "OBL-001",
+      "theme": "Obligations",
+      "tier": "NOW",
+      "priority": "Should",
+      "workbook_status": "Delivered",
+      "hook": "backend_frontend_sdk_route_backed_with_autonomous_extraction_reminder_actions_and_fail_closed_http_provider_dispatcher",
+      "gap": "Live production calendar/email adapter acceptance, attestation, and evidence-vault acceptance not proven"
+    },
+    {
+      "id": "CLB-001",
+      "theme": "Clause & Reg",
+      "tier": "NOW",
+      "priority": "Should",
+      "workbook_status": "Delivered",
+      "hook": "backend_frontend_sdk_route_backed_ranked_semantic_search_and_governance_decisions",
+      "gap": "No remaining route-backed governance decision acceptance gap"
+    },
+    {
+      "id": "CLB-002",
+      "theme": "Clause & Reg",
+      "tier": "NOW",
+      "priority": "Should",
+      "workbook_status": "Delivered",
+      "hook": "backend_frontend_sdk_route_backed_with_governance_decisions",
+      "gap": "Automated regulatory update ingestion not proven"
+    },
+    {
+      "id": "WTQ-DASH",
+      "theme": "Contracts",
+      "tier": "NOW",
+      "priority": "Should",
+      "workbook_status": "Delivered",
+      "hook": "route_backed_openapi_documented_dashboard_kpi_acceptance",
+      "gap": "No remaining dashboard/KPI acceptance fixture gap"
+    },
+    {
+      "id": "WTQ-UI",
+      "theme": "Quality / NFR",
+      "tier": "NOW",
+      "priority": "Should",
+      "workbook_status": "Partial",
+      "hook": "ui_pages_with_watheeq_workflow_controls_policy_admin_and_overview_rtl_bulk_decision_acceptance",
+      "gap": "No remaining overview-level RTL/LTR acceptance gap; broader page-by-page Arabic localization remains backlog"
+    },
+    {
+      "id": "WTQ-INT",
+      "theme": "Quality / NFR",
+      "tier": "NEXT",
+      "priority": "Must",
+      "workbook_status": "Planned",
+      "hook": "platform_hook_with_core_forms_admin_persistent_watheeq_doa_policy_catalog_admin_ui_analytics_forms_ooo_and_parallel_quorum_routing",
+      "gap": "No remaining route-backed approval-policy workflow analytics gap"
+    },
+    {
+      "id": "WTQ-RPT",
+      "theme": "Contracts",
+      "tier": "NEXT",
+      "priority": "Should",
+      "workbook_status": "Delivered",
+      "hook": "contract_matter_obligation_reports_route_backed_openapi_documented",
+      "gap": "No remaining RTM gap for contract/matter/obligation JSON/CSV reports; custom report builder and scheduled exports remain proposed backlog"
+    }
+  ],
+  "proposed_feature_groups": [
+    {
+      "theme": "AI Drafting",
+      "count": 11,
+      "now": 1,
+      "must": 0,
+      "ids": [
+        "WTQ-AID-01",
+        "WTQ-AID-02",
+        "WTQ-AID-03",
+        "WTQ-AID-04",
+        "WTQ-AID-05",
+        "WTQ-AID-06",
+        "WTQ-AID-07",
+        "WTQ-AID-08",
+        "WTQ-AID-09",
+        "WTQ-AID-10",
+        "WTQ-AID-11"
+      ],
+      "hook": "mostly_no_first_class_hook"
+    },
+    {
+      "theme": "Review & Risk",
+      "count": 11,
+      "now": 1,
+      "must": 3,
+      "ids": [
+        "WTQ-RSK-01",
+        "WTQ-RSK-02",
+        "WTQ-RSK-03",
+        "WTQ-RSK-04",
+        "WTQ-RSK-05",
+        "WTQ-RSK-06",
+        "WTQ-RSK-07",
+        "WTQ-RSK-08",
+        "WTQ-RSK-09",
+        "WTQ-RSK-10",
+        "WTQ-RSK-11"
+      ],
+      "hook": "partial_analysis_classification_compliance_and_signature_gate_hooks"
+    },
+    {
+      "theme": "Obligations",
+      "count": 10,
+      "now": 2,
+      "must": 2,
+      "ids": [
+        "WTQ-OBL-01",
+        "WTQ-OBL-02",
+        "WTQ-OBL-03",
+        "WTQ-OBL-04",
+        "WTQ-OBL-05",
+        "WTQ-OBL-06",
+        "WTQ-OBL-07",
+        "WTQ-OBL-08",
+        "WTQ-OBL-09",
+        "WTQ-OBL-10"
+      ],
+      "hook": "backend_and_frontend_route_backed_with_autonomous_extraction_renewal_warnings_reminder_outbox_http_provider_config_and_reports"
+    },
+    {
+      "theme": "Matters",
+      "count": 8,
+      "now": 2,
+      "must": 0,
+      "ids": [
+        "WTQ-MAT-01",
+        "WTQ-MAT-02",
+        "WTQ-MAT-03",
+        "WTQ-MAT-04",
+        "WTQ-MAT-05",
+        "WTQ-MAT-06",
+        "WTQ-MAT-07",
+        "WTQ-MAT-08"
+      ],
+      "hook": "backend_and_frontend_route_backed_with_conflict_check"
+    },
+    {
+      "theme": "Clause & Reg",
+      "count": 8,
+      "now": 1,
+      "must": 0,
+      "ids": [
+        "WTQ-CLB-01",
+        "WTQ-CLB-02",
+        "WTQ-CLB-03",
+        "WTQ-CLB-04",
+        "WTQ-CLB-05",
+        "WTQ-CLB-06",
+        "WTQ-CLB-07",
+        "WTQ-CLB-08"
+      ],
+      "hook": "backend_frontend_sdk_route_backed_with_ranked_semantic_search_and_governance_decisions"
+    },
+    {
+      "theme": "Workflow",
+      "count": 9,
+      "now": 3,
+      "must": 1,
+      "ids": [
+        "WTQ-WFL-01",
+        "WTQ-WFL-02",
+        "WTQ-WFL-03",
+        "WTQ-WFL-04",
+        "WTQ-WFL-05",
+        "WTQ-WFL-06",
+        "WTQ-WFL-07",
+        "WTQ-WFL-08",
+        "WTQ-WFL-09"
+      ],
+      "hook": "persistent_watheeq_doa_policy_catalog_contract_review_single_bulk_and_parallel_quorum_task_routing"
+    },
+    {
+      "theme": "Collaboration",
+      "count": 7,
+      "now": 2,
+      "must": 0,
+      "ids": [
+        "WTQ-COL-01",
+        "WTQ-COL-02",
+        "WTQ-COL-03",
+        "WTQ-COL-04",
+        "WTQ-COL-05",
+        "WTQ-COL-06",
+        "WTQ-COL-07"
+      ],
+      "hook": "contract_timeline_redline_and_signature_handoff_hooks"
+    },
+    {
+      "theme": "Signature",
+      "count": 6,
+      "now": 1,
+      "must": 1,
+      "ids": [
+        "WTQ-SIG-01",
+        "WTQ-SIG-02",
+        "WTQ-SIG-03",
+        "WTQ-SIG-04",
+        "WTQ-SIG-05",
+        "WTQ-SIG-06"
+      ],
+      "hook": "backend_and_frontend_route_backed_with_http_provider_dispatch_hmac_and_custody"
+    },
+    {
+      "theme": "Repository",
+      "count": 6,
+      "now": 2,
+      "must": 1,
+      "ids": [
+        "WTQ-REP-01",
+        "WTQ-REP-02",
+        "WTQ-REP-03",
+        "WTQ-REP-04",
+        "WTQ-REP-05",
+        "WTQ-REP-06"
+      ],
+      "hook": "contract_document_hook_with_repository_summary_and_bulk_import"
+    },
+    {
+      "theme": "Analytics",
+      "count": 7,
+      "now": 1,
+      "must": 0,
+      "ids": [
+        "WTQ-ANL-01",
+        "WTQ-ANL-02",
+        "WTQ-ANL-03",
+        "WTQ-ANL-04",
+        "WTQ-ANL-05",
+        "WTQ-ANL-06",
+        "WTQ-ANL-07"
+      ],
+      "hook": "dashboard_stats_and_contract_matter_obligation_reports"
+    },
+    {
+      "theme": "Integrations",
+      "count": 7,
+      "now": 1,
+      "must": 1,
+      "ids": [
+        "WTQ-INT-01",
+        "WTQ-INT-02",
+        "WTQ-INT-03",
+        "WTQ-INT-04",
+        "WTQ-INT-05",
+        "WTQ-INT-06",
+        "WTQ-INT-07"
+      ],
+      "hook": "platform_auth_openapi_provider_dispatch_seams_obligation_reminder_http_config_and_provider_event_hmac_intake"
+    },
+    {
+      "theme": "Security & NFR",
+      "count": 10,
+      "now": 3,
+      "must": 4,
+      "ids": [
+        "WTQ-SEC-01",
+        "WTQ-SEC-02",
+        "WTQ-SEC-03",
+        "WTQ-SEC-04",
+        "WTQ-SEC-05",
+        "WTQ-SEC-06",
+        "WTQ-SEC-07",
+        "WTQ-SEC-08",
+        "WTQ-SEC-09",
+        "WTQ-SEC-10"
+      ],
+      "hook": "watheeq_permission_alias_tenant_acceptance_plus_audit_event_mapping_and_ingestion"
+    }
+  ],
+  "now_or_must_queue": [
+    {
+      "id": "WTQ-AID-06",
+      "theme": "AI Drafting",
+      "tier": "NOW",
+      "priority": "Should",
+      "hook": "partial"
+    },
+    {
+      "id": "WTQ-RSK-01",
+      "theme": "Review & Risk",
+      "tier": "NEXT",
+      "priority": "Must",
+      "hook": "partial"
+    },
+    {
+      "id": "WTQ-RSK-02",
+      "theme": "Review & Risk",
+      "tier": "NEXT",
+      "priority": "Must",
+      "hook": "partial"
+    },
+    {
+      "id": "WTQ-RSK-07",
+      "theme": "Review & Risk",
+      "tier": "NOW",
+      "priority": "Should",
+      "hook": "contract_classification_route_frontend_sdk_openapi"
+    },
+    {
+      "id": "WTQ-RSK-10",
+      "theme": "Review & Risk",
+      "tier": "NEXT",
+      "priority": "Must",
+      "hook": "backend_signature_send_gate"
+    },
+    {
+      "id": "WTQ-OBL-01",
+      "theme": "Obligations",
+      "tier": "NEXT",
+      "priority": "Must",
+      "hook": "deterministic_and_autonomous_extraction_commit_route_frontend_sdk_wrappers_acceptance"
+    },
+    {
+      "id": "WTQ-OBL-02",
+      "theme": "Obligations",
+      "tier": "NOW",
+      "priority": "Should",
+      "hook": "backend_frontend_sdk_route_backed_with_reminder_outbox_page_actions_fail_closed_http_provider_dispatcher_config"
+    },
+    {
+      "id": "WTQ-OBL-06",
+      "theme": "Obligations",
+      "tier": "NOW",
+      "priority": "Must",
+      "hook": "contract_renewal_warning_summary_route_frontend_sdk_openapi"
+    },
+    {
+      "id": "WTQ-MAT-01",
+      "theme": "Matters",
+      "tier": "NOW",
+      "priority": "Should",
+      "hook": "backend_and_frontend_route_backed_with_conflict_check_acceptance"
+    },
+    {
+      "id": "WTQ-MAT-06",
+      "theme": "Matters",
+      "tier": "NOW",
+      "priority": "Could",
+      "hook": "backend_and_frontend_route_backed"
+    },
+    {
+      "id": "WTQ-CLB-03",
+      "theme": "Clause & Reg",
+      "tier": "NOW",
+      "priority": "Should",
+      "hook": "backend_frontend_sdk_route_backed_with_ranked_semantic_search_and_governance_decisions"
+    },
+    {
+      "id": "WTQ-WFL-02",
+      "theme": "Workflow",
+      "tier": "NEXT",
+      "priority": "Must",
+      "hook": "persistent_watheeq_approval_policies_and_core_forms_authoring_materialize_parallel_quorum_tasks_and_wait_for_quorum_before_contract_advance"
+    },
+    {
+      "id": "WTQ-WFL-03",
+      "theme": "Workflow",
+      "tier": "NOW",
+      "priority": "Should",
+      "hook": "shared_workflow_delegation_validation_plus_watheeq_out_of_office_reroute"
+    },
+    {
+      "id": "WTQ-WFL-04",
+      "theme": "Workflow",
+      "tier": "NOW",
+      "priority": "Could",
+      "hook": "bulk_workflow_decision_route_frontend_sdk_openapi"
+    },
+    {
+      "id": "WTQ-WFL-07",
+      "theme": "Workflow",
+      "tier": "NOW",
+      "priority": "Could",
+      "hook": "reminder_plan_outbox_and_local_dispatcher_external_delivery_missing"
+    },
+    {
+      "id": "WTQ-COL-06",
+      "theme": "Collaboration",
+      "tier": "NOW",
+      "priority": "Should",
+      "hook": "contract_timeline_route_frontend_sdk_openapi"
+    },
+    {
+      "id": "WTQ-COL-07",
+      "theme": "Collaboration",
+      "tier": "NOW",
+      "priority": "Could",
+      "hook": "backend_and_frontend_signature_handoff_provider_event_hmac_and_custody"
+    },
+    {
+      "id": "WTQ-SIG-01",
+      "theme": "Signature",
+      "tier": "NEXT",
+      "priority": "Must",
+      "hook": "backend_and_frontend_route_backed_http_provider_dispatch_hmac_custody_live_nafath_credentials_unproven"
+    },
+    {
+      "id": "WTQ-SIG-06",
+      "theme": "Signature",
+      "tier": "NOW",
+      "priority": "Should",
+      "hook": "backend_route_backed_signed_file_custody_external_indexing_unproven"
+    },
+    {
+      "id": "WTQ-REP-01",
+      "theme": "Repository",
+      "tier": "NOW",
+      "priority": "Must",
+      "hook": "contract_document_repository_summary_and_bulk_import"
+    },
+    {
+      "id": "WTQ-REP-04",
+      "theme": "Repository",
+      "tier": "NOW",
+      "priority": "Could",
+      "hook": "repository_summary_folders_taxonomy_saved_views_retention_rollup_plus_bulk_import_metadata"
+    },
+    {
+      "id": "WTQ-ANL-01",
+      "theme": "Analytics",
+      "tier": "NOW",
+      "priority": "Should",
+      "hook": "dashboard_and_contract_matter_obligation_reports"
+    },
+    {
+      "id": "WTQ-INT-04",
+      "theme": "Integrations",
+      "tier": "NOW",
+      "priority": "Must",
+      "hook": "platform_auth_watheeq_security_acceptance_provider_dispatch_seams_obligation_reminder_http_config_and_provider_event_intake"
+    },
+    {
+      "id": "WTQ-SEC-01",
+      "theme": "Security & NFR",
+      "tier": "NOW",
+      "priority": "Must",
+      "hook": "watheeq_permission_guard_alias_and_tenant_isolation_acceptance"
+    },
+    {
+      "id": "WTQ-SEC-02",
+      "theme": "Security & NFR",
+      "tier": "NOW",
+      "priority": "Must",
+      "hook": "workflow_signature_custody_event_evidence_plus_audit_mapping_and_ingestion"
+    },
+    {
+      "id": "WTQ-SEC-03",
+      "theme": "Security & NFR",
+      "tier": "NEXT",
+      "priority": "Must",
+      "hook": "missing_proof"
+    },
+    {
+      "id": "WTQ-SEC-04",
+      "theme": "Security & NFR",
+      "tier": "NOW",
+      "priority": "Must",
+      "hook": "signature_custody_hashes_and_platform_crypto_partial"
+    }
+  ],
+  "highest_priority_unresolved_gaps": [
+    "Production external integrations remain open: live Nafath/e-sign credentials, production calendar/email reminder provider credentials/acceptance, public event webhooks, and external signed-file vault/indexing.",
+    "KSA residency, deployment encryption evidence, and richer ABAC attributes remain unproven."
+  ]
+}

@@ -1,0 +1,520 @@
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 16
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: clario360-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be set in .env (see .env.example)}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env (see .env.example)}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB must be set in .env (see .env.example)}
+    ports:
+      - "5436:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./deploy/docker/init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Redis 7.2
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7.2-alpine
+    container_name: clario360-redis
+    restart: unless-stopped
+    ports:
+      - "6382:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Kafka (KRaft mode — no ZooKeeper)
+  # ---------------------------------------------------------------------------
+  kafka:
+    image: bitnamilegacy/kafka:4.0.0-debian-12-r10
+    container_name: clario360-kafka
+    restart: unless-stopped
+    environment:
+      KAFKA_CFG_NODE_ID: "1"
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CFG_NUM_PARTITIONS: "3"
+      KAFKA_CFG_DEFAULT_REPLICATION_FACTOR: "1"
+      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_KRAFT_CLUSTER_ID: clario360-kraft-cluster-id
+    ports:
+      - "9092:9092"
+      - "9094:9094"
+    volumes:
+      - kafka-data:/bitnami/kafka
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Schema Registry (Confluent)
+  # ---------------------------------------------------------------------------
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.6.0
+    container_name: clario360-schema-registry
+    restart: unless-stopped
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9092
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    ports:
+      # Keep the container's standard schema-registry port, but avoid clashing
+      # with the local IAM service, which owns host port 8081.
+      - "8082:8081"
+
+  # ---------------------------------------------------------------------------
+  # MinIO (S3-compatible object storage)
+  # ---------------------------------------------------------------------------
+  minio:
+    image: minio/minio:latest
+    container_name: clario360-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set in .env (see .env.example)}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set in .env (see .env.example)}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # dr-store-init — creates the `dr-recovery-points` bucket with object-lock
+  # GOVERNANCE retention for ClarioDR recovery points.
+  # ---------------------------------------------------------------------------
+  dr-store-init:
+    image: minio/mc:RELEASE.2025-07-16T15-35-03Z
+    container_name: clario360-dr-store-init
+    depends_on:
+      minio: { condition: service_healthy }
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        BUCKET="$${DR_WORM_BUCKET:-dr-recovery-points}"
+        mc alias set dr http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
+        if ! mc ls "dr/$$BUCKET" >/dev/null 2>&1; then
+          mc mb --with-lock "dr/$$BUCKET"
+        fi
+        mc version enable "dr/$$BUCKET"
+        mc retention set --default governance "7d" "dr/$$BUCKET"
+        SENTINEL="__dr_self_test/sentinel-$$(date +%s).txt"
+        echo "dr-worm-sentinel" | mc pipe "dr/$$BUCKET/$$SENTINEL"
+        echo "$$BUCKET bucket ready, sentinel written (inherits 7d GOVERNANCE)"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set in .env (see .env.example)}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set in .env (see .env.example)}
+      DR_WORM_BUCKET: ${DR_WORM_BUCKET:-dr-recovery-points}
+    restart: "no"
+
+  # ---------------------------------------------------------------------------
+  # Keycloak (Identity Provider)
+  # ---------------------------------------------------------------------------
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: clario360-keycloak
+    restart: unless-stopped
+    command: start-dev
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: ${POSTGRES_USER:?POSTGRES_USER must be set in .env}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:?KEYCLOAK_ADMIN must be set in .env}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD must be set in .env}
+      KC_HTTP_PORT: "8180"
+    ports:
+      - "8180:8180"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Prometheus (Metrics Collection)
+  # ---------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: clario360-prometheus
+    restart: unless-stopped
+    ports:
+      - "9099:9090"
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9090/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ---------------------------------------------------------------------------
+  # Grafana (Dashboards & Visualization)
+  # ---------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: clario360-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?GRAFANA_ADMIN_USER must be set in .env}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set in .env}
+      GF_AUTH_ANONYMOUS_ENABLED: ${GRAFANA_ANON_ENABLED:-false}
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./deploy/grafana/provisioning/:/etc/grafana/provisioning/
+      - ./deploy/grafana/dashboards/:/var/lib/grafana/dashboards/
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # ClamAV (Virus Scanner)
+  # ---------------------------------------------------------------------------
+  clamav:
+    image: clamav/clamav:stable
+    container_name: clario360-clamav
+    restart: unless-stopped
+    ports:
+      - "3310:3310"
+    volumes:
+      - clamav-data:/var/lib/clamav
+    healthcheck:
+      test: ["CMD-SHELL", "clamdscan --ping 3 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+  # ---------------------------------------------------------------------------
+  # siem-service (SIEM-01). Application services normally run via PM2
+  # (ecosystem.local.js); this block is provided under the `apps` profile
+  # so a containerised stack can include it via `docker compose
+  # --profile apps up siem-service`. It is intentionally opt-in so the
+  # default `docker compose up` keeps booting only infra.
+  # ---------------------------------------------------------------------------
+  siem-service:
+    profiles: ["apps"]
+    build:
+      context: ./backend
+      dockerfile: cmd/siem-service/Dockerfile
+    container_name: clario360-siem-service
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+      kafka:    { condition: service_healthy }
+    environment:
+      SIEM_HTTP_PORT: "8094"
+      SIEM_ADMIN_PORT: "9082"
+      SIEM_PG_DSN: postgres://clario:clario_dev_pass@postgres:5432/siem_db?sslmode=disable
+      SIEM_REDIS_ADDR: redis:6379
+      SIEM_REDIS_DB: "7"
+      SIEM_KAFKA_BROKERS: kafka:9092
+      SIEM_KAFKA_CLIENT_ID: siem-service
+      SIEM_LOG_LEVEL: info
+      SIEM_ENABLE_PPROF: "true"
+      SIEM_JWT_ISSUER: clario360
+      SIEM_JWT_PUBLIC_KEY_PATH: /run/secrets/jwt-public.pem
+    ports:
+      - "8094:8094"
+      - "8095:8095"   # SIEM-03 mTLS heartbeat listener (collector phone-home)
+      - "9082:9082"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9082/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Jaeger (Distributed Tracing)
+  # ---------------------------------------------------------------------------
+  jaeger:
+    image: jaegertracing/all-in-one:1.58
+    container_name: clario360-jaeger
+    restart: unless-stopped
+    ports:
+      - "4317:4317"
+      - "16686:16686"
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:14269/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ---------------------------------------------------------------------------
+  # OpenSearch (SIEM-02 hot store). Host port 9210 because cib-elasticsearch
+  # already binds 9200. Single-node, security plugin disabled in dev.
+  # ---------------------------------------------------------------------------
+  opensearch:
+    image: opensearchproject/opensearch:2.15.0
+    container_name: clario360-opensearch
+    environment:
+      cluster.name: clario360-siem
+      node.name: opensearch-1
+      discovery.type: single-node
+      bootstrap.memory_lock: "true"
+      OPENSEARCH_JAVA_OPTS: "-Xms1g -Xmx1g"
+      DISABLE_SECURITY_PLUGIN: "true"
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+      DISABLE_PERFORMANCE_ANALYZER_AGENT_CLI: "true"
+    ulimits:
+      memlock: { soft: -1, hard: -1 }
+      nofile:  { soft: 65536, hard: 65536 }
+    ports:
+      - "9210:9200"     # host 9210 → container 9200 (cib-elasticsearch holds 9200)
+      - "9611:9600"
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health | grep -E '\"status\":\"(yellow|green)\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # OpenSearch Dashboards (dev profile only).
+  # ---------------------------------------------------------------------------
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.15.0
+    container_name: clario360-opensearch-dashboards
+    environment:
+      OPENSEARCH_HOSTS: '["http://opensearch:9200"]'
+      DISABLE_SECURITY_DASHBOARDS_PLUGIN: "true"
+    ports:
+      - "5611:5601"
+    depends_on:
+      opensearch: { condition: service_healthy }
+    profiles: ["dev"]
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # MinIO (SIEM cold store). Separate from the existing `minio` service that
+  # backs file-service. Host ports 9010/9011 to avoid clashing with 9000/9001.
+  # ---------------------------------------------------------------------------
+  minio-siem:
+    image: quay.io/minio/minio:RELEASE.2025-06-13T11-33-47Z
+    container_name: clario360-minio-siem
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${SIEM_MINIO_ROOT_USER:-clario_siem_minio}
+      MINIO_ROOT_PASSWORD: ${SIEM_MINIO_ROOT_PASSWORD:-clario_siem_minio_secret}
+    ports:
+      - "9010:9000"
+      - "9011:9001"
+    volumes:
+      - minio-siem-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # siem-store-init — creates the `siem-cold` bucket with object-lock COMPLIANCE
+  # and writes a sentinel object the Go-side WORM self-test relies on.
+  # ---------------------------------------------------------------------------
+  siem-store-init:
+    image: minio/mc:RELEASE.2025-07-16T15-35-03Z
+    container_name: clario360-siem-store-init
+    depends_on:
+      minio-siem: { condition: service_healthy }
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        mc alias set siem http://minio-siem:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
+        if ! mc ls siem/siem-cold >/dev/null 2>&1; then
+          mc mb --with-lock siem/siem-cold
+        fi
+        mc retention set --default compliance "7y" siem/siem-cold
+        mc version enable siem/siem-cold
+        # Write a sentinel object that BucketHealthy's ListObjects probe relies on.
+        # The sentinel inherits the bucket-level 7y COMPLIANCE default — MinIO
+        # object-lock retention granularity is days/years, so seconds-level
+        # per-object override is not supported. The Go-side WORM self-test
+        # writes its own ephemeral object to a separate test bucket with a
+        # 1-day retention when it needs short-lived WORM artifacts.
+        SENTINEL="__siem_self_test/sentinel-$$(date +%s).txt"
+        echo "siem-02-sentinel" | mc pipe siem/siem-cold/$$SENTINEL
+        echo "siem-cold bucket ready, sentinel written (inherits 7y COMPLIANCE)"
+    environment:
+      MINIO_ROOT_USER: ${SIEM_MINIO_ROOT_USER:-clario_siem_minio}
+      MINIO_ROOT_PASSWORD: ${SIEM_MINIO_ROOT_PASSWORD:-clario_siem_minio_secret}
+    restart: "no"
+
+  # ---------------------------------------------------------------------------
+  # Vault (dev mode, not for prod). Dev profile only; the prod overlay
+  # disables this service via the `__never__` profile.
+  # ---------------------------------------------------------------------------
+  vault-dev:
+    image: hashicorp/vault:1.17
+    container_name: clario360-vault-dev
+    cap_add: ["IPC_LOCK"]
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${SIEM_VAULT_DEV_ROOT_TOKEN:-siem-dev-root-token-do-not-use-in-prod}
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+      VAULT_ADDR: http://0.0.0.0:8200
+    command: ["server", "-dev"]
+    ports:
+      - "8200:8200"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "--spider", "http://127.0.0.1:8200/v1/sys/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    profiles: ["dev"]
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # WatheeqTech Second Brain (ai/second-brain) — FastAPI RAG over the Saudi legal
+  # reference corpus. Opt-in via the "ai" profile (heavy: pgvector + a ~2 GB
+  # embedding model), so a normal `docker compose up` never starts it:
+  #     docker compose --profile ai up -d ai-second-brain
+  # lex-service reaches it in-cluster at http://ai-second-brain:8000; for the
+  # HOST pm2 stack set LEX_AI_SERVICE_URL=http://localhost:8000 (port published
+  # below). Corpus + Q&A wiring: WatheeqTech_Library_Runbook.md §4-§6.
+  # ---------------------------------------------------------------------------
+  ai-second-brain-db:
+    profiles: ["ai"]
+    image: pgvector/pgvector:pg16
+    container_name: clario360-ai-second-brain-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: second_brain
+      POSTGRES_PASSWORD: ${AI_DB_PASSWORD:-second_brain}
+      POSTGRES_DB: second_brain
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - ai-second-brain-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U second_brain"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  ai-second-brain:
+    profiles: ["ai"]
+    build:
+      context: ./ai/second-brain
+      dockerfile: Dockerfile
+    container_name: clario360-ai-second-brain
+    restart: unless-stopped
+    depends_on:
+      ai-second-brain-db:
+        condition: service_healthy
+    environment:
+      AI_DATABASE_URL: postgresql://second_brain:${AI_DB_PASSWORD:-second_brain}@ai-second-brain-db:5432/second_brain
+      # /ask (generation) key — blank => /ask returns 503, /search still works.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AI_LLM_MODEL: ${AI_LLM_MODEL:-claude-opus-4-8}
+      AI_EMBEDDING_MODEL: ${AI_EMBEDDING_MODEL:-intfloat/multilingual-e5-large}
+      AI_EMBEDDING_DIM: ${AI_EMBEDDING_DIM:-1024}
+      # Corpus source for /ingest: point LEX_API_URL at the gateway/lex-service to
+      # pull the real catalog+bytes (Option A), else the mounted corpus is used.
+      LEX_API_URL: ${AI_LEX_API_URL:-}
+      LEX_API_TOKEN: ${AI_LEX_API_TOKEN:-}
+      LEX_TENANT_ID: ${AI_LEX_TENANT_ID:-}
+      LIBRARY_PATH: /corpus/WatheeqTech Library
+      MANIFEST_PATH: /corpus/reference_library_manifest.json
+      HF_HOME: /models
+    ports:
+      - "8000:8000"
+    volumes:
+      # Local corpus (Library/ subdir + manifest) mounted read-only for the
+      # no-LEX ingestion path; gitignored, never baked into the image.
+      - ./docs/ClarioWatheeq:/corpus:ro
+      # Persist the downloaded embedding model across restarts.
+      - ai-second-brain-models:/models
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health',timeout=5).status==200 else 1)\""]
+      interval: 15s
+      timeout: 8s
+      retries: 5
+      start_period: 40s
+
+  # ---------------------------------------------------------------------------
+  # MailHog — local SMTP capture for the Lex email-notification path (PRD 13.0,
+  # CAP-157). It accepts mail on :1025 (no auth, no TLS) and exposes a web UI on
+  # :8025 where captured messages are inspected — the demonstrable local delivery
+  # target for the self-contained SMTPLexEmailDispatcher. Point lex-service at it
+  # with:
+  #   LEX_LEX_NOTIFICATION_PROVIDER_MODE=smtp
+  #   LEX_LEX_NOTIFICATION_SMTP_HOST=localhost   # or "mailhog" from another container
+  #   LEX_LEX_NOTIFICATION_SMTP_PORT=1025
+  #   LEX_LEX_NOTIFICATION_SMTP_FROM=lex@clario360.sa
+  # (no username/password/TLS for MailHog). Production swaps these for a real relay.
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: clario360-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # web UI (http://localhost:8025)
+    healthcheck:
+      test: ["CMD", "sh", "-c", "wget -q -O /dev/null http://localhost:8025/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:
+  redis-data:
+  kafka-data:
+  minio-data:
+  clamav-data:
+  prometheus-data:
+  grafana-data:
+  opensearch-data:
+  minio-siem-data:
+  ai-second-brain-pgdata:
+  ai-second-brain-models:

@@ -1,0 +1,145 @@
+/*
+ * Widget-board overrides for react-grid-layout / react-resizable.
+ *
+ * Everything is scoped under `.widget-board` and consumes --ds-* / theme HSL
+ * tokens, so light + dark themes and future re-themes come for free. This file
+ * is imported AFTER the library stylesheets in widget-board.tsx, so equal or
+ * higher specificity here wins the cascade.
+ *
+ * Note on physical properties: react-grid-layout positions items and resize
+ * handles in physical (left/top) space by design; the board mirrors layout
+ * x-coordinates for RTL in JS (see layout-utils.mirrorLayout), so the physical
+ * left/right offsets below are intentional and correct in both directions.
+ */
+
+.widget-board {
+  --wb-gap: var(--ds-space-6);
+}
+
+/* ------------------------------------------------------------------ */
+/* Grid items                                                          */
+/* ------------------------------------------------------------------ */
+
+.widget-board .react-grid-item {
+  transition-property: transform, width, height;
+  transition-duration: var(--ds-duration-normal);
+  transition-timing-function: var(--ds-ease-standard);
+}
+
+.widget-board .react-grid-item.react-draggable-dragging,
+.widget-board .react-grid-item.resizing {
+  z-index: 30;
+  opacity: 0.92;
+  border-radius: var(--ds-radius-2xl);
+  box-shadow: var(--ds-elevation-4);
+}
+
+/* Drop-target placeholder (library default is an opaque red block). */
+.widget-board .react-grid-item.react-grid-placeholder {
+  background: hsl(var(--primary) / 0.08);
+  border: 1px dashed hsl(var(--primary) / 0.5);
+  border-radius: var(--ds-radius-2xl);
+  opacity: 1;
+  transition-duration: var(--ds-duration-fast);
+}
+
+/* ------------------------------------------------------------------ */
+/* Manually-sized frames: fixed height (minus the baked-in gutter) and */
+/* internal scrolling so user-chosen sizes never clip content silently. */
+/* ------------------------------------------------------------------ */
+
+.widget-board .react-grid-item > .wb-frame-fixed {
+  height: calc(100% - var(--wb-gap));
+  overflow-y: auto;
+}
+
+/* Side-by-side rows in the static composition: stretch the wrapped widget to
+   the row height, matching the old CSS-grid `align-items: stretch` look. */
+.wb-fill > * {
+  height: 100%;
+}
+
+/* ------------------------------------------------------------------ */
+/* Resize handles: replace the library's baked-in dark-only artwork    */
+/* with token-colored affordances that read in light and dark themes.  */
+/* ------------------------------------------------------------------ */
+
+.widget-board .react-grid-item > .react-resizable-handle {
+  background-image: none;
+  opacity: 0;
+  transition: opacity var(--ds-duration-fast) var(--ds-ease-standard);
+}
+
+.widget-board .react-grid-item:hover > .react-resizable-handle,
+.widget-board .react-grid-item.resizing > .react-resizable-handle {
+  opacity: 1;
+}
+
+.widget-board .react-grid-item > .react-resizable-handle::after {
+  content: '';
+  position: absolute;
+  border: none;
+  background: hsl(var(--primary) / 0.65);
+  border-radius: var(--ds-radius-pill);
+}
+
+/* Corner handles: small L-shaped brackets. */
+.widget-board .react-grid-item > .react-resizable-handle-se::after,
+.widget-board .react-grid-item > .react-resizable-handle-sw::after {
+  background: none;
+  width: 9px;
+  height: 9px;
+  bottom: 5px;
+  border-bottom: 2px solid hsl(var(--primary) / 0.75);
+  border-radius: 0;
+}
+
+.widget-board .react-grid-item > .react-resizable-handle-se::after {
+  right: 5px;
+  border-right: 2px solid hsl(var(--primary) / 0.75);
+  border-end-end-radius: var(--ds-radius-xs);
+}
+
+.widget-board .react-grid-item > .react-resizable-handle-sw::after {
+  left: 5px;
+  border-left: 2px solid hsl(var(--primary) / 0.75);
+  border-end-start-radius: var(--ds-radius-xs);
+}
+
+/* Edge handles: slim pill grips centered on each edge. */
+.widget-board .react-grid-item > .react-resizable-handle-e::after,
+.widget-board .react-grid-item > .react-resizable-handle-w::after {
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 24px;
+}
+
+.widget-board .react-grid-item > .react-resizable-handle-e::after {
+  right: 2px;
+}
+
+.widget-board .react-grid-item > .react-resizable-handle-w::after {
+  left: 2px;
+}
+
+.widget-board .react-grid-item > .react-resizable-handle-s::after {
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 3px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Reduced motion: show end states instantly (WCAG 2.3.3).             */
+/* ------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  .widget-board .react-grid-item,
+  .widget-board .react-grid-item.react-grid-placeholder,
+  .widget-board .react-grid-item > .react-resizable-handle {
+    transition: none !important;
+    animation: none !important;
+  }
+}

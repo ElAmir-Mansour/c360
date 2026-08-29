@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clario360.io/siem/events/sources/source.deleted.json",
+  "title": "siem.source.deleted",
+  "description": "Data payload of the siem.source.deleted CloudEvent. SOFT-delete only; the source row persists for audit. Certificate is revoked at the same time.",
+  "type": "object",
+  "required": ["source_id", "tenant_id", "actor_user_id", "deleted_at"],
+  "properties": {
+    "source_id":      {"type": "string", "format": "uuid"},
+    "tenant_id":      {"type": "string", "format": "uuid"},
+    "actor_user_id":  {"type": "string", "format": "uuid"},
+    "deleted_at":     {"type": "string", "format": "date-time"},
+    "cert_serial":    {"type": "string"}
+  }
+}

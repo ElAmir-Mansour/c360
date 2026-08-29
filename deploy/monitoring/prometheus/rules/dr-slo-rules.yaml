@@ -1,0 +1,205 @@
+# ClarioDR (DataStream Disaster Recovery) SLO recording + alert rules.
+#
+# Source of truth: clario360Project/DESIGN_DataStream_DR.md §11 (the SLO board).
+# Metrics are exported by clario-dr-service under the dr_* namespace
+# (internal/datastream/core/metrics.go + internal/dr/.../metrics.go) and are
+# scraped verbatim (no relabel) by the "clario360-clario-dr-service" job.
+#
+# SLO targets (§11):
+#   dr_rpo_seconds{group}                        SLO <= 300   (alert at 240)
+#   dr_failover_rto_seconds{mode}                SLO <= 900
+#   dr_recovery_point_validation_ratio{group}    SLO >= 0.999
+#   dr_replication_lag_seconds{stream}           keep low (<= 10s working target)
+#   dr_stream_status{stream,status}              streaming == healthy
+groups:
+  # ---------------------------------------------------------------------------
+  # Recording rules — pre-compute the SLO board series so the Grafana dashboard
+  # and the burn alerts read cheap, stable series.
+  # ---------------------------------------------------------------------------
+  - name: clario-dr-slo-recording
+    interval: 1m
+    rules:
+      # Worst (highest) live RPO across all consistency groups, in seconds.
+      - record: clario360:dr:rpo_seconds:max
+        expr: max(dr_rpo_seconds)
+
+      # Per-group live RPO (passthrough alias used by the dashboard).
+      - record: clario360:dr:rpo_seconds:by_group
+        expr: max by (group) (dr_rpo_seconds)
+
+      # Fraction of the 300s RPO objective currently consumed, per group.
+      - record: clario360:dr:rpo_objective_ratio:by_group
+        expr: max by (group) (dr_rpo_seconds) / 300
+
+      # Worst (lowest) recovery-point validation ratio across groups.
+      - record: clario360:dr:validation_ratio:min
+        expr: min(dr_recovery_point_validation_ratio)
+
+      - record: clario360:dr:validation_ratio:by_group
+        expr: min by (group) (dr_recovery_point_validation_ratio)
+
+      # Worst (highest) replication lag across all streams, in seconds.
+      - record: clario360:dr:replication_lag_seconds:max
+        expr: max(dr_replication_lag_seconds)
+
+      - record: clario360:dr:replication_lag_seconds:by_stream
+        expr: max by (stream) (dr_replication_lag_seconds)
+
+      # p95 observed failover/drill RTO over the trailing day, per mode.
+      - record: clario360:dr:failover_rto_seconds:p95
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(dr_failover_rto_seconds_bucket[1d])) by (mode, le)
+          )
+
+      # Frames / bytes shipped throughput (per-second) for the dashboard.
+      - record: clario360:dr:frames_shipped:rate5m
+        expr: sum by (stream) (rate(dr_frames_shipped_total[5m]))
+
+      - record: clario360:dr:bytes_shipped:rate5m
+        expr: sum by (stream) (rate(dr_bytes_shipped_total[5m]))
+
+      # Transport resume rate (reconnect churn) per transport backend.
+      - record: clario360:dr:transport_resumes:rate5m
+        expr: sum by (transport) (rate(dr_transport_resumes_total[5m]))
+
+      # Count of streams not in the healthy "streaming" state.
+      - record: clario360:dr:streams_unhealthy:count
+        expr: count(dr_stream_status{status!="streaming"} == 1) or vector(0)
+
+  # ---------------------------------------------------------------------------
+  # Alert rules — the SLO breaches the deck promises (§11).
+  # ---------------------------------------------------------------------------
+  - name: clario-dr-slo-alerts
+    rules:
+      # RPO approaching the objective — early warning at the 240s threshold
+      # (slide 47: "alert at 240" while the SLO ceiling is 300s).
+      - alert: DRRPOApproachingObjective
+        expr: max by (group) (dr_rpo_seconds) > 240
+        for: 1m
+        labels:
+          severity: warning
+          team: platform
+          suite: datastream
+          slo: rpo
+        annotations:
+          summary: "ClarioDR RPO for group {{ $labels.group }} is {{ $value }}s (warn >= 240s)"
+          description: "Live recovery-point objective for consistency group {{ $labels.group }} is {{ $value }}s, approaching the 300s SLO ceiling."
+          runbook: "docs/runbooks/troubleshooting/TS-010-replication-lag.md"
+
+      # RPO SLO breach — over the 300s ceiling.
+      - alert: DRRPOObjectiveBreached
+        expr: max by (group) (dr_rpo_seconds) > 300
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+          suite: datastream
+          slo: rpo
+        annotations:
+          summary: "ClarioDR RPO SLO breached for group {{ $labels.group }}: {{ $value }}s > 300s"
+          description: "Consistency group {{ $labels.group }} has a live RPO of {{ $value }}s, exceeding the 300s data-loss-window SLO. Data older than the SLO would be lost on failover now."
+          runbook: "docs/runbooks/incident-response/IR-001-service-outage.md"
+
+      # RTO SLO breach — an observed failover/drill took longer than 900s.
+      - alert: DRFailoverRTOObjectiveBreached
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(dr_failover_rto_seconds_bucket[1d])) by (mode, le)
+          ) > 900
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+          suite: datastream
+          slo: rto
+        annotations:
+          summary: "ClarioDR failover RTO SLO breached ({{ $labels.mode }}): p95 {{ $value }}s > 900s"
+          description: "p95 recovery time for {{ $labels.mode }} failovers over the last day is {{ $value }}s, exceeding the 900s (15 min) RTO SLO."
+          runbook: "docs/runbooks/incident-response/IR-001-service-outage.md"
+
+      # Recovery-point validation below the 99.9% fidelity SLO.
+      - alert: DRRecoveryPointValidationBelowSLO
+        expr: min by (group) (dr_recovery_point_validation_ratio) < 0.999
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+          suite: datastream
+          slo: validation
+        annotations:
+          summary: "ClarioDR recovery-point validation below SLO for group {{ $labels.group }}: {{ $value | humanizePercentage }}"
+          description: "Recovery-point validation match ratio for group {{ $labels.group }} is {{ $value }}, below the 0.999 fidelity SLO. A failover from this point could restore corrupt or incomplete data."
+          runbook: "docs/runbooks/incident-response/IR-001-service-outage.md"
+
+      # Replication lag past the working SLO (slide 30 ≤ 10s target).
+      - alert: DRReplicationLagHigh
+        expr: max by (stream) (dr_replication_lag_seconds) > 10
+        for: 1m
+        labels:
+          severity: warning
+          team: platform
+          suite: datastream
+          slo: replication_lag
+        annotations:
+          summary: "ClarioDR replication lag high on stream {{ $labels.stream }}: {{ $value }}s"
+          description: "Stream {{ $labels.stream }} apply lag (now - Frame.EmittedAt) is {{ $value }}s, above the 10s working target. Sustained lag pushes RPO toward the 300s ceiling."
+          runbook: "docs/runbooks/troubleshooting/TS-010-replication-lag.md"
+
+      - alert: DRReplicationLagCritical
+        expr: max by (stream) (dr_replication_lag_seconds) > 60
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+          suite: datastream
+          slo: replication_lag
+        annotations:
+          summary: "ClarioDR replication lag CRITICAL on stream {{ $labels.stream }}: {{ $value }}s"
+          description: "Stream {{ $labels.stream }} apply lag is {{ $value }}s. The stream is falling behind faster than it can catch up; RPO breach is imminent."
+          runbook: "docs/runbooks/troubleshooting/TS-010-replication-lag.md"
+
+      # A stream entered a degraded / error state (the RPO monitor sets this).
+      - alert: DRStreamDegraded
+        expr: max by (stream, status) (dr_stream_status{status=~"degraded|error"}) == 1
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+          suite: datastream
+          slo: stream_health
+        annotations:
+          summary: "ClarioDR stream {{ $labels.stream }} is {{ $labels.status }}"
+          description: "Replication stream {{ $labels.stream }} reported status {{ $labels.status }}. Protection for the underlying site is no longer keeping pace; investigate the agent/transport."
+          runbook: "docs/runbooks/incident-response/IR-001-service-outage.md"
+
+      # A stream stopped shipping frames while still expected to stream.
+      - alert: DRStreamNoFramesShipped
+        expr: |
+          (max by (stream) (dr_stream_status{status="streaming"}) == 1)
+          and
+          (sum by (stream) (rate(dr_frames_shipped_total[10m])) == 0)
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+          suite: datastream
+          slo: stream_health
+        annotations:
+          summary: "ClarioDR stream {{ $labels.stream }} shipped no frames in 10m"
+          description: "Stream {{ $labels.stream }} is marked streaming but no frames have shipped for 10 minutes. The capture agent or transport may be stalled."
+          runbook: "docs/runbooks/troubleshooting/TS-010-replication-lag.md"
+
+      # Excessive transport resumes indicate an unstable link to the agent.
+      - alert: DRTransportResumesHigh
+        expr: sum by (transport) (rate(dr_transport_resumes_total[15m])) * 60 > 5
+        for: 15m
+        labels:
+          severity: warning
+          team: platform
+          suite: datastream
+          slo: transport
+        annotations:
+          summary: "ClarioDR transport {{ $labels.transport }} resuming frequently ({{ $value | humanize }}/min)"
+          description: "The {{ $labels.transport }} transport is reconnecting/resuming more than 5 times per minute, indicating an unstable link to the DR agent."
+          runbook: "docs/runbooks/troubleshooting/TS-010-replication-lag.md"

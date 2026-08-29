@@ -1,0 +1,256 @@
+{
+  "$comment": "i18n coverage ratchet baseline (scripts/i18n-gate.mjs). Per-module `hardcoded` may only go DOWN and `coverage` may only go UP; global `totals.coverage` is monotonic non-decreasing; brand-new modules must meet the net-new floor. Regenerate deliberately with: npm run i18n:gate:update",
+  "generatedAt": "2026-07-16T05:17:17.106Z",
+  "netNewFloor": {
+    "minCoverage": 0.9,
+    "maxHardcoded": 5
+  },
+  "totals": {
+    "files": 1745,
+    "translated": 15693,
+    "hardcoded": 1734,
+    "coverage": 0.9004992253399897
+  },
+  "modules": {
+    "(root)": {
+      "files": 13,
+      "translated": 9,
+      "hardcoded": 10,
+      "coverage": 0.47368421052631576
+    },
+    "[suite]": {
+      "files": 3,
+      "translated": 0,
+      "hardcoded": 0,
+      "coverage": 1
+    },
+    "about": {
+      "files": 1,
+      "translated": 0,
+      "hardcoded": 0,
+      "coverage": 1
+    },
+    "acta": {
+      "files": 45,
+      "translated": 15,
+      "hardcoded": 269,
+      "coverage": 0.0528169014084507
+    },
+    "admin": {
+      "files": 183,
+      "translated": 2358,
+      "hardcoded": 76,
+      "coverage": 0.9687756778964667
+    },
+    "callback": {
+      "files": 1,
+      "translated": 27,
+      "hardcoded": 0,
+      "coverage": 1
+    },
+    "compare": {
+      "files": 1,
+      "translated": 0,
+      "hardcoded": 0,
+      "coverage": 1
+    },
+    "console": {
+      "files": 86,
+      "translated": 1427,
+      "hardcoded": 49,
+      "coverage": 0.9668021680216802
+    },
+    "contact": {
+      "files": 1,
+      "translated": 0,
+      "hardcoded": 0,
+      "coverage": 1
+    },
+    "cyber": {
+      "files": 345,
+      "translated": 595,
+      "hardcoded": 342,
+      "coverage": 0.6350053361792957
+    },
+    "dashboard": {
+      "files": 5,
+      "translated": 11,
+      "hardcoded": 5,
+      "coverage": 0.6875
+    },
+    "data": {
+      "files": 125,
+      "translated": 1201,
+      "hardcoded": 34,
+      "coverage": 0.9724696356275304
+    },
+    "design-system": {
+      "files": 11,
+      "translated": 0,
+      "hardcoded": 222,
+      "coverage": 0
+    },
+    "dr": {
+      "files": 130,
+      "translated": 1039,
+      "hardcoded": 177,
+      "coverage": 0.8544407894736842
+    },
+    "files": {
+      "files": 3,
+      "translated": 3,
+      "hardcoded": 8,
+      "coverage": 0.2727272727272727
+    },
+    "forbidden": {
+      "files": 1,
+      "translated": 0,
+      "hardcoded": 0,
+      "coverage": 1
+    },
+    "forgot-password": {
+      "files": 1,
+      "translated": 0,
+      "hardcoded": 0,
+      "coverage": 1
+    },
+    "invite": {
+      "files": 1,
+      "translated": 59,
+      "hardcoded": 0,
+      "coverage": 1
+    },
+    "lex": {
+      "files": 618,
+      "translated": 7750,
+      "hardcoded": 329,
+      "coverage": 0.9592771382596856
+    },
+    "login": {
+      "files": 1,
+      "translated": 0,
+      "hardcoded": 0,
+      "coverage": 1
+    },
+    "migrate": {
+      "files": 20,
+      "translated": 445,
+      "hardcoded": 19,
+      "coverage": 0.959051724137931
+    },
+    "notebooks": {
+      "files": 8,
+      "translated": 4,
+      "hardcoded": 3,
+      "coverage": 0.5714285714285714
+    },
+    "notifications": {
+      "files": 4,
+      "translated": 26,
+      "hardcoded": 1,
+      "coverage": 0.9629629629629629
+    },
+    "platform": {
+      "files": 2,
+      "translated": 0,
+      "hardcoded": 0,
+      "coverage": 1
+    },
+    "pricing": {
+      "files": 1,
+      "translated": 0,
+      "hardcoded": 0,
+      "coverage": 1
+    },
+    "recover": {
+      "files": 46,
+      "translated": 337,
+      "hardcoded": 5,
+      "coverage": 0.9853801169590644
+    },
+    "register": {
+      "files": 1,
+      "translated": 0,
+      "hardcoded": 0,
+      "coverage": 1
+    },
+    "reset-password": {
+      "files": 1,
+      "translated": 0,
+      "hardcoded": 0,
+      "coverage": 1
+    },
+    "resources": {
+      "files": 1,
+      "translated": 0,
+      "hardcoded": 0,
+      "coverage": 1
+    },
+    "respond": {
+      "files": 12,
+      "translated": 40,
+      "hardcoded": 3,
+      "coverage": 0.9302325581395349
+    },
+    "settings": {
+      "files": 13,
+      "translated": 1,
+      "hardcoded": 4,
+      "coverage": 0.2
+    },
+    "setup": {
+      "files": 12,
+      "translated": 109,
+      "hardcoded": 7,
+      "coverage": 0.9396551724137931
+    },
+    "solutions": {
+      "files": 1,
+      "translated": 0,
+      "hardcoded": 0,
+      "coverage": 1
+    },
+    "sovereignty": {
+      "files": 1,
+      "translated": 0,
+      "hardcoded": 0,
+      "coverage": 1
+    },
+    "trust": {
+      "files": 1,
+      "translated": 0,
+      "hardcoded": 0,
+      "coverage": 1
+    },
+    "ui-gallery": {
+      "files": 1,
+      "translated": 0,
+      "hardcoded": 150,
+      "coverage": 0
+    },
+    "verify": {
+      "files": 1,
+      "translated": 0,
+      "hardcoded": 0,
+      "coverage": 1
+    },
+    "verify-email": {
+      "files": 1,
+      "translated": 47,
+      "hardcoded": 0,
+      "coverage": 1
+    },
+    "visus": {
+      "files": 29,
+      "translated": 55,
+      "hardcoded": 13,
+      "coverage": 0.8088235294117647
+    },
+    "workflows": {
+      "files": 14,
+      "translated": 135,
+      "hardcoded": 8,
+      "coverage": 0.9440559440559441
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{{- if .Values.clarioDrService.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "clario360.componentName" (dict "root" . "component" "clario-dr-service") }}
+  namespace: {{ include "clario360.namespace" . }}
+  labels:
+    {{- include "clario360.componentLabels" (dict "root" . "component" "clario-dr-service") | nindent 4 }}
+  {{- with ((.Values.clarioDrService).service).annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ dig "service" "type" "ClusterIP" .Values.clarioDrService }}
+  ports:
+    - name: http
+      port: 8097
+      targetPort: http
+      protocol: TCP
+    - name: admin
+      port: 9097
+      targetPort: admin
+      protocol: TCP
+    - name: mtls
+      port: 8098
+      targetPort: mtls
+      protocol: TCP
+  selector:
+    {{- include "clario360.componentSelectorLabels" (dict "root" . "component" "clario-dr-service") | nindent 4 }}
+{{- end }}

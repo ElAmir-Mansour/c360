@@ -1,0 +1,263 @@
+/*
+ * Compact agenda band for the dashboard Calendar panel (LEX-LD-GAP-DESIGN G5).
+ *
+ * The dashboard slot is wide and short, so the layout is container-driven: once
+ * the panel is wide enough the day header moves into an inline-start rail and
+ * each row spreads its trailing metadata into a third column, keeping the band
+ * short. Below that width everything stacks.
+ *
+ * Only `--wt-*` / `--ds-*` tokens and logical properties are used, so the whole
+ * band mirrors correctly under `dir="rtl"`.
+ */
+
+.panel {
+  container-type: inline-size;
+}
+
+.agenda {
+  display: flex;
+  min-inline-size: 0;
+  flex-direction: column;
+  gap: calc(var(--wt-space-base) * 3);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.day {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: calc(var(--wt-space-base) * 1.5);
+  min-inline-size: 0;
+}
+
+.dayHeader {
+  display: flex;
+  min-inline-size: 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--wt-space-base);
+  margin: 0;
+}
+
+.dayDate {
+  color: var(--wt-teal-900);
+  font-size: var(--wt-font-size-caption);
+  font-weight: 700;
+  line-height: var(--wt-line-height-caption);
+  overflow-wrap: anywhere;
+}
+
+.dayFlag {
+  padding-block: calc(var(--wt-space-base) * 0.25);
+  padding-inline: var(--wt-space-base);
+  font-size: var(--wt-font-size-caption);
+  font-weight: 700;
+  line-height: var(--wt-line-height-caption);
+  border: var(--wt-card-border-width) solid;
+  border-radius: var(--wt-radius-pill);
+  overflow-wrap: anywhere;
+}
+
+.today {
+  color: var(--wt-teal-900);
+  background: var(--wt-ok-050);
+  border-color: var(--wt-ok);
+}
+
+.holiday {
+  color: var(--wt-teal-900);
+  background: var(--wt-warn-050);
+  border-color: var(--wt-medium);
+}
+
+.events {
+  display: flex;
+  min-inline-size: 0;
+  flex-direction: column;
+  gap: var(--wt-space-base);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.eventItem {
+  min-inline-size: 0;
+}
+
+/*
+ * The severity hue is published once as a custom property and consumed by both
+ * the rail and the dot, so a row can never disagree with itself. Severity is
+ * additionally rendered as text inside the row, never by colour alone.
+ */
+.event {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--wt-space-base) calc(var(--wt-space-base) * 1.5);
+  align-items: start;
+  min-inline-size: 0;
+  padding-block: var(--wt-space-base);
+  padding-inline: calc(var(--wt-space-base) * 1.5);
+  color: var(--wt-teal-900);
+  text-decoration: none;
+  background: var(--wt-surface);
+  border: var(--wt-card-border-width) solid var(--wt-teal-300);
+  border-inline-start: calc(var(--wt-space-base) * 0.5) solid
+    var(--wt-calendar-severity, var(--wt-teal-300));
+  border-radius: var(--wt-radius-kpi-card);
+  transition: background-color var(--ds-duration-fast) var(--ds-ease-standard);
+}
+
+.event[data-severity='critical'] {
+  --wt-calendar-severity: var(--wt-critical);
+}
+
+.event[data-severity='high'] {
+  --wt-calendar-severity: var(--wt-high);
+}
+
+.event[data-severity='medium'] {
+  --wt-calendar-severity: var(--wt-medium);
+}
+
+.event[data-severity='low'] {
+  --wt-calendar-severity: var(--wt-ok);
+}
+
+.event[data-severity='info'] {
+  --wt-calendar-severity: var(--wt-track-alt);
+}
+
+.event:hover {
+  background: var(--wt-canvas);
+}
+
+.event:focus-visible {
+  outline: calc(var(--wt-card-border-width) * 2) solid var(--wt-teal-700);
+  outline-offset: calc(var(--wt-card-border-width) * 2);
+}
+
+.dot {
+  grid-column: 1;
+  grid-row: 1;
+  inline-size: var(--wt-space-base);
+  block-size: var(--wt-space-base);
+  margin-block-start: calc(var(--wt-space-base) * 0.75);
+  background: var(--wt-calendar-severity, var(--wt-teal-300));
+  border-radius: var(--wt-radius-pill);
+}
+
+.body {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  min-inline-size: 0;
+  flex-direction: column;
+  gap: calc(var(--wt-space-base) * 0.25);
+}
+
+.title {
+  color: var(--wt-teal-900);
+  font-size: var(--wt-font-size-body);
+  font-weight: 700;
+  line-height: var(--wt-line-height-body);
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  color: var(--wt-teal-700);
+  font-size: var(--wt-font-size-caption);
+  line-height: var(--wt-line-height-caption);
+  overflow-wrap: anywhere;
+}
+
+.trail {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  min-inline-size: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--wt-space-base);
+}
+
+.typePill {
+  padding-block: calc(var(--wt-space-base) * 0.25);
+  padding-inline: var(--wt-space-base);
+  color: var(--wt-teal-900);
+  font-size: var(--wt-font-size-caption);
+  font-weight: 700;
+  line-height: var(--wt-line-height-caption);
+  background: var(--wt-track);
+  border-radius: var(--wt-radius-pill);
+  overflow-wrap: anywhere;
+}
+
+.time {
+  color: var(--wt-teal-700);
+  font-size: var(--wt-font-size-caption);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--wt-line-height-caption);
+  overflow-wrap: anywhere;
+}
+
+.overflow {
+  display: inline-flex;
+  margin: 0;
+  margin-block-start: calc(var(--wt-space-base) * 2);
+  padding-block: calc(var(--wt-space-base) * 0.5);
+  padding-inline: var(--wt-space-base);
+  color: var(--wt-teal-700);
+  font-size: var(--wt-font-size-caption);
+  font-weight: 700;
+  line-height: var(--wt-line-height-caption);
+  text-decoration: none;
+  border-radius: var(--wt-radius-pill);
+  overflow-wrap: anywhere;
+  transition:
+    color var(--ds-duration-fast) var(--ds-ease-standard),
+    background-color var(--ds-duration-fast) var(--ds-ease-standard);
+}
+
+.overflow:hover {
+  color: var(--wt-teal-900);
+  background: var(--wt-canvas);
+}
+
+.overflow:focus-visible {
+  outline: calc(var(--wt-card-border-width) * 2) solid var(--wt-teal-700);
+  outline-offset: calc(var(--wt-card-border-width) * 2);
+}
+
+@container (min-width: 34rem) {
+  .day {
+    grid-template-columns: minmax(calc(var(--wt-space-base) * 20), auto) minmax(0, 1fr);
+    gap: calc(var(--wt-space-base) * 2);
+    align-items: start;
+  }
+
+  .dayHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .event {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .trail {
+    grid-column: 3;
+    grid-row: 1;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: calc(var(--wt-space-base) * 0.5);
+    text-align: end;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .event,
+  .overflow {
+    transition: none;
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clario360.io/siem/events/sources/source.disabled.json",
+  "title": "siem.source.disabled",
+  "description": "Data payload of the siem.source.disabled CloudEvent. Emitted when an admin disables a source; ingestion rejects events with this source's thumbprint until re-enable.",
+  "type": "object",
+  "required": ["source_id", "tenant_id", "actor_user_id", "reason", "disabled_at"],
+  "properties": {
+    "source_id":      {"type": "string", "format": "uuid"},
+    "tenant_id":      {"type": "string", "format": "uuid"},
+    "actor_user_id":  {"type": "string", "format": "uuid"},
+    "reason":         {"type": "string"},
+    "disabled_at":    {"type": "string", "format": "date-time"}
+  }
+}

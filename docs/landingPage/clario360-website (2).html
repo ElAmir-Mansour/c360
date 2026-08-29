@@ -1,0 +1,2907 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Clario360 — The Sovereign Enterprise Platform</title>
+<meta name="description" content="Clario360 is a sovereign enterprise platform built Arabic-first. One login, one audit, four suites — DataStream (resilience), Business+ (operations), ClarioSec (security) and ClarioInsight (analytics) — on a configurable platform core. Deploys SaaS, on-prem, or fully air-gapped." />
+<meta name="theme-color" content="#0033A1" />
+<meta name="author" content="Clario360" />
+<meta name="keywords" content="sovereign enterprise platform, Arabic-first software, KSA, disaster recovery, DSPM, GRC, contract lifecycle, board governance, data security posture, NCA, SAMA, PDPL, air-gapped, on-premise enterprise software" />
+<link rel="canonical" href="https://clario360.sa/" />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Clario360" />
+<meta property="og:title" content="Clario360 — The Sovereign Enterprise Platform" />
+<meta property="og:description" content="One platform, four suites, built Arabic-first. Data resilience, corporate operations, security and analytics — one login, one audit. Deploys SaaS, on-prem, or fully air-gapped." />
+<meta property="og:url" content="https://clario360.sa/" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:locale:alternate" content="ar_SA" />
+<meta property="og:image" content="https://clario360.sa/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Clario360 — four suites on one sovereign platform core" />
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Clario360 — The Sovereign Enterprise Platform" />
+<meta name="twitter:description" content="One platform, four suites, built Arabic-first. Data resilience, corporate operations, security and analytics. SaaS, on-prem, or fully air-gapped." />
+<meta name="twitter:image" content="https://clario360.sa/og-image.png" />
+
+<!-- Favicon (inline SVG) -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%230033A1'/%3E%3Cpath d='M20 8a12 12 0 1 0 0 24' stroke='white' stroke-width='2.6' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='20' cy='20' r='4.2' fill='%23C9A65A'/%3E%3C/svg%3E" />
+
+<!-- Structured data: Organization + SoftwareApplication -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://clario360.sa/#org",
+      "name": "Clario360",
+      "url": "https://clario360.sa/",
+      "description": "Sovereign enterprise platform built Arabic-first, deploying SaaS, on-premise, or fully air-gapped.",
+      "areaServed": ["SA", "AE", "QA", "KW", "BH", "OM"],
+      "knowsLanguage": ["ar", "en"]
+    },
+    {
+      "@type": "SoftwareApplication",
+      "name": "Clario360",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web, On-premise, Air-gapped",
+      "offers": { "@type": "Offer", "priceCurrency": "SAR", "price": "0", "description": "Enterprise licensing, priced per suite and deployment model." },
+      "featureList": [
+        "DataStream Suite — disaster recovery, migration, change data capture, sovereign lakehouse",
+        "Business+ Suite — legal, project delivery, GRC, executive, board governance",
+        "ClarioSec Suite — CTEM, DSPM, UEBA, virtual CISO",
+        "ClarioInsight Suite — data intelligence and dashboards"
+      ],
+      "publisher": { "@id": "https://clario360.sa/#org" }
+    }
+  ]
+}
+</script>
+<style>
+/* ============================================================
+   CLARIO360 — DESIGN TOKENS
+   Derived from the product's own design system (--ds-* tokens):
+   navy #0033A1 primary · gold accent · teal (DataStream) · ink
+   ============================================================ */
+:root{
+  /* Brand */
+  --navy-950:#040A2E;
+  --navy-900:#071449;
+  --navy-800:#0A1C66;
+  --navy-700:#0B2585;
+  --navy-600:#0033A1;   /* PRIMARY — the sovereign blue from tokens.css */
+  --navy-500:#1D4FD6;
+  --navy-400:#4F7BF0;
+  --navy-300:#8FAEF8;
+  --navy-200:#C3D4FC;
+  --navy-100:#E4ECFE;
+  --navy-50:#F2F6FF;
+
+  --ink:#0A0E27;        /* dark sections */
+  --ink-soft:#10173A;
+  --ink-line:rgba(255,255,255,.10);
+
+  --gold-600:#A9863F;
+  --gold-500:#C9A65A;   /* accent — the sovereign/royal note */
+  --gold-400:#DCC07F;
+  --gold-100:#F4EBD4;
+
+  --teal-700:#0A4F58;
+  --teal-600:#0E6E7A;   /* DataStream family */
+  --teal-400:#39A6B2;
+  --teal-100:#D8EEF1;
+
+  --paper:#FBFAF7;      /* warm-cool off white */
+  --paper-2:#F4F2EC;
+  --card:#FFFFFF;
+  --line:#E7E3DA;
+  --line-2:#D8D3C7;
+
+  --text:#15182B;
+  --text-2:#4A4F66;
+  --text-3:#7A8099;
+  --text-inv:#F3F5FB;
+  --text-inv-2:#A9B4D6;
+
+  --ok:#16A34A;
+  --warn:#D97706;
+  --crit:#DC2626;
+
+  /* Type */
+  --sans:"Inter","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  --display:"Fraunces","Iowan Old Style","Palatino Linotype",Georgia,"Times New Roman",serif;
+  --mono:"IBM Plex Mono","JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --arabic:"IBM Plex Sans Arabic","Noto Sans Arabic",Tahoma,sans-serif;
+
+  /* Scale / motion */
+  --maxw:1200px;
+  --r-sm:8px; --r:14px; --r-lg:22px; --r-xl:30px;
+  --shadow-1:0 1px 2px rgba(10,14,39,.06),0 4px 14px rgba(10,14,39,.05);
+  --shadow-2:0 10px 30px rgba(10,14,39,.10),0 2px 6px rgba(10,14,39,.06);
+  --shadow-navy:0 18px 50px rgba(0,51,161,.28);
+  --ease:cubic-bezier(.22,.61,.36,1);
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--paper);color:var(--text);
+  font-family:var(--sans);font-size:16px;line-height:1.62;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  overflow-x:hidden;
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+/* Global safety: any inline SVG icon defaults to text-size; specific rules below scale up. */
+svg{width:1em;height:1em;flex:none}
+.more svg{width:16px;height:16px}
+::selection{background:var(--navy-600);color:#fff}
+
+/* ---------- Accessibility ---------- */
+.skip-link{
+  position:fixed;top:-60px;left:16px;z-index:300;
+  background:var(--navy-600);color:#fff;padding:12px 20px;border-radius:8px;
+  font-family:var(--sans);font-weight:600;font-size:.9rem;transition:top .2s var(--ease);
+}
+.skip-link:focus{top:16px;outline:3px solid var(--gold-400);outline-offset:2px}
+/* Visible keyboard focus everywhere, without affecting mouse users */
+:focus-visible{outline:3px solid var(--navy-500);outline-offset:2px;border-radius:4px}
+.nav.dark :focus-visible,.hero :focus-visible,.page-hero :focus-visible,.footer :focus-visible,.stats-band :focus-visible{outline-color:var(--gold-400)}
+.btn:focus-visible{outline-offset:3px}
+/* Keep hover affordances but make interactive spans behave for AT */
+[role="button"],[tabindex="0"]{cursor:pointer}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+#main:focus{outline:none}
+#main{display:block}
+
+h1,h2,h3,h4{font-family:var(--display);font-weight:600;line-height:1.08;letter-spacing:-.02em;margin:0;color:var(--text)}
+h1{font-size:clamp(2.5rem,6vw,4.5rem)}
+h2{font-size:clamp(2rem,4.4vw,3.25rem)}
+h3{font-size:clamp(1.35rem,2.4vw,1.85rem)}
+h4{font-size:1.18rem;letter-spacing:-.01em}
+p{margin:0 0 1rem}
+.lede{font-size:clamp(1.12rem,1.7vw,1.4rem);line-height:1.55;color:var(--text-2);font-weight:400}
+
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 28px}
+.section{padding:clamp(64px,9vw,128px) 0}
+.section-tight{padding:clamp(48px,6vw,84px) 0}
+
+/* Eyebrow — encodes section meaning, tracked caps */
+.eyebrow{
+  display:inline-flex;align-items:center;gap:9px;
+  font-family:var(--mono);font-size:.72rem;font-weight:500;
+  letter-spacing:.24em;text-transform:uppercase;color:var(--navy-600);
+  margin-bottom:18px;
+}
+.eyebrow::before{content:"";width:22px;height:1.5px;background:var(--gold-500)}
+.eyebrow.on-dark{color:var(--gold-400)}
+.eyebrow.on-dark::before{background:var(--gold-500)}
+
+.bilingual{font-family:var(--arabic);direction:rtl;unicode-bidi:isolate}
+
+/* ---------- Buttons ---------- */
+.btn{
+  display:inline-flex;align-items:center;gap:9px;
+  font-family:var(--sans);font-weight:600;font-size:.95rem;
+  padding:13px 24px;border-radius:var(--r-sm);border:1.5px solid transparent;
+  cursor:pointer;transition:all .25s var(--ease);white-space:nowrap;
+}
+.btn svg{width:17px;height:17px}
+.btn-primary{background:var(--navy-600);color:#fff;box-shadow:var(--shadow-navy)}
+.btn-primary:hover{background:var(--navy-700);transform:translateY(-2px);box-shadow:0 22px 56px rgba(0,51,161,.36)}
+.btn-ghost{background:transparent;color:var(--text);border-color:var(--line-2)}
+.btn-ghost:hover{border-color:var(--navy-600);color:var(--navy-600);background:var(--navy-50)}
+.btn-gold{background:var(--gold-500);color:var(--ink)}
+.btn-gold:hover{background:var(--gold-400);transform:translateY(-2px)}
+.btn-ondark{background:rgba(255,255,255,.08);color:#fff;border-color:rgba(255,255,255,.22);backdrop-filter:blur(8px)}
+.btn-ondark:hover{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.4)}
+.btn-lg{padding:16px 30px;font-size:1rem}
+.linkarrow{font-weight:600;color:var(--navy-600);display:inline-flex;align-items:center;gap:7px;transition:gap .2s var(--ease)}
+.linkarrow:hover{gap:12px}
+.linkarrow svg{width:16px;height:16px;transition:transform .2s var(--ease)}
+
+/* ============================================================
+   NAVBAR
+   ============================================================ */
+.nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  transition:all .3s var(--ease);
+}
+.nav-inner{
+  max-width:var(--maxw);margin:0 auto;padding:0 28px;
+  height:72px;display:flex;align-items:center;justify-content:space-between;gap:24px;
+}
+.nav.scrolled{background:rgba(251,250,247,.86);backdrop-filter:blur(18px) saturate(1.4);border-bottom:1px solid var(--line)}
+.nav.dark{}
+.nav.dark .nav-link,.nav.dark .logo-text{color:var(--text-inv)}
+.nav.dark.scrolled{background:rgba(10,14,39,.78);border-bottom:1px solid var(--ink-line)}
+.nav.dark.scrolled .nav-link,.nav.dark.scrolled .logo-text{color:var(--text-inv)}
+
+.logo{display:flex;align-items:center;gap:11px;cursor:pointer}
+.logo-mark{width:34px;height:34px;flex:none}
+.logo-text{font-family:var(--display);font-weight:600;font-size:1.32rem;letter-spacing:-.02em;color:var(--text)}
+.logo-text b{color:var(--navy-600)}
+.nav.dark .logo-text b{color:var(--gold-400)}
+
+.nav-links{display:flex;align-items:center;gap:4px}
+.nav-link{
+  position:relative;font-size:.92rem;font-weight:500;color:var(--text-2);
+  padding:9px 14px;border-radius:8px;cursor:pointer;transition:all .2s;
+  display:inline-flex;align-items:center;gap:6px;
+}
+.nav-link:hover{color:var(--navy-600);background:rgba(0,51,161,.06)}
+.nav-link.active{color:var(--navy-600)}
+.nav-link .chev{width:13px;height:13px;opacity:.6;transition:transform .25s}
+.has-mega:hover .chev,.has-mega.mega-open .chev,.has-mega:focus-within .chev{transform:rotate(180deg)}
+/* Trigger button reset so it matches text nav-links */
+.nav-trigger{background:none;border:none;font-family:var(--sans);cursor:pointer}
+.nav.dark .nav-trigger{color:var(--text-inv)}
+.nav.dark.scrolled .nav-trigger{color:var(--text-inv)}
+.mega-arch-link{font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--navy-600);cursor:pointer;white-space:nowrap}
+.mega-arch-link:hover{color:var(--navy-700);text-decoration:underline}
+
+/* Mega menu */
+.mega{
+  position:absolute;top:calc(100% + 10px);left:50%;transform:translateX(-50%) translateY(8px);
+  width:min(680px,92vw);background:var(--card);border:1px solid var(--line);
+  border-radius:var(--r-lg);box-shadow:var(--shadow-2);padding:10px;
+  opacity:0;visibility:hidden;transition:all .26s var(--ease);
+  display:grid;grid-template-columns:1fr 1fr;gap:6px;
+}
+.has-mega:hover .mega,.has-mega.mega-open .mega,.has-mega:focus-within .mega{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
+/* Wide products mega-menu (4 suites) — anchored to the nav row, centered under the bar */
+.mega-products{
+  width:min(940px,94vw);display:block;padding:20px;
+  position:fixed;top:64px;left:50%;transform:translateX(-50%) translateY(8px);
+}
+.has-mega:hover .mega-products,.has-mega.mega-open .mega-products,.has-mega:focus-within .mega-products{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0);top:68px}
+/* invisible bridge under the trigger so the cursor can travel into the fixed menu */
+.has-mega::after{content:"";position:absolute;left:0;right:0;top:100%;height:18px}
+.mega-products-head{display:flex;justify-content:space-between;align-items:center;padding:0 6px 16px;border-bottom:1px solid var(--line);margin-bottom:16px}
+.mega-products-head small{font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--navy-600)}
+.mega-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.mega-col{padding:6px}
+.mega-col-head{display:flex;gap:10px;align-items:center;padding:8px;border-radius:10px;cursor:pointer;margin-bottom:6px;transition:background .18s}
+.mega-col-head:hover{background:var(--paper-2)}
+.mega-ico.sm{width:34px;height:34px;border-radius:9px}
+.mega-col-head h5{font-family:var(--sans);font-weight:700;font-size:.86rem;margin:0;color:var(--text)}
+.mega-col-head p{font-size:.7rem;color:var(--text-3);margin:1px 0 0;line-height:1.3}
+.mega-app{display:flex;flex-direction:column;padding:7px 9px;border-radius:8px;cursor:pointer;transition:background .16s;font-size:.84rem;font-weight:600;color:var(--text-2)}
+.mega-app:hover{background:var(--navy-50);color:var(--navy-600)}
+.mega-app span{font-size:.7rem;font-weight:400;color:var(--text-3);margin-top:1px}
+.mega-head{grid-column:1/-1;padding:12px 14px 8px;border-bottom:1px solid var(--line);margin-bottom:4px;display:flex;justify-content:space-between;align-items:center}
+.mega-head small{font-family:var(--mono);font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:var(--text-3)}
+.mega-item{display:flex;gap:13px;padding:12px 14px;border-radius:12px;cursor:pointer;transition:background .18s}
+.mega-item:hover{background:var(--paper-2)}
+.mega-ico{width:38px;height:38px;border-radius:10px;flex:none;display:grid;place-items:center;color:#fff}
+.mega-ico svg{width:19px;height:19px}
+.mega-item h5{font-family:var(--sans);font-weight:600;font-size:.92rem;margin:0 0 2px;color:var(--text)}
+.mega-item p{font-size:.78rem;color:var(--text-3);margin:0;line-height:1.4}
+
+.nav-cta{display:flex;align-items:center;gap:10px}
+.burger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:8px;background:none;border:none}
+.burger span{width:24px;height:2px;background:var(--text);border-radius:2px;transition:.3s}
+.nav.dark .burger span{background:var(--text-inv)}
+.nav.dark.scrolled .burger span{background:var(--text-inv)}
+
+/* Mobile drawer */
+.drawer{
+  position:fixed;inset:0;z-index:200;background:var(--ink);
+  transform:translateX(100%);transition:transform .4s var(--ease);
+  display:flex;flex-direction:column;padding:84px 28px 40px;overflow-y:auto;
+}
+.drawer.open{transform:translateX(0)}
+.drawer-close{position:absolute;top:22px;right:24px;background:none;border:none;color:#fff;font-size:2rem;cursor:pointer;line-height:1}
+.drawer a,.drawer .d-link{display:block;color:var(--text-inv);font-family:var(--display);font-size:1.5rem;padding:14px 0;border-bottom:1px solid var(--ink-line);cursor:pointer}
+.drawer .d-sub{font-family:var(--sans);font-size:1rem;color:var(--text-inv-2);padding:9px 0 9px 18px;border:none}
+
+/* ============================================================
+   HERO (home)
+   ============================================================ */
+.hero{position:relative;background:var(--ink);color:#fff;overflow:hidden;padding:148px 0 0}
+.hero-bg{position:absolute;inset:0;overflow:hidden}
+.hero-grad{position:absolute;width:900px;height:900px;border-radius:50%;
+  background:radial-gradient(circle,rgba(0,51,161,.55),transparent 62%);
+  top:-340px;right:-180px;filter:blur(20px)}
+.hero-grad2{position:absolute;width:620px;height:620px;border-radius:50%;
+  background:radial-gradient(circle,rgba(201,166,90,.16),transparent 65%);
+  bottom:-280px;left:-160px}
+.grid-overlay{position:absolute;inset:0;opacity:.5;
+  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:54px 54px;mask-image:radial-gradient(ellipse 80% 70% at 60% 25%,#000,transparent 75%)}
+.hero-inner{position:relative;z-index:2}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:10px;padding:7px 15px 7px 7px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);
+  border-radius:100px;font-size:.82rem;color:var(--text-inv-2);margin-bottom:26px;backdrop-filter:blur(8px)
+}
+.hero-badge b{background:var(--gold-500);color:var(--ink);font-size:.66rem;font-weight:700;
+  letter-spacing:.06em;padding:4px 9px;border-radius:100px;text-transform:uppercase}
+.hero h1{color:#fff;margin-bottom:22px}
+.hero h1 .accent{
+  background:linear-gradient(120deg,var(--gold-400),var(--gold-500));
+  -webkit-background-clip:text;background-clip:text;color:transparent;font-style:italic
+}
+.hero .lede{color:var(--text-inv-2);max-width:560px;margin-bottom:34px}
+.hero-ar{font-family:var(--arabic);direction:rtl;font-size:1.05rem;color:var(--gold-400);margin-bottom:8px;opacity:.92}
+.hero-actions{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:42px}
+.hero-trust{display:flex;gap:30px;flex-wrap:wrap;padding-top:30px;border-top:1px solid var(--ink-line)}
+.hero-trust .t{display:flex;flex-direction:column;gap:3px}
+.hero-trust .t b{font-family:var(--display);font-size:1.7rem;color:#fff;line-height:1}
+.hero-trust .t span{font-size:.78rem;color:var(--text-inv-2)}
+
+/* Hero architecture card — the "four suites on one core" truth, drawn */
+.arch-card{
+  background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.02));
+  border:1px solid rgba(255,255,255,.13);border-radius:var(--r-xl);
+  padding:26px;backdrop-filter:blur(14px);box-shadow:0 30px 80px rgba(0,0,0,.4)
+}
+.arch-card .ac-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.arch-card .ac-top span{font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--text-inv-2)}
+.ac-dots{display:flex;gap:6px}
+.ac-dots i{width:9px;height:9px;border-radius:50%;display:block}
+.ac-suites{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.ac-suite{border-radius:14px;padding:15px;border:1px solid rgba(255,255,255,.12)}
+.ac-suite.ds{background:linear-gradient(160deg,rgba(14,110,122,.32),rgba(14,110,122,.08))}
+.ac-suite.bp{background:linear-gradient(160deg,rgba(0,51,161,.4),rgba(0,51,161,.12))}
+.ac-suite.sec{background:linear-gradient(160deg,rgba(178,58,72,.34),rgba(178,58,72,.1))}
+.ac-suite.insight{background:linear-gradient(160deg,rgba(91,63,168,.34),rgba(91,63,168,.1))}
+.ac-suite h6{font-family:var(--sans);font-size:.8rem;font-weight:700;color:#fff;margin:0 0 9px;letter-spacing:.02em}
+.ac-suite .apps{display:flex;flex-wrap:wrap;gap:5px}
+.ac-suite .apps em{font-style:normal;font-size:.68rem;font-family:var(--mono);color:var(--text-inv-2);
+  background:rgba(255,255,255,.08);padding:3px 7px;border-radius:5px}
+.ac-bus{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:11px;
+  background:rgba(201,166,90,.12);border:1px solid rgba(201,166,90,.3);margin-bottom:12px}
+.ac-bus .pulse{width:8px;height:8px;border-radius:50%;background:var(--gold-400);flex:none;
+  box-shadow:0 0 0 0 rgba(220,192,127,.7);animation:pulse 2.2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(220,192,127,.6)}70%{box-shadow:0 0 0 10px rgba(220,192,127,0)}100%{box-shadow:0 0 0 0 rgba(220,192,127,0)}}
+.ac-bus span{font-family:var(--mono);font-size:.72rem;color:var(--gold-400);letter-spacing:.04em}
+.ac-core{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.ac-core em{font-style:normal;text-align:center;font-size:.62rem;font-family:var(--mono);
+  color:var(--text-inv-2);background:rgba(255,255,255,.05);padding:7px 2px;border-radius:7px;border:1px solid rgba(255,255,255,.07)}
+
+/* ============================================================
+   LOGOS / MARQUEE STRIP
+   ============================================================ */
+.strip{background:var(--ink-soft);border-top:1px solid var(--ink-line);border-bottom:1px solid var(--ink-line);padding:26px 0}
+.strip-inner{display:flex;align-items:center;gap:40px;justify-content:center;flex-wrap:wrap}
+.strip-label{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--text-inv-2)}
+.strip-items{display:flex;gap:30px;flex-wrap:wrap;align-items:center}
+.strip-items span{font-family:var(--display);font-size:1.05rem;color:rgba(255,255,255,.55);font-weight:600;letter-spacing:.02em}
+
+/* ============================================================
+   GENERIC SECTION HEADERS
+   ============================================================ */
+.sec-head{max-width:720px;margin-bottom:54px}
+.sec-head.center{margin-left:auto;margin-right:auto;text-align:center}
+.sec-head .lede{margin-top:14px}
+
+/* ---------- Principles grid ---------- */
+.principles{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.principle{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:30px;transition:all .3s var(--ease);position:relative;overflow:hidden
+}
+.principle:hover{transform:translateY(-5px);box-shadow:var(--shadow-2);border-color:var(--navy-200)}
+.principle .num{font-family:var(--mono);font-size:.74rem;color:var(--gold-600);letter-spacing:.1em;margin-bottom:14px}
+.principle .pic{width:46px;height:46px;border-radius:12px;background:var(--navy-50);
+  display:grid;place-items:center;color:var(--navy-600);margin-bottom:16px}
+.principle .pic svg{width:23px;height:23px}
+.principle h4{margin-bottom:9px}
+.principle p{font-size:.92rem;color:var(--text-2);margin:0}
+
+/* ============================================================
+   SUITE BLOCKS (home + suite pages)
+   ============================================================ */
+.suite-block{position:relative}
+.suite-hero{border-radius:var(--r-xl);overflow:hidden;position:relative;padding:clamp(40px,5vw,64px)}
+.suite-hero.ds{background:linear-gradient(150deg,var(--teal-700),var(--teal-600) 70%,#0c5a64)}
+.suite-hero.sec{background:linear-gradient(150deg,#7E2531,#B23A48 75%)}
+.suite-hero.insight{background:linear-gradient(150deg,#3C2A73,#5B3FA8 75%)}
+.suite-hero.bp{background:linear-gradient(150deg,var(--navy-800),var(--navy-600) 75%)}
+.suite-hero{color:#fff}
+.suite-hero .eyebrow{color:rgba(255,255,255,.85)}
+.suite-hero .eyebrow::before{background:rgba(255,255,255,.6)}
+.suite-hero h2{color:#fff;max-width:640px}
+.suite-hero .lede{color:rgba(255,255,255,.86);max-width:580px;margin-top:14px}
+.suite-bgtext{position:absolute;right:-10px;bottom:-40px;font-family:var(--display);
+  font-size:clamp(7rem,18vw,16rem);font-weight:600;color:rgba(255,255,255,.05);line-height:.8;pointer-events:none;font-style:italic}
+
+.apps-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-top:30px}
+.app-card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:26px;cursor:pointer;transition:all .3s var(--ease);position:relative;
+  display:flex;flex-direction:column;gap:14px;
+}
+.app-card:hover{transform:translateY(-5px);box-shadow:var(--shadow-2)}
+.app-card .ac-h{display:flex;align-items:flex-start;gap:14px}
+.app-ico{width:48px;height:48px;border-radius:13px;flex:none;display:grid;place-items:center;color:#fff}
+.app-ico svg{width:24px;height:24px}
+.app-card h4{margin:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.app-card .ar{font-family:var(--arabic);font-size:.92rem;color:var(--text-3);font-weight:500}
+.app-card .role{font-size:.82rem;color:var(--text-3);margin:2px 0 0;font-family:var(--mono);letter-spacing:.02em}
+.app-card p{font-size:.9rem;color:var(--text-2);margin:0}
+.app-card .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto}
+.chip{font-size:.72rem;font-family:var(--mono);background:var(--paper-2);color:var(--text-2);
+  padding:4px 9px;border-radius:6px;border:1px solid var(--line)}
+.app-card .more{font-size:.84rem;font-weight:600;color:var(--navy-600);display:inline-flex;align-items:center;gap:6px}
+
+.badge-new{font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  background:var(--gold-100);color:var(--gold-600);padding:3px 7px;border-radius:5px}
+.badge-ga{font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  background:#DCFCE7;color:#15803D;padding:3px 7px;border-radius:5px}
+.badge-soon{font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  background:var(--paper-2);color:var(--text-3);padding:3px 7px;border-radius:5px;border:1px solid var(--line)}
+
+/* ============================================================
+   CORE ENGINES (platform)
+   ============================================================ */
+.engines{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.engine{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px;transition:all .25s}
+.engine:hover{border-color:var(--navy-300);box-shadow:var(--shadow-1);transform:translateY(-3px)}
+.engine h5{display:flex;align-items:center;gap:6px}
+.eng-arrow{width:14px;height:14px;opacity:0;transform:translateX(-4px);transition:all .2s var(--ease);color:var(--navy-600)}
+.engine:hover .eng-arrow{opacity:1;transform:translateX(0)}
+.engine .ei{width:38px;height:38px;border-radius:10px;background:var(--navy-50);display:grid;place-items:center;color:var(--navy-600);margin-bottom:12px}
+.engine .ei svg{width:19px;height:19px}
+.engine h5{font-family:var(--sans);font-weight:700;font-size:.94rem;margin:0 0 5px}
+.engine p{font-size:.8rem;color:var(--text-3);margin:0;line-height:1.45}
+
+/* ============================================================
+   DEPLOYMENT / SOVEREIGNTY
+   ============================================================ */
+.deploy-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.deploy{border-radius:var(--r-lg);padding:32px;border:1px solid;position:relative;overflow:hidden}
+.deploy.saas{background:var(--navy-50);border-color:var(--navy-200)}
+.deploy.onprem{background:#fff;border-color:var(--line-2)}
+.deploy.airgap{background:var(--ink);border-color:var(--ink-line);color:#fff}
+.deploy h4{margin-bottom:8px}
+.deploy.airgap h4{color:#fff}
+.deploy .dtag{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;margin-bottom:18px;display:block}
+.deploy.saas .dtag{color:var(--navy-600)}
+.deploy.onprem .dtag{color:var(--text-3)}
+.deploy.airgap .dtag{color:var(--gold-400)}
+.deploy p{font-size:.9rem;margin:0 0 16px}
+.deploy.airgap p{color:var(--text-inv-2)}
+.deploy ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+.deploy li{font-size:.86rem;display:flex;gap:9px;align-items:flex-start}
+.deploy li svg{width:16px;height:16px;flex:none;margin-top:3px;color:var(--ok)}
+.deploy.airgap li{color:var(--text-inv)}
+.deploy.airgap li svg{color:var(--gold-400)}
+
+/* ============================================================
+   STATS BAND
+   ============================================================ */
+.stats-band{background:var(--ink);color:#fff;position:relative;overflow:hidden}
+.stats-band .grid-overlay{opacity:.4}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;position:relative;z-index:2}
+.stat{text-align:center;padding:18px}
+.stat b{font-family:var(--display);font-size:clamp(2.6rem,5vw,3.8rem);color:#fff;line-height:1;display:block;margin-bottom:10px}
+.stat b em{color:var(--gold-400);font-style:normal}
+.stat span{font-size:.86rem;color:var(--text-inv-2);line-height:1.4;display:block}
+
+/* ============================================================
+   EVENT BUS — the signature element
+   ============================================================ */
+.bus-section{background:linear-gradient(180deg,var(--paper),var(--paper-2));position:relative;overflow:hidden}
+.bus-diagram{position:relative;margin-top:50px;padding:40px 0}
+.bus-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;position:relative;z-index:2}
+.bus-node{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center;transition:all .25s}
+.bus-node:hover{transform:translateY(-3px);box-shadow:var(--shadow-1);border-color:var(--navy-300)}
+.bus-node h6{font-family:var(--sans);font-weight:700;font-size:.84rem;margin:0 0 4px}
+.bus-node span{font-family:var(--mono);font-size:.68rem;color:var(--text-3)}
+.bus-spine{margin:26px 0;padding:18px 22px;border-radius:14px;
+  background:linear-gradient(90deg,var(--navy-700),var(--navy-600),var(--teal-600));
+  color:#fff;display:flex;align-items:center;gap:16px;box-shadow:var(--shadow-navy);position:relative;overflow:hidden}
+.bus-spine::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);
+  transform:translateX(-100%);animation:sweep 3.4s var(--ease) infinite}
+@keyframes sweep{to{transform:translateX(100%)}}
+.bus-spine .bl{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-400);flex:none}
+.bus-spine .bt{font-family:var(--display);font-size:1.15rem;font-weight:600;flex:1;min-width:0}
+.bus-events{display:flex;gap:7px;flex-wrap:wrap}
+.bus-events em{font-style:normal;font-family:var(--mono);font-size:.66rem;color:#fff;
+  background:rgba(255,255,255,.14);padding:4px 9px;border-radius:6px}
+
+/* ============================================================
+   COMPARE TABLE
+   ============================================================ */
+.cmp{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow-1)}
+.cmp-row{display:grid;grid-template-columns:1.4fr 1fr 1fr;border-bottom:1px solid var(--line)}
+.cmp-row:last-child{border-bottom:none}
+.cmp-row.head{background:var(--ink);color:#fff}
+.cmp-row.head>div{padding:20px 22px;font-family:var(--sans);font-weight:700;font-size:.92rem}
+.cmp-row.head .c-clario{background:var(--navy-600);position:relative}
+.cmp-row.head .c-clario::before{content:"RECOMMENDED";position:absolute;top:6px;right:14px;
+  font-family:var(--mono);font-size:.56rem;letter-spacing:.1em;color:var(--gold-400)}
+.cmp-row>div{padding:16px 22px;font-size:.88rem;display:flex;align-items:center;gap:9px}
+.cmp-row .c-label{font-weight:600;color:var(--text)}
+.cmp-row .c-clario{background:var(--navy-50);font-weight:500;color:var(--navy-700)}
+.cmp-row .c-other{color:var(--text-3)}
+.cmp-row svg{width:17px;height:17px;flex:none}
+.cmp .yes{color:var(--ok)}.cmp .no{color:var(--text-3);opacity:.5}
+
+/* ============================================================
+   PRICING
+   ============================================================ */
+.tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;align-items:start}
+.tier{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:34px;position:relative;transition:all .3s var(--ease)}
+.tier:hover{box-shadow:var(--shadow-2);transform:translateY(-4px)}
+.tier.featured{border-color:var(--navy-600);box-shadow:var(--shadow-navy);transform:scale(1.02)}
+.tier.featured:hover{transform:scale(1.02) translateY(-4px)}
+.tier .ribbon{position:absolute;top:-13px;left:34px;background:var(--gold-500);color:var(--ink);
+  font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 13px;border-radius:6px}
+.tier h3{margin-bottom:6px}
+.tier .tdesc{font-size:.88rem;color:var(--text-3);margin-bottom:22px;min-height:42px}
+.tier .price{font-family:var(--display);font-size:2.4rem;font-weight:600;margin-bottom:4px}
+.tier .price small{font-size:.92rem;color:var(--text-3);font-family:var(--sans);font-weight:400}
+.tier .pnote{font-size:.78rem;color:var(--text-3);margin-bottom:24px}
+.tier ul{list-style:none;margin:0 0 26px;padding:0;display:flex;flex-direction:column;gap:11px}
+.tier li{font-size:.88rem;display:flex;gap:10px;align-items:flex-start;color:var(--text-2)}
+.tier li svg{width:17px;height:17px;flex:none;margin-top:3px;color:var(--navy-600)}
+.tier .btn{width:100%;justify-content:center}
+
+/* ============================================================
+   SUB-PAGE HEADER (interior pages)
+   ============================================================ */
+.page-hero{background:var(--ink);color:#fff;padding:140px 0 64px;position:relative;overflow:hidden}
+.page-hero.suite-ds{background:linear-gradient(150deg,var(--teal-700),var(--teal-600))}
+.page-hero.suite-sec{background:linear-gradient(150deg,#7E2531,#B23A48)}
+.page-hero.suite-insight{background:linear-gradient(150deg,#3C2A73,#5B3FA8)}
+.page-hero.suite-bp{background:linear-gradient(150deg,var(--navy-800),var(--navy-600))}
+.page-hero .grid-overlay{opacity:.4}
+.page-hero-inner{position:relative;z-index:2;max-width:760px}
+.page-hero .eyebrow{color:var(--gold-400)}
+.page-hero h1{color:#fff;margin-bottom:18px}
+.page-hero .lede{color:var(--text-inv-2)}
+.breadcrumb{display:flex;gap:8px;align-items:center;font-size:.82rem;color:var(--text-inv-2);margin-bottom:28px;font-family:var(--mono)}
+.breadcrumb a{cursor:pointer;transition:color .2s}
+.breadcrumb a:hover{color:#fff}
+.breadcrumb svg{width:13px;height:13px;opacity:.5}
+
+/* App detail hero */
+.app-hero{display:flex;align-items:center;gap:18px;margin-bottom:18px}
+.app-hero .big-ico{width:64px;height:64px;border-radius:16px;display:grid;place-items:center;color:#fff;flex:none}
+.app-hero .big-ico svg{width:32px;height:32px}
+.app-hero .ar-big{font-family:var(--arabic);direction:rtl;font-size:1.5rem;color:var(--gold-400)}
+
+/* Module list (app pages) */
+.modules{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:10px}
+.module{display:flex;gap:13px;padding:18px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);transition:all .25s}
+.module:hover{border-color:var(--navy-300);box-shadow:var(--shadow-1)}
+.module .mi{width:36px;height:36px;border-radius:9px;background:var(--navy-50);display:grid;place-items:center;color:var(--navy-600);flex:none}
+.module .mi svg{width:18px;height:18px}
+.module h5{font-family:var(--sans);font-weight:600;font-size:.94rem;margin:0 0 3px}
+.module p{font-size:.82rem;color:var(--text-3);margin:0;line-height:1.45}
+
+/* Flow steps */
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0;margin-top:20px;counter-reset:step}
+.flow-step{padding:22px;position:relative;border:1px solid var(--line);border-right:none;background:var(--card)}
+.flow-step:first-child{border-radius:var(--r) 0 0 var(--r)}
+.flow-step:last-child{border-right:1px solid var(--line);border-radius:0 var(--r) var(--r) 0}
+.flow-step .fs-num{width:30px;height:30px;border-radius:50%;background:var(--navy-600);color:#fff;
+  font-family:var(--mono);font-size:.82rem;font-weight:600;display:grid;place-items:center;margin-bottom:13px}
+.flow-step h6{font-family:var(--sans);font-weight:700;font-size:.92rem;margin:0 0 5px}
+.flow-step p{font-size:.8rem;color:var(--text-3);margin:0;line-height:1.42}
+@media(max-width:780px){
+  .flow{grid-template-columns:1fr}
+  .flow-step{border-right:1px solid var(--line)!important;border-bottom:none}
+  .flow-step:first-child{border-radius:var(--r) var(--r) 0 0}
+  .flow-step:last-child{border-radius:0 0 var(--r) var(--r)}
+}
+
+/* spec rows */
+.specs{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:24px}
+.spec{background:var(--navy-50);border:1px solid var(--navy-100);border-radius:var(--r);padding:22px;text-align:center}
+.spec b{font-family:var(--display);font-size:2rem;color:var(--navy-700);display:block;line-height:1;margin-bottom:8px}
+.spec span{font-size:.82rem;color:var(--text-2)}
+
+/* ============================================================
+   SOLUTIONS / persona cards
+   ============================================================ */
+.persona-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+.persona{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:30px;display:flex;flex-direction:column;gap:14px;transition:all .3s}
+.persona:hover{box-shadow:var(--shadow-2);transform:translateY(-4px)}
+.persona .pi{width:50px;height:50px;border-radius:13px;background:var(--gold-100);display:grid;place-items:center;color:var(--gold-600)}
+.persona .pi svg{width:25px;height:25px}
+.persona h4{margin:0}
+.persona p{font-size:.9rem;color:var(--text-2);margin:0}
+.persona .uses{display:flex;flex-direction:column;gap:7px;margin-top:auto}
+.persona .uses div{font-size:.84rem;display:flex;gap:9px;align-items:flex-start;color:var(--text-2)}
+.persona .uses svg{width:15px;height:15px;flex:none;margin-top:3px;color:var(--navy-600)}
+
+/* ============================================================
+   FAQ / accordion
+   ============================================================ */
+.faq{max-width:820px;margin:0 auto}
+.faq-item{border-bottom:1px solid var(--line)}
+.faq-q{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:24px 4px;cursor:pointer;font-family:var(--display);font-size:1.18rem;font-weight:600}
+.faq-q .fi{width:26px;height:26px;flex:none;border-radius:50%;border:1.5px solid var(--line-2);display:grid;place-items:center;transition:all .25s;color:var(--navy-600)}
+.faq-item.open .fi{background:var(--navy-600);border-color:var(--navy-600);color:#fff;transform:rotate(45deg)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .35s var(--ease)}
+.faq-a p{padding:0 4px 24px;color:var(--text-2);margin:0;font-size:.95rem}
+
+/* ============================================================
+   CTA BAND
+   ============================================================ */
+.cta-band{background:linear-gradient(150deg,var(--navy-800),var(--navy-600));color:#fff;border-radius:var(--r-xl);padding:clamp(44px,6vw,72px);text-align:center;position:relative;overflow:hidden}
+.cta-band .hero-grad{top:-300px;opacity:.5}
+.cta-band h2{color:#fff;position:relative;z-index:2;max-width:640px;margin:0 auto 16px}
+.cta-band p{color:var(--text-inv-2);position:relative;z-index:2;max-width:520px;margin:0 auto 30px;font-size:1.08rem}
+.cta-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;position:relative;z-index:2}
+
+/* ============================================================
+   CONTACT
+   ============================================================ */
+.contact-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:50px;align-items:start}
+.contact-info{display:flex;flex-direction:column;gap:26px}
+.ci-item{display:flex;gap:15px}
+.ci-item .cii{width:44px;height:44px;border-radius:11px;background:var(--navy-50);display:grid;place-items:center;color:var(--navy-600);flex:none}
+.ci-item .cii svg{width:21px;height:21px}
+.ci-item h5{font-family:var(--sans);font-weight:700;margin:0 0 3px;font-size:.98rem}
+.ci-item p{margin:0;font-size:.9rem;color:var(--text-2)}
+.form-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:34px;box-shadow:var(--shadow-1)}
+.field{margin-bottom:18px}
+.field label{display:block;font-size:.84rem;font-weight:600;margin-bottom:7px;color:var(--text)}
+.field input,.field select,.field textarea{
+  width:100%;padding:12px 15px;border:1.5px solid var(--line-2);border-radius:9px;
+  font-family:var(--sans);font-size:.94rem;background:var(--paper);color:var(--text);transition:all .2s}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--navy-600);background:#fff;box-shadow:0 0 0 4px rgba(0,51,161,.1)}
+.field textarea{resize:vertical;min-height:110px}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-note{font-size:.8rem;color:var(--text-3);margin-top:8px}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+.footer{background:var(--ink);color:var(--text-inv-2);padding:70px 0 32px;position:relative;overflow:hidden}
+.footer-top{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:34px;margin-bottom:50px;position:relative;z-index:2}
+.footer-brand .logo-text{color:#fff;margin-bottom:14px}
+.footer-brand p{font-size:.9rem;line-height:1.6;max-width:280px;margin-bottom:18px}
+.footer-ar{font-family:var(--arabic);direction:rtl;color:var(--gold-400);font-size:.95rem;margin-top:6px}
+.footer-col h6{font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--text-inv);margin:0 0 18px}
+.footer-col a{display:block;font-size:.88rem;padding:6px 0;color:var(--text-inv-2);cursor:pointer;transition:color .2s}
+.footer-col a:hover{color:#fff}
+.footer-bottom{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;
+  padding-top:28px;border-top:1px solid var(--ink-line);position:relative;z-index:2}
+.footer-bottom p{font-size:.82rem;margin:0}
+.footer-legal{display:flex;gap:22px;flex-wrap:wrap}
+.footer-legal a{font-size:.82rem;cursor:pointer}
+.footer-legal a:hover{color:#fff}
+.footer-badges{display:flex;gap:10px;flex-wrap:wrap}
+.fbadge{font-family:var(--mono);font-size:.66rem;letter-spacing:.08em;color:var(--text-inv-2);
+  border:1px solid var(--ink-line);padding:5px 11px;border-radius:6px}
+
+/* ============================================================
+   UTIL / RESPONSIVE
+   ============================================================ */
+.fade-up{opacity:0;transform:translateY(26px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+.fade-up.in{opacity:1;transform:none}
+.center{text-align:center}
+.mt0{margin-top:0}.mb0{margin-bottom:0}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:center}
+
+@media(max-width:980px){
+  .nav-links{display:none}
+  .nav-cta .btn-demo{display:none}
+  .burger{display:flex}
+  .hero-grid{grid-template-columns:1fr;gap:44px}
+  .hero-trust{gap:22px}
+  .principles,.engines,.deploy-grid,.stats-grid,.tiers,.persona-grid{grid-template-columns:1fr 1fr}
+  .apps-grid,.modules,.specs,.contact-grid,.split{grid-template-columns:1fr}
+  .footer-top{grid-template-columns:1fr 1fr;gap:30px}
+  .footer-brand{grid-column:1/-1}
+}
+@media(max-width:620px){
+  .wrap{padding:0 20px}
+  .principles,.engines,.deploy-grid,.stats-grid,.tiers,.persona-grid,.apps-grid,.cmp-row,.field-row{grid-template-columns:1fr}
+  .cmp-row{display:flex;flex-direction:column}
+  .cmp-row.head{display:none}
+  .cmp-row>div{border-bottom:1px solid var(--line)}
+  .ac-suites{grid-template-columns:1fr}
+  .ac-core{grid-template-columns:repeat(2,1fr)}
+  .hero-actions .btn,.cta-actions .btn{width:100%;justify-content:center}
+  .footer-top{grid-template-columns:1fr}
+  .tier.featured{transform:none}
+}
+
+/* ============================================================
+   HOME EVALUATE/PROOF LINK CARDS
+   ============================================================ */
+.home-links{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.home-link{display:flex;align-items:center;gap:16px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:24px;transition:all .25s var(--ease);text-decoration:none}
+.home-link:hover{border-color:var(--navy-300);box-shadow:var(--shadow-1);transform:translateY(-3px)}
+.hl-ico{width:46px;height:46px;border-radius:12px;background:var(--navy-50);display:grid;place-items:center;color:var(--navy-600);flex:none}
+.hl-ico svg{width:23px;height:23px}
+.home-link h4{margin:0 0 4px;font-size:1.08rem}
+.home-link p{margin:0;font-size:.84rem;color:var(--text-3);line-height:1.4}
+.hl-arrow{width:18px;height:18px;color:var(--navy-600);flex:none;margin-left:auto;opacity:0;transform:translateX(-4px);transition:all .2s var(--ease)}
+.home-link:hover .hl-arrow{opacity:1;transform:translateX(0)}
+@media(max-width:980px){.home-links{grid-template-columns:1fr}}
+
+/* ============================================================
+   RESOURCES HUB
+   ============================================================ */
+.res-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.res-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:28px;transition:all .3s var(--ease);display:flex;flex-direction:column;gap:12px}
+.res-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-2);border-color:var(--navy-200)}
+.res-ico{width:48px;height:48px;border-radius:13px;background:var(--navy-50);display:grid;place-items:center;color:var(--navy-600)}
+.res-ico svg{width:24px;height:24px}
+.res-tag{font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-600)}
+.res-card h4{margin:0}
+.res-card p{font-size:.9rem;color:var(--text-2);margin:0;flex:1}
+
+/* ============================================================
+   ROI / TCO CALCULATOR
+   ============================================================ */
+.calc{background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);padding:clamp(24px,4vw,40px);box-shadow:var(--shadow-1)}
+.calc-controls{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin-bottom:32px}
+.calc-field label{display:block;font-size:.88rem;font-weight:600;margin-bottom:14px;color:var(--text)}
+.calc-range{display:flex;align-items:center;gap:16px}
+.calc-range input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:6px;border-radius:6px;background:var(--navy-100);outline-offset:4px}
+.calc-range input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;border-radius:50%;background:var(--navy-600);cursor:pointer;box-shadow:0 2px 8px rgba(0,51,161,.4);transition:transform .15s}
+.calc-range input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.15)}
+.calc-range input[type=range]::-moz-range-thumb{width:22px;height:22px;border:none;border-radius:50%;background:var(--navy-600);cursor:pointer}
+.calc-range output{font-family:var(--mono);font-size:.92rem;font-weight:600;color:var(--navy-700);min-width:54px;text-align:right}
+.calc-results{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px}
+.calc-result{background:var(--paper-2);border:1px solid var(--line);border-radius:var(--r);padding:22px;text-align:center}
+.calc-result.featured{background:var(--navy-50);border-color:var(--navy-200)}
+.calc-result.accent{background:linear-gradient(150deg,var(--navy-700),var(--navy-600));border:none}
+.calc-result-label{font-size:.78rem;color:var(--text-3);display:block;margin-bottom:8px}
+.calc-result.accent .calc-result-label{color:rgba(255,255,255,.8)}
+.calc-result b{font-family:var(--display);font-size:clamp(1.8rem,3.5vw,2.6rem);color:var(--navy-700);display:block;line-height:1}
+.calc-result.accent b{color:#fff}
+.calc-result-sub{font-size:.76rem;color:var(--text-3);display:block;margin-top:8px}
+.calc-result.accent .calc-result-sub{color:rgba(255,255,255,.75)}
+.calc-note{font-size:.78rem;color:var(--text-3);margin:0;line-height:1.5}
+
+/* ============================================================
+   SUITE CONFIGURATOR
+   ============================================================ */
+.cfg{background:var(--card);border:1px solid var(--line);border-radius:var(--r-xl);padding:clamp(20px,3vw,32px);box-shadow:var(--shadow-1)}
+.cfg-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.cfg-suite{position:relative;text-align:left;background:var(--paper);border:2px solid var(--line);border-radius:var(--r-lg);padding:22px;cursor:pointer;transition:all .25s var(--ease);display:flex;flex-direction:column;gap:8px;font-family:var(--sans)}
+.cfg-suite:hover{border-color:var(--navy-300);transform:translateY(-3px)}
+.cfg-suite.selected{border-color:var(--navy-600);background:var(--navy-50)}
+.cfg-check{position:absolute;top:14px;right:14px;width:24px;height:24px;border-radius:50%;border:2px solid var(--line-2);display:grid;place-items:center;color:#fff;transition:all .2s}
+.cfg-check svg{width:14px;height:14px;opacity:0;transition:opacity .2s}
+.cfg-suite.selected .cfg-check{background:var(--navy-600);border-color:var(--navy-600)}
+.cfg-suite.selected .cfg-check svg{opacity:1}
+.cfg-ico{width:44px;height:44px;border-radius:11px;display:grid;place-items:center;color:#fff}
+.cfg-ico svg{width:22px;height:22px}
+.cfg-name{font-weight:700;font-size:1.02rem;color:var(--text)}
+.cfg-sub{font-size:.82rem;color:var(--text-3)}
+.cfg-apps{font-family:var(--mono);font-size:.72rem;color:var(--navy-600);margin-top:auto}
+.cfg-summary{background:var(--ink);border-radius:var(--r-lg);padding:26px;display:flex;flex-direction:column;gap:18px}
+.cfg-summary-row{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.cfg-sum-label{font-size:.74rem;color:var(--text-inv-2);display:block;margin-bottom:6px}
+.cfg-summary b{font-family:var(--display);font-size:1.1rem;color:#fff;line-height:1.2}
+.cfg-deploy{display:flex;flex-direction:column;gap:10px}
+.cfg-deploy-opts{display:flex;gap:8px;flex-wrap:wrap}
+.cfg-deploy-opt{background:rgba(255,255,255,.08);border:1px solid var(--ink-line);color:var(--text-inv);padding:9px 18px;border-radius:8px;cursor:pointer;font-family:var(--sans);font-weight:600;font-size:.86rem;transition:all .2s}
+.cfg-deploy-opt:hover{background:rgba(255,255,255,.14)}
+.cfg-deploy-opt.active{background:var(--gold-500);color:var(--ink);border-color:var(--gold-500)}
+.cfg-summary .btn{align-self:flex-start}
+
+@media(max-width:980px){
+  .res-grid{grid-template-columns:1fr 1fr}
+  .calc-controls,.calc-results{grid-template-columns:1fr}
+  .calc-results{gap:12px}
+  .cfg-grid{grid-template-columns:1fr 1fr}
+  .cfg-summary-row{grid-template-columns:1fr 1fr}
+}
+@media(max-width:620px){
+  .res-grid,.cfg-grid,.cfg-summary-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<noscript>
+  <div style="max-width:760px;margin:0 auto;padding:80px 28px;font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:#15182B">
+    <h1 style="font-size:2rem;margin:0 0 14px">Clario360 — The Sovereign Enterprise Platform</h1>
+    <p style="font-size:1.1rem;line-height:1.6;color:#4A4F66">Clario360 is a sovereign enterprise platform, built Arabic-first, that unifies four product suites on one configurable platform core — one login, one audit. It deploys as managed SaaS, on-premise, or in fully air-gapped environments.</p>
+    <h2 style="font-size:1.3rem;margin:28px 0 10px">The four suites</h2>
+    <ul style="line-height:1.8;color:#4A4F66">
+      <li><strong>DataStream</strong> — data resilience and mobility: ClarioDR (disaster recovery), ClarioMigration, ClarioSync (change data capture), ClarioDWH (sovereign lakehouse).</li>
+      <li><strong>Business+</strong> — corporate operations: Watheeq (legal &amp; contracts), MahamaTech (project delivery), EHKAM (GRC), BOSALAH (executive &amp; board), Acta (committee governance).</li>
+      <li><strong>ClarioSec</strong> — security and cyber programs: CTEM (exposure management), DSPM (data security posture), UEBA (behavioural analytics), ClarioVCISO (virtual CISO).</li>
+      <li><strong>ClarioInsight</strong> — data intelligence and dashboards.</li>
+    </ul>
+    <p style="margin-top:24px;color:#4A4F66">This site is interactive and requires JavaScript. To explore the full platform, please enable JavaScript, or contact our team for a guided demonstration.</p>
+  </div>
+</noscript>
+
+<script>
+/* ============================================================
+   CLARIO360 — ICON LIBRARY (inline SVG, stroke-based)
+   ============================================================ */
+const I = {
+  shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  recover:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+  migrate:'<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/><rect x="2" y="4" width="5" height="16" rx="1"/>',
+  sync:'<path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>',
+  database:'<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/>',
+  scale:'<path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>',
+  layers:'<path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/>',
+  briefcase:'<rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+  gauge:'<path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>',
+  workflow:'<rect width="8" height="8" x="3" y="3" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/><rect width="8" height="8" x="13" y="13" rx="2"/>',
+  form:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h3"/>',
+  bot:'<path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/>',
+  plug:'<path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/>',
+  key:'<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/>',
+  file:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/>',
+  bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  license:'<path d="M15 12a3 3 0 1 0-6 0 3 3 0 0 0 6 0Z"/><path d="M12 3v2"/><path d="M12 19v2"/><circle cx="12" cy="12" r="9"/>',
+  sparkle:'<path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/>',
+  lock:'<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  globe:'<circle cx="12" cy="12" r="10"/><path d="M12 2a15 15 0 0 1 0 20a15 15 0 0 1 0-20"/><path d="M2 12h20"/>',
+  server:'<rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><path d="M6 6h.01M6 18h.01"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  checkCircle:'<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+  x:'<path d="M18 6 6 18M6 6l12 12"/>',
+  arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',
+  chev:'<path d="m6 9 6 6 6-6"/>',
+  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  gavel:'<path d="m14.5 12.5-8 8a2.12 2.12 0 1 1-3-3l8-8"/><path d="m16 16 6-6"/><path d="m8 8 6-6"/><path d="m9 7 8 8"/><path d="m21 11-8-8"/>',
+  target:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  building:'<rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"/>',
+  trend:'<path d="M22 7 13.5 15.5 8.5 10.5 2 17"/><path d="M16 7h6v6"/>',
+  clipboard:'<rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/>',
+  flag:'<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/>',
+  network:'<rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/>',
+  doc:'<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/><path d="M9 9h1M9 13h6M9 17h6"/>',
+  radar:'<path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01"/><path d="M17.99 11.66A6 6 0 0 1 15.77 16.67"/><circle cx="12" cy="12" r="2"/><path d="m13.41 10.59 5.66-5.66"/>',
+  book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+  eye:'<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
+  zap:'<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 12 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 12 14z"/>',
+  calendar:'<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/>',
+  mail:'<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-10 5L2 7"/>',
+  phone:'<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  pin:'<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+  cube:'<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/>',
+  search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  pen:'<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>',
+  finger:'<path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/><path d="M14 13.12c0 2.38 0 6.38-1 8.88"/><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/><path d="M2 12a10 10 0 0 1 18-6"/><path d="M2 16h.01"/><path d="M21.8 16c.2-2 .131-5.354 0-6"/><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/><path d="M8.65 22c.21-.66.45-1.32.57-2"/>',
+  alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4M12 17h.01"/>',
+  cycle:'<path d="M11 2a10 10 0 1 0 10 10"/><path d="M21 2v6h-6"/><path d="M21 8a10 10 0 0 0-3-4"/>',
+  handshake:'<path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/>',
+};
+function svg(p,cls){return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="${cls||''}">${p}</svg>`;}
+const logoMark = `<svg class="logo-mark" viewBox="0 0 40 40" fill="none"><rect width="40" height="40" rx="10" fill="#0033A1"/><path d="M20 8a12 12 0 1 0 0 24" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><circle cx="20" cy="20" r="4.2" fill="#C9A65A"/><path d="M28 13.5 32 20l-4 6.5" stroke="#C9A65A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+/* ============================================================
+   PRODUCT DATA MODEL — sourced from the E2E architecture deck
+   ============================================================ */
+const COLORS = {
+  ds:{600:'var(--teal-600)',700:'var(--teal-700)',grad:'linear-gradient(150deg,var(--teal-700),var(--teal-600))'},
+  bp:{600:'var(--navy-600)',700:'var(--navy-800)',grad:'linear-gradient(150deg,var(--navy-800),var(--navy-600))'},
+  sec:{600:'#B23A48',700:'#7E2531',grad:'linear-gradient(150deg,#7E2531,#B23A48)'},
+  insight:{600:'#5B3FA8',700:'#3C2A73',grad:'linear-gradient(150deg,#3C2A73,#5B3FA8)'},
+};
+
+const DATASTREAM = {
+  id:'datastream', name:'DataStream Suite', family:'ds',
+  tagline:'Data resilience and mobility — four applications on one Go replication core.',
+  blurb:'One static-binary replication engine, air-gap ready, powers continuous protection, anywhere-to-anywhere migration, sub-10-second change capture, and the sovereign lakehouse everything feeds. Build the engine once; four products inherit it.',
+  core:'Shared Replication Core · Go',
+  coreDesc:'Capture agents (VM · DB log · file) → transport (compress · encrypt · resume · throttle) → idempotent apply & validate → checkpointing with an RPO ledger. Fixing throughput, encryption or resume logic once improves every app simultaneously.',
+  apps:[
+    {id:'clariodr', name:'ClarioDR', ar:'الاستعادة', role:'Failover & recovery', icon:I.shield, status:'ga',
+     short:'Sovereign failover, drawn end to end — immutable, ransomware-safe recovery points with one-click, audit-grade drills.',
+     hero:'Sovereign failover and disaster recovery, gated end to end.',
+     desc:'ClarioDR continuously protects production VMs, databases and IaC snapshots, replicating them encrypted to a sovereign or DC-2 recovery site. Every failover passes four gates — validate, approve, execute, attest — and drill mode runs the identical code path against isolated networks, so a rehearsal is the same as the real event.',
+     specs:[['RTO ≤ 15 min','Boot-ordered recovery'],['RPO ≤ 5 min','At GA → ≤30s in 2027'],['4 gates','Validate · Approve · Execute · Attest']],
+     modules:[
+       ['Replication manager','Continuous capture and encrypted shipping of VMs, databases and configs',I.sync],
+       ['RPO monitor','Live recovery-point tracking against your sovereign SLO',I.gauge],
+       ['Immutable recovery points','Ransomware-safe, tamper-evident restore checkpoints',I.lock],
+       ['Consistency groups','Application-consistent boot order across dependent systems',I.layers],
+       ['Runbook orchestrator','Automation-engine-driven failover and cutover sequences',I.workflow],
+       ['Non-disruptive drills','Rehearse against isolated networks with no production impact',I.cycle],
+       ['Attestation reports','NCA-ready, audit-grade evidence for every drill and event',I.doc],
+       ['Network mappings','Pre-mapped recovery-site routing and failover targets',I.network],
+     ],
+     flow:[['Initiate','Operator triggers failover or drill'],['Quiesce & sync','Final sync, then Gate 1 RPO check'],['Approve','Gate 2 approval requested and granted'],['Execute','Gate 3 boot order runs, services validated'],['Attest','Gate 4 attestation report issued']],
+     bench:'Benchmarked against enterprise DR — beaten on sovereign deployment and audit-grade, code-identical drills.'},
+    {id:'clariomigration', name:'ClarioMigration', ar:'الترحيل', role:'Move workloads anywhere', icon:I.migrate, status:'soon',
+     short:'Anywhere to anywhere, gated and reversible — hyperscalers migrate you in; Clario migrates you anywhere, including back.',
+     hero:'Anywhere-to-anywhere workload migration — gated and reversible.',
+     desc:'ClarioMigration reuses the ClarioDR replication core to move VMs, databases and files between any cloud or data centre. It assesses dependencies and plans waves, seeds an initial replica, catches up with change-data-capture, then performs a runbook-gated cutover with the rollback path armed until validation passes.',
+     specs:[['99.9%','Data-integrity checks'],['Near-zero','Cutover lag via CDC'],['Reversible','Rollback armed to sign-off']],
+     modules:[
+       ['Discovery & dependency map','Automatic inventory and dependency graphing of the source estate',I.search],
+       ['Wave planning','Group workloads into sequenced, low-risk migration waves',I.layers],
+       ['Throttled seeding','Initial full replication with bandwidth control',I.database],
+       ['CDC delta catch-up','Near-zero-lag change capture before cutover',I.sync],
+       ['Runbook-gated cutover','Orchestrated switchover with armed rollback',I.workflow],
+       ['Validation & sign-off','99.9% data checks before the rollback path closes',I.checkCircle],
+       ['Source/target adapters','Cloud-agnostic adapters from the Integration Engine',I.plug],
+       ['Cloud-agnostic by design','No lock-in — migrate in, across, or back out',I.globe],
+     ],
+     flow:[['Assess','Discovery, dependency map, wave plan'],['Seed','Throttled initial full replication'],['Delta','CDC catch-up to near-zero lag'],['Cutover','Runbook-gated with rollback armed'],['Validate','99.9% data checks and sign-off']],
+     bench:'Hyperscaler tools migrate you into their cloud. ClarioMigration is cloud-agnostic by construction — including the path back.'},
+    {id:'clariosync', name:'ClarioSync', ar:'المزامنة', role:'CDC ≤ 10 s', icon:I.sync, status:'soon',
+     short:'Change data capture at ≤10 seconds — flat, predictable pricing. The engine meters rows for visibility, never for billing surprises.',
+     hero:'Change data capture, delivered in ten seconds or less.',
+     desc:'ClarioSync adds a streaming pipeline on top of the shared core: log-based capture with zero source impact, ordered and partitioned streaming, in-flight transform and masking, and idempotent exactly-once delivery. Connectors come from the Integration Engine catalog — Sync adds the pipeline, not another adapter framework.',
+     specs:[['≤ 10 s','Lag SLO with alerting'],['Exactly-once','Idempotent apply'],['Flat pricing','Metered for visibility, not billing']],
+     modules:[
+       ['Log-based capture','Read database logs with zero impact on the source',I.eye],
+       ['Ordered streaming','Per-tenant ordered, partitioned event streams',I.network],
+       ['Transform & mask','Map, mask and enrich data in flight',I.pen],
+       ['Idempotent delivery','Exactly-once apply to every target',I.checkCircle],
+       ['Lag monitor','≤10-second SLO with proactive alerts',I.gauge],
+       ['Schema-drift detection','Detect and evolve through upstream schema changes',I.layers],
+       ['Multi-target fan-out','Feed ClarioDWH, analytics, apps and recovery copies at once',I.cube],
+       ['Predictable pricing','Row metering for observability, never for billing surprises',I.trend],
+     ],
+     flow:[['Capture','Log reader, zero source impact'],['Stream','Ordered, partitioned event bus'],['Transform','Map, mask, enrich'],['Deliver','Idempotent exactly-once apply'],['Monitor','≤10s lag SLO and alerts']],
+     bench:'Versus consumption-metered competitors, pricing stays flat and predictable — the engine meters rows for visibility, never to surprise you.'},
+    {id:'clariodwh', name:'ClarioDWH', ar:'المستودع', role:'Sovereign lakehouse', icon:I.database, status:'soon',
+     short:'The sovereign lakehouse everything feeds — bronze keeps the truth, silver keeps the standard, gold keeps the answers.',
+     hero:'The sovereign lakehouse every source feeds into.',
+     desc:'ClarioDWH is the destination for CDC streams, batch loads, app events and external feeds. A medallion architecture over sovereign object storage moves data from raw bronze, through quality-gated silver, to curated, AI-ready gold — with catalog, lineage and dark-data discovery throughout. Data stays in-Kingdom.',
+     specs:[['−40% $/TB','vs global cloud DWH'],['In-Kingdom','Sovereign object storage'],['AI-ready','Gold marts for RAG & BI']],
+     modules:[
+       ['Bronze zone','Raw, immutable, replayable landing data',I.database],
+       ['Silver zone','Cleansed, conformed, quality-gated data',I.layers],
+       ['Gold zone','Curated marts, metrics and AI-ready datasets',I.sparkle],
+       ['Catalog & lineage','Full discovery, lineage and dark-data surfacing',I.search],
+       ['Quality rules & contracts','Enforced data contracts between producers and consumers',I.checkCircle],
+       ['SQL engine','In-place query over sovereign object storage',I.server],
+       ['BI & dashboards','Powers BOSALAH executive views and BI tools',I.gauge],
+       ['AI / RAG services','Gold-zone datasets feed retrieval-augmented AI',I.bot],
+     ],
+     flow:[['Ingest','CDC, batch, events, external feeds'],['Bronze','Raw, immutable, replayable'],['Silver','Cleansed, conformed, gated'],['Gold','Curated marts and metrics'],['Serve','BI, exec views and AI/RAG']],
+     bench:'Data stays in-Kingdom at roughly 40% lower cost per terabyte than global cloud warehouses — sovereignty and economics, together.'},
+  ],
+};
+
+const BUSINESSPLUS = {
+  id:'business-plus', name:'Business+ Suite', family:'bp',
+  tagline:'Corporate operations in NestJS — Arabic-first, workflow-powered, event-connected.',
+  blurb:'Four corporate-operations applications on one shared React shell — single navigation, single design system, single login, Arabic-first RTL. Each app owns its schema and API and never touches another app\'s database. They integrate only through the event bus.',
+  core:'Shared Web Shell + Platform Core',
+  coreDesc:'A React shell (Arabic-first RTL/LTR) gives one navigation, one design system and one login. Each NestJS module owns its schema and typed BFF endpoints, consumes the platform core (Workflow, Forms, Automation, Integration, IAM, Files, Notify, Licensing, AI), and publishes domain events. No app calls another app\'s database, ever.',
+  apps:[
+    {id:'watheeq', name:'Watheeq', ar:'وثيق', role:'Legal & contracts', icon:I.scale, status:'ga',
+     short:'Legal operations, Arabic-native — the architecture treats the Arabic document as the primary artifact, not a translation.',
+     hero:'Legal operations and contract lifecycle, Arabic-native.',
+     desc:'Watheeq runs matters, the full contract lifecycle, obligations and a bilingual clause library — authoring, redlining, workflow-engine approval, and e-signature, with obligations tracked live afterward. It integrates with Najiz courts and treats the Arabic document as the primary artifact, not a translation. Saudi-law content and Najiz alignment are the moat.',
+     specs:[['AR / EN','Bilingual clause library'],['Najiz','Court-system integration'],['CLM','Icertis-class lifecycle']],
+     modules:[
+       ['Matters & cases','Central registry for every legal matter and case',I.briefcase],
+       ['Contract lifecycle (CLM)','Author, negotiate, approve, sign and renew',I.doc],
+       ['Obligations & deadlines','Live tracking of contractual obligations and dates',I.calendar],
+       ['Clause library (AR/EN)','Reusable, governed clauses in Arabic and English',I.book],
+       ['Arabic document generation','Native Arabic drafting as the primary artifact',I.pen],
+       ['Advice & opinion tracking','Log and track legal advice and opinions',I.clipboard],
+       ['Legal hold','Preservation holds wired to the File service',I.lock],
+       ['Spend & counsel management','Outside-counsel and legal-spend control',I.trend],
+     ],
+     flow:[['Author','Draft in Arabic or English'],['Negotiate','Redline and compare versions'],['Approve','Routed through the Workflow Engine'],['e-Sign','Integrated e-signature'],['Obligations','Tracked live, with Najiz alignment']],
+     bench:'Benchmarked against Clio and Icertis-class CLM — differentiated by Saudi-law content, Najiz alignment, and Arabic-as-primary.'},
+    {id:'mahamatech', name:'MahamaTech', ar:'مهامتك', role:'Projects & delivery', icon:I.target, status:'soon',
+     short:'Delivery tied to strategy and risk — a task is never an island; it traces up to an OKR and sideways to a risk, automatically.',
+     hero:'Project and portfolio delivery, tied to strategy and risk.',
+     desc:'MahamaTech manages portfolios, programs, projects, boards and tasks with Arabic-first plans, Gantt and kanban. Strategy and OKRs cascade in from BOSALAH; delivery risks escalate out to EHKAM. Every task traces up to an objective and sideways to a risk — automatically — so delivery is never disconnected from why it matters.',
+     specs:[['AR-first','Plans, Gantt & kanban'],['Stage gates','Workflow-engine governed'],['OKR-linked','Cascade from BOSALAH']],
+     modules:[
+       ['Portfolio & programs','Hierarchy from portfolio down to task',I.layers],
+       ['Plans, Gantt & kanban','Arabic-first planning and delivery boards',I.clipboard],
+       ['Resourcing & capacity','Allocate people and track capacity',I.users],
+       ['Timesheets & costs','Effort and cost capture per initiative',I.gauge],
+       ['Stage gates','Phase approvals via the Workflow Engine',I.workflow],
+       ['Status & RAID logs','Risks, assumptions, issues and dependencies',I.alert],
+       ['Methodology packs','Reusable templates and delivery methodologies',I.book],
+       ['Strategy & risk linkage','Tasks trace to OKRs and to EHKAM risks',I.network],
+     ],
+     flow:[['Plan','Portfolio, program and project structure'],['Resource','Capacity and allocation'],['Execute','Boards, tasks and timesheets'],['Govern','Stage gates and RAID logs'],['Connect','OKRs in, delivery risks out']],
+     bench:'Matched against Monday.com, Asana and Jira on boards and plans — beaten on strategy-and-risk linkage in Arabic.'},
+    {id:'ehkam', name:'EHKAM', ar:'إحكام', role:'Risk & compliance', icon:I.shield, status:'soon',
+     short:'GRC with the frameworks pre-loaded — one control, many frameworks; evidence collected once satisfies every mapped regulation.',
+     hero:'Governance, risk and compliance — Saudi frameworks pre-loaded.',
+     desc:'EHKAM ships with NCA ECC/CSCC, SAMA CSF, PDPL, ISO 27001 and NIST mapped on day one. A unified control library lets you map once and satisfy many frameworks; assessments collect evidence into Files, issues route through the Workflow Engine, and continuous monitoring is driven by Automation. Posture stays live and regulator-ready.',
+     specs:[['Day-one','NCA · SAMA · PDPL · ISO'],['Map once','Unified control library'],['Live posture','Regulator-ready reporting']],
+     modules:[
+       ['Framework packs','NCA ECC/CSCC, SAMA CSF, PDPL, ISO 27001, NIST',I.shield],
+       ['Unified control library','Map a control once, satisfy many frameworks',I.layers],
+       ['Risk register','Scoring, appetite and treatment tracking',I.alert],
+       ['Assessments & evidence','Evidence collection wired to the File service',I.clipboard],
+       ['Issues & actions','Findings routed through the Workflow Engine',I.workflow],
+       ['Policy lifecycle','Policy authoring, approval and attestations',I.doc],
+       ['Continuous monitoring','Automation-driven control monitoring',I.cycle],
+       ['Immutable audit trail','Tamper-evident record of every action',I.lock],
+     ],
+     flow:[['Map','One control to many frameworks'],['Assess','Collect evidence into Files'],['Remediate','Issues via Workflow Engine'],['Monitor','Continuous, Automation-driven'],['Report','Live posture to BOSALAH']],
+     bench:'Beaten ServiceNow GRC, MetricStream and Archer on day-one Saudi framework coverage and sovereign deployment.'},
+    {id:'bosalah', name:'BOSALAH', ar:'بوصلة', role:'Strategy & board', icon:I.gauge, status:'soon',
+     short:'The executive layer everything feeds — it writes almost nothing of its own; it is the read-model of the whole platform, which is its power.',
+     hero:'The executive and board layer the whole platform feeds.',
+     desc:'BOSALAH is the read-model of Clario360. It consumes risk, delivery and legal events plus ClarioDWH marts to render a Vision-2030-aligned strategy map, cascade OKRs from org to person, drive live executive dashboards, and generate Arabic board packs. It writes almost nothing of its own — every number arrives live from the suite, not from slides.',
+     specs:[['Vision 2030','Aligned strategy map'],['Live','Every number from the bus'],['Board packs','Arabic document generation']],
+     modules:[
+       ['Strategy map','Vision-2030-aligned strategic objectives',I.target],
+       ['OKR cascade','Objectives from org to team to person',I.network],
+       ['Executive dashboards','Live, drill-down performance views',I.gauge],
+       ['Board packs','Arabic board-pack document generation',I.doc],
+       ['Meetings & decisions','Decisions and action tracking',I.users],
+       ['Initiative funding','Funding and benefits realisation',I.trend],
+       ['KPI-breach alerts','Automation-driven alerts on threshold breach',I.bell],
+       ['Decision-to-action','Decisions become actions via the Workflow Engine',I.workflow],
+     ],
+     flow:[['Consume','Risk, delivery, legal events + DWH'],['Align','Vision-2030 strategy map'],['Cascade','OKRs org → team → person'],['Surface','Live dashboards and board packs'],['Act','Decisions become tracked actions']],
+     bench:'Matched against Diligent Boards and Quantive on boards and OKRs — beaten because every number arrives live from the suite, not from slides.'},
+  ],
+};
+
+const CLARIOSEC = {
+  id:'clariosec', name:'ClarioSec', family:'sec',
+  tagline:'Security operations, threat intelligence and cyber programs — one sovereign console, Arabic-first.',
+  blurb:'ClarioSec runs the full security lifecycle on the platform core: a SOC with detection, hunting and MITRE ATT&CK mapping; a threat-intelligence layer tracking actors, campaigns and brand abuse; and four cyber programs — exposure management, data security posture, behavioural analytics, and a virtual CISO. Detections, risks and evidence all flow on the same event bus the rest of Clario360 uses.',
+  core:'SOC + Threat Intelligence platform',
+  coreDesc:'Security Operations brings IOC management, threat feeds, threat hunting, detection rules, an event explorer and MITRE ATT&CK coverage. Threat Intelligence adds a CTI dashboard with threat events, active campaigns, threat actors, brand-abuse monitoring, and geographic and sector targeting. The four cyber programs build on top — and every detection and finding publishes to the bus for automation, audit and executive views.',
+  apps:[
+    {id:'ctem', name:'CTEM', ar:'إدارة التعرض', role:'Continuous threat exposure management', icon:I.target, status:'ga',
+     short:'Continuously find, prioritise and close exposures before they become incidents — assessment to remediation, gated and tracked.',
+     hero:'Continuous threat exposure management, assessment to remediation.',
+     desc:'CTEM runs the exposure-management loop: scope the attack surface, run assessments, prioritise what actually matters, and drive remediation to closure. It ties findings to assets and routes fixes through the Workflow Engine, so exposure reduction is measurable rather than a one-off scan.',
+     specs:[['Continuous','Not point-in-time scans'],['Prioritised','By real exploitability'],['Gated','Remediation via Workflow']],
+     modules:[
+       ['Exposure dashboard','A live view of your current attack-surface exposure',I.gauge],
+       ['Assessments','Scheduled and on-demand exposure assessments',I.target],
+       ['Asset correlation','Findings tied to the assets they actually affect',I.server],
+       ['Prioritisation','Rank exposures by real-world exploitability',I.trend],
+       ['Remediation tracking','Drive fixes to closure through the Workflow Engine',I.workflow],
+       ['MITRE ATT&CK mapping','Coverage mapped to adversary techniques',I.network],
+       ['Detection rules','Author and tune detections for known exposures',I.checkCircle],
+       ['Threat hunting','Proactively hunt across the estate',I.search],
+     ],
+     flow:[['Scope','Define the attack surface'],['Assess','Run exposure assessments'],['Prioritise','Rank by exploitability'],['Remediate','Gated fixes via Workflow'],['Verify','Confirm exposure reduced']],
+     bench:'Benchmarked against exposure-management platforms — differentiated by sovereign deployment and one console shared with the rest of the security programme.'},
+    {id:'dspm', name:'DSPM', ar:'وضع أمن البيانات', role:'Data security posture management', icon:I.database, status:'ga',
+     short:'Find sensitive data, see who can reach it, and fix the exposure — data assets, policies, access control and compliance in one place.',
+     hero:'Data security posture — find sensitive data and control who reaches it.',
+     desc:'DSPM discovers and classifies data assets, evaluates them against policy, surfaces who has access, and drives remediation of risky exposure. Exceptions are governed, access is reviewed, and compliance posture is reported continuously — so sensitive data is protected by evidence, not assumption.',
+     specs:[['Discover','Classify data assets'],['Access','See and control who reaches it'],['Continuous','Live compliance posture']],
+     modules:[
+       ['Data assets','Discover and classify sensitive data across stores',I.database],
+       ['Policies','Define and enforce data-security policies',I.doc],
+       ['Remediations','Close risky data exposure to completion',I.workflow],
+       ['Exceptions','Govern and time-box accepted exceptions',I.alert],
+       ['Access control','See and manage who can reach sensitive data',I.key],
+       ['Compliance','Map posture to frameworks and report it live',I.scale],
+       ['Lineage & discovery','Surface dark data and its lineage',I.search],
+       ['Audit trail','Immutable record of access and changes',I.lock],
+     ],
+     flow:[['Discover','Find and classify data'],['Assess','Evaluate against policy'],['Expose','Surface who has access'],['Remediate','Fix risky exposure'],['Report','Live compliance posture']],
+     bench:'Beaten data-security-posture tools on sovereign deployment and on sharing a control library with GRC, so evidence is collected once.'},
+    {id:'ueba', name:'UEBA', ar:'تحليل السلوك', role:'User & entity behaviour analytics', icon:I.finger, status:'soon',
+     short:'Detect the threats signatures miss — baseline normal behaviour for users and entities, then surface the anomalies that matter.',
+     hero:'User and entity behaviour analytics — catch what signatures miss.',
+     desc:'UEBA builds behavioural baselines for users and entities, then scores deviations to surface insider threats, compromised accounts and lateral movement. Anomalies feed the SOC and publish to the bus, so behavioural risk becomes part of the same detection and response loop as everything else.',
+     specs:[['Baselined','Per user and entity'],['Scored','Risk-ranked anomalies'],['Connected','Feeds SOC & automation']],
+     modules:[
+       ['Behavioural baselines','Learn normal behaviour per user and entity',I.trend],
+       ['Anomaly scoring','Risk-rank deviations from the baseline',I.gauge],
+       ['Insider-threat detection','Surface risky internal activity',I.users],
+       ['Account-compromise signals','Detect compromised-credential patterns',I.key],
+       ['Lateral-movement detection','Spot movement across the estate',I.network],
+       ['Entity risk timeline','Track how an entity\'s risk evolves',I.eye],
+       ['SOC integration','Feed anomalies into detection and response',I.shield],
+       ['Bus publishing','Behavioural events available platform-wide',I.zap],
+     ],
+     flow:[['Collect','Activity across users & entities'],['Baseline','Learn what normal looks like'],['Score','Rank deviations by risk'],['Surface','Route anomalies to the SOC'],['Respond','Automate and attest']],
+     bench:'Matched against UEBA modules in major SIEMs — differentiated by running on the same sovereign console and bus as the whole platform.'},
+    {id:'clariovciso', name:'ClarioVCISO', ar:'مدير الأمن الافتراضي', role:'Virtual CISO', icon:I.bot, status:'ga',
+     short:'A virtual CISO that runs the security programme — risk register, policies, third-party risk, evidence, maturity and incident readiness, with AI briefings.',
+     hero:'A virtual CISO that runs the whole security programme.',
+     desc:'ClarioVCISO is the management layer over security: a live risk register, policy lifecycle, third-party risk, an evidence vault, maturity-and-budget tracking, awareness and IAM, and incident readiness — with AI-generated executive briefings. It turns scattered security work into a governed, board-ready programme.',
+     specs:[['Programme','Risk to readiness'],['AI briefings','Executive-ready'],['Evidence','Vaulted & auditable']],
+     modules:[
+       ['Executive briefing','AI-generated security briefings for leadership',I.bot],
+       ['Risk register','Live security-risk register with treatment',I.book],
+       ['Policy lifecycle','Author, approve and attest security policies',I.doc],
+       ['Compliance','Track posture against required frameworks',I.checkCircle],
+       ['Third-party risk','Assess and monitor vendor risk',I.handshake],
+       ['Evidence vault','Collect and retain audit evidence',I.lock],
+       ['Maturity & budget','Track security maturity against spend',I.gauge],
+       ['Incident readiness','Awareness, IAM and incident preparedness',I.alert],
+     ],
+     flow:[['Assess','Risk register and maturity'],['Govern','Policies and third-party risk'],['Evidence','Vault audit evidence'],['Brief','AI executive briefings'],['Improve','Track maturity vs budget']],
+     bench:'Benchmarked against vCISO services and GRC tooling — beaten by combining live programme management with AI briefings on a sovereign platform.'},
+  ],
+};
+
+const CLARIOINSIGHT = {
+  id:'clarioinsight', name:'ClarioInsight', family:'insight',
+  tagline:'Data intelligence and analytics — pipelines, quality and dark-data discovery, surfaced as live dashboards.',
+  blurb:'ClarioInsight is the analytics layer of Clario360: a data-intelligence engine that manages sources, models, pipelines, quality and dark-data discovery, paired with a dashboards-and-reporting surface for KPIs, reports and alerts. It reads from the sovereign lakehouse and turns governed data into decisions.',
+  core:'Data Intelligence + Dashboards',
+  coreDesc:'Data Intelligence handles sources, data models, pipelines, quality rules, contradiction detection and dark-data discovery. The dashboards surface gives every team live dashboards, KPIs, reports and alerts. Together they read from ClarioDWH and the event bus, so the numbers are governed and current.',
+  apps:[
+    {id:'data-intelligence', name:'Data Intelligence', ar:'ذكاء البيانات', role:'Sources, models, pipelines & quality', icon:I.layers, status:'ga',
+     short:'Govern data end to end — sources, models, pipelines, quality and dark-data discovery, with contradiction detection built in.',
+     hero:'Data intelligence — govern data from source to insight.',
+     desc:'The data-intelligence engine connects sources, defines models, runs pipelines and enforces quality rules — while surfacing contradictions and discovering dark data across the estate. It is the governance layer that makes analytics trustworthy.',
+     specs:[['Pipelines','Source to model'],['Quality','Rules enforced'],['Dark data','Discovered & surfaced']],
+     modules:[
+       ['Data sources','Connect and manage data sources',I.plug],
+       ['Data models','Define conformed, reusable models',I.boxes||I.layers],
+       ['Pipelines','Build and run data pipelines',I.workflow],
+       ['Data quality','Enforce quality rules and gates',I.checkCircle],
+       ['Contradictions','Surface conflicting data automatically',I.zap],
+       ['Dark data','Discover ungoverned, hidden data',I.search],
+       ['Analytics','Analyse across the governed estate',I.trend],
+       ['Lakehouse link','Reads from ClarioDWH zones',I.database],
+     ],
+     flow:[['Connect','Bring in data sources'],['Model','Define conformed models'],['Process','Run governed pipelines'],['Validate','Enforce quality rules'],['Discover','Surface dark data & conflicts']],
+     bench:'Differentiated by governing quality and discovering dark data on the same sovereign platform that stores and secures the data.'},
+    {id:'dashboards', name:'Visus Dashboards', ar:'لوحات المعلومات', role:'Dashboards, KPIs, reports & alerts', icon:I.gauge, status:'ga',
+     short:'Live dashboards, KPIs, reports and alerts — the reporting surface every team reads, fed by governed data.',
+     hero:'Dashboards, KPIs and reports — fed by governed, live data.',
+     desc:'The dashboards surface turns governed data into live dashboards, tracked KPIs, scheduled reports and threshold alerts. Because it reads from the same lakehouse and bus as the rest of the platform, every figure is current and traceable — not a stale export.',
+     specs:[['Live','Always current'],['KPIs','Tracked & alerting'],['Reports','Scheduled & shareable']],
+     modules:[
+       ['Dashboards','Build and share live dashboards',I.gauge],
+       ['KPIs','Define and track key metrics',I.trend],
+       ['Reports','Schedule and distribute reports',I.doc],
+       ['Alerts','Threshold alerts on the metrics that matter',I.bell],
+       ['Drill-down','Move from summary to detail',I.search],
+       ['Data binding','Reads governed data from the lakehouse',I.database],
+       ['Access control','Scope dashboards by role and tenant',I.key],
+       ['Export & share','Share figures with traceability',I.zap],
+     ],
+     flow:[['Bind','Connect to governed data'],['Build','Compose dashboards & KPIs'],['Track','Monitor metrics live'],['Alert','Trigger on thresholds'],['Share','Distribute reports']],
+     bench:'Matched against BI tools on dashboards and reports — beaten because the data is governed, sovereign and live, not a periodic extract.'},
+  ],
+};
+
+/* Acta — board & committee governance — folded into Business+ as a governance app */
+const ACTA_APP = {id:'acta', name:'Acta', ar:'المجالس', role:'Board & committee governance', icon:I.building, status:'ga',
+  short:'Run boards and committees properly — committees, meetings, minutes and action items, tracked to closure.',
+  hero:'Board and committee governance, end to end.',
+  desc:'Acta manages committees, schedules and documents meetings, captures minutes and decisions, and tracks action items to closure. It gives governance a system of record — and publishes governance events to the bus so decisions become tracked actions across the platform.',
+  specs:[['Committees','Membership & mandate'],['Meetings','Agenda to minutes'],['Actions','Tracked to closure']],
+  modules:[
+    ['Committees','Manage committees, membership and mandate',I.users],
+    ['Meetings','Schedule, run and document meetings',I.book],
+    ['Agendas','Build and circulate agendas',I.clipboard],
+    ['Minutes','Capture minutes and decisions',I.doc],
+    ['Action items','Track actions through to closure',I.checkCircle],
+    ['Decisions','Record and trace board decisions',I.gavel],
+    ['Attendance','Track attendance and quorum',I.calendar],
+    ['Governance events','Decisions flow to the bus as actions',I.network],
+  ],
+  flow:[['Convene','Set up committee and meeting'],['Prepare','Build and circulate the agenda'],['Meet','Run the meeting and capture minutes'],['Decide','Record decisions'],['Track','Drive action items to closure']],
+  bench:'Benchmarked against board-governance tools — differentiated by living on the same platform, so decisions become tracked actions automatically.'};
+
+/* Acta is a Business+ governance app — add it to that suite's lineup */
+BUSINESSPLUS.apps.push(ACTA_APP);
+
+const SUITES = {datastream:DATASTREAM, 'business-plus':BUSINESSPLUS, clariosec:CLARIOSEC, clarioinsight:CLARIOINSIGHT};
+const ALL_APPS = {};
+Object.values(SUITES).forEach(s=>s.apps.forEach(a=>ALL_APPS[a.id]={...a,suite:s.id,family:s.family}));
+
+const ENGINES = [
+  ['Workflow Engine','Configurable approvals, stage gates and state machines',I.workflow,'workflow'],
+  ['Forms Engine','Admin-built forms and data capture, no redeploy',I.form,'forms'],
+  ['Automation Engine','Runbooks, drills and event-triggered actions',I.cycle,'automation'],
+  ['Integration Engine','Source and target adapters, gov-platform connectors',I.plug,'integration'],
+  ['IAM','One login, RBAC and tenant isolation across the platform',I.key,'iam'],
+  ['File Service','Sovereign document storage, legal hold and evidence',I.file,'files'],
+  ['Notifications','Email, SMS and in-app alerting, centrally governed',I.bell,'notifications'],
+  ['Licensing','Per-tenant entitlement and packaging control',I.license,'licensing'],
+  ['AI Services','Copilots, contract review and detection, RAG-ready',I.bot,'ai'],
+  ['API Gateway','AuthN/Z, rate limits, routing and versioning · Go',I.server,'gateway'],
+  ['Event Bus','Ordered, per-tenant, replayable domain events',I.network,'event-bus'],
+  ['Observability','RPO/RTO/latency SLOs and platform-wide audit',I.gauge,'observability'],
+];
+
+/* Per-engine detail content for /platform/{slug} pages */
+const ENGINE_DETAIL = {
+  workflow:{tag:'Process',long:'The Workflow Engine turns business processes into configurable approvals, stage gates and state machines. Every app — from contract approval in Watheeq to remediation in CTEM — routes through it, so process logic is built and changed by administrators, not redeployed by engineers.',
+    points:[['Visual process design','Model approvals and state machines without code',I.workflow],['Stage gates','Phase-gate any process with conditional rules',I.checkCircle],['SLA timers','Working-time SLAs, escalations and reminders',I.gauge],['Reusable across apps','One workflow definition serves every suite',I.cube]],
+    consumers:['Watheeq — contract approval','EHKAM — issue remediation','CTEM — exposure remediation','Acta — decision-to-action']},
+  forms:{tag:'Data capture',long:'The Forms Engine lets administrators build data-capture forms and bind them to any process. Intake, assessments, evidence requests and structured records are all defined once and reused — no redeploy to change a field.',
+    points:[['Drag-and-build forms','Compose forms from typed fields',I.form],['Validation rules','Enforce data quality at capture',I.checkCircle],['Conditional logic','Show, hide and require dynamically',I.workflow],['Bound to workflow','Forms feed directly into processes',I.network]],
+    consumers:['EHKAM — control assessments','ClarioVCISO — evidence intake','MahamaTech — status capture','DSPM — exception requests']},
+  automation:{tag:'Runbooks',long:'The Automation Engine executes runbooks, drills and event-triggered actions. It powers DR failover sequences, continuous control monitoring and KPI-breach responses — listening to the event bus and acting without human latency.',
+    points:[['Runbook orchestration','Sequenced, gated automated actions',I.cycle],['Event triggers','React to any domain event on the bus',I.zap],['Scheduled jobs','Drills, scans and checks on a cadence',I.calendar],['Closed-loop','Detect, act and attest automatically',I.checkCircle]],
+    consumers:['ClarioDR — failover runbooks','EHKAM — continuous monitoring','BOSALAH — KPI-breach alerts','ClarioSec — automated response']},
+  integration:{tag:'Connectors',long:'The Integration Engine is the shared adapter catalog — source and target connectors plus government-platform integrations like Najiz and ZATCA. Apps reuse adapters instead of each building their own connector framework.',
+    points:[['Adapter catalog','Reusable source and target connectors',I.plug],['Gov-platform links','Najiz, ZATCA and sector systems',I.building],['Protocol support','APIs, files, webhooks and queues',I.network],['Shared, not duplicated','One catalog serves every suite',I.cube]],
+    consumers:['Watheeq — Najiz courts','ClarioMigration — cloud adapters','ClarioSync — source connectors','ClarioInsight — data sources']},
+  iam:{tag:'Identity',long:'IAM provides one login, role-based access control and tenant isolation across the entire platform. Identity federates to each customer\'s own directory, and every permission is enforced at the gateway before a request reaches an app.',
+    points:[['Single sign-on','One identity across all four suites',I.key],['RBAC','Fine-grained, role-based permissions',I.lock],['Federated identity','Connect to AD / Entra / your IdP',I.users],['Tenant isolation','Hard boundaries between tenants',I.shield]],
+    consumers:['Every suite — one login','Gateway — request authorisation','Audit — who did what','Admin — role management']},
+  files:{tag:'Documents',long:'The File Service is sovereign document storage with legal hold and evidence management. Contracts, board packs, assessment evidence and recovery artefacts all live in one governed store with retention and tamper-evidence.',
+    points:[['Sovereign storage','Documents stay in-Kingdom',I.file],['Legal hold','Preservation holds for litigation',I.lock],['Evidence vault','Audit-grade evidence retention',I.archive||I.lock],['Versioning','Full document history and lineage',I.layers]],
+    consumers:['Watheeq — contracts & holds','EHKAM — assessment evidence','ClarioVCISO — evidence vault','Acta — board documents']},
+  notifications:{tag:'Alerting',long:'Notifications centralise email, SMS and in-app alerting across the platform. Every app publishes alerts through one governed channel, so delivery, preferences and audit are consistent rather than reimplemented per product.',
+    points:[['Multi-channel','Email, SMS and in-app',I.bell],['Preference control','Per-user, per-tenant routing',I.key],['Event-driven','Triggered by bus events',I.zap],['Governed delivery','One audited notification path',I.checkCircle]],
+    consumers:['BOSALAH — KPI alerts','ClarioDR — failover notices','EHKAM — deadline reminders','ClarioSec — incident alerts']},
+  licensing:{tag:'Entitlement',long:'The Licensing engine controls per-tenant entitlement and packaging. Which suites, apps and capabilities a tenant can use is configuration — so commercial packaging changes without code, and marketplace billing can plug in cleanly.',
+    points:[['Per-tenant entitlement','Enable suites and apps per tenant',I.license],['Packaging control','Bundle capabilities commercially',I.cube],['Usage metering','Visibility metering, not billing surprises',I.gauge],['Marketplace-ready','Billing adapters plug in',I.handshake]],
+    consumers:['Platform — feature gating','Sales — commercial packaging','Marketplace — billing','Admin — entitlement view']},
+  ai:{tag:'Intelligence',long:'AI Services provide copilots, contract review, threat detection and RAG-grounded answers across the platform. The gold zone of ClarioDWH feeds retrieval, so AI works on governed, in-Kingdom data — not an external model with your data.',
+    points:[['Copilots','In-context assistance per app',I.bot],['Document AI','Contract review and risk flags',I.doc],['Detection','Anomaly and threat detection',I.radar],['RAG-grounded','Answers from governed data',I.sparkle]],
+    consumers:['Watheeq — contract review','ClarioSec — detection','BOSALAH — AI briefings','ClarioInsight — analytics AI']},
+  gateway:{tag:'Edge · Go',long:'The API Gateway is the single edge for the platform: authentication, authorisation, rate limiting, routing and versioning, written in Go. Every request — web, mobile, partner or public API — passes through it, so policy is enforced in one place.',
+    points:[['AuthN / AuthZ','Identity and permission at the edge',I.lock],['Rate limiting','Protect services under load',I.gauge],['Routing & versioning','Contract-first, versioned APIs',I.network],['Single entry','One enforced edge for all traffic',I.server]],
+    consumers:['Web & mobile clients','Partner & public APIs','Every suite — routed','IAM — enforced here']},
+  'event-bus':{tag:'The spine',long:'The Event Bus is the architectural spine of Clario360: ordered, partitioned per tenant, schema-registered and replayable. Apps publish facts as domain events and never call each other\'s databases — which is why suites ship, scale and fail independently.',
+    points:[['Ordered & partitioned','Per-tenant ordered event streams',I.network],['Schema registry','Versioned, validated event contracts',I.doc],['Replayable','Rebuild state from the log',I.cycle],['No coupling','Facts, not commands; no DB calls',I.shield]],
+    consumers:['Every app — publishes','BOSALAH — read-model','Automation — reacts','Audit — attests']},
+  observability:{tag:'Telemetry',long:'Observability provides RPO/RTO/latency SLOs and platform-wide audit. Every action is attested to an immutable trail, and the SLOs that matter — recovery objectives, sync lag, response times — are measured and surfaced, not assumed.',
+    points:[['SLO tracking','RPO, RTO and latency objectives',I.gauge],['Immutable audit','Tamper-evident action trail',I.lock],['Platform-wide','One view across every suite',I.eye],['Exportable','Evidence for auditors',I.doc]],
+    consumers:['ClarioDR — RPO/RTO','ClarioSync — lag SLO','Audit — full trail','Every suite — telemetry']},
+};
+
+const PRINCIPLES = [
+  ['Platform-First','Shared services built once — every app consumes, none re-implements.',I.cube],
+  ['Config Over Code','Workflows, forms, integrations and automation are admin-configured, not redeployed.',I.workflow],
+  ['Contract-First APIs','OpenAPI / protobuf contracts precede code; versioned, generated, enforced at the gateway.',I.doc],
+  ['Event-Driven Core','Suites integrate through the event bus — no direct cross-suite coupling.',I.network],
+  ['Sovereign by Design','Every component deploys SaaS, on-prem and air-gapped — no cloud-only dependencies.',I.globe],
+  ['Arabic-First UX','RTL/LTR and bilingual content are platform concerns, solved once in the shared shell.',I.scale],
+];
+</script>
+
+<script>
+/* ============================================================
+   SHARED CHROME — navbar + footer
+   ============================================================ */
+function nav(active, dark){
+  const navLink=(label,path,act)=>`<a class="nav-link ${active===act?'active':''}" href="#${path}" onclick="navGo(event,'${path}')"${active===act?' aria-current="page"':''}>${label}</a>`;
+  const suiteCol = (s,label,sub)=>`
+    <div class="mega-col" role="group" aria-label="${label} suite">
+      <a class="mega-col-head" href="#/${s.id}" onclick="navGo(event,'/${s.id}')">
+        <div class="mega-ico sm" style="background:${COLORS[s.family].grad}" aria-hidden="true">${svg(s.apps[0].icon)}</div>
+        <div><h5>${label}</h5><p>${sub}</p></div>
+      </a>
+      ${s.apps.map(a=>`<a class="mega-app" href="#/${s.id}/${a.id}" onclick="navGo(event,'/${s.id}/${a.id}')">${a.name}<span>${a.role}</span></a>`).join('')}
+    </div>`;
+  const productsActive=['datastream','business-plus','clariosec','clarioinsight'].includes(active);
+  return `
+  <a href="#main" class="skip-link">Skip to content</a>
+  <nav class="nav ${dark?'dark':''}" id="nav" aria-label="Primary">
+    <div class="nav-inner">
+      <a class="logo" href="#/" onclick="navGo(event,'/')" aria-label="Clario360 home">${logoMark}<span class="logo-text">Clario<b>360</b></span></a>
+      <div class="nav-links">
+        <div class="has-mega" id="products-menu">
+          <button class="nav-link nav-trigger ${productsActive?'active':''}" aria-haspopup="true" aria-expanded="false" aria-controls="products-mega" onclick="toggleMega(this)" onkeydown="megaKey(event,this)">Products ${svg(I.chev,'chev')}</button>
+          <div class="mega mega-products" id="products-mega" role="menu" aria-label="Products">
+            <div class="mega-products-head">
+              <div><h5 style="font-family:var(--display);font-size:1.1rem;margin:0">The Clario360 platform</h5>
+              <p style="font-size:.78rem;color:var(--text-3);margin:3px 0 0">Four suites · one platform core · one login</p></div>
+              <a class="mega-arch-link" href="#/platform" onclick="navGo(event,'/platform')">Platform architecture →</a>
+            </div>
+            <div class="mega-grid">
+              ${suiteCol(DATASTREAM,'DataStream','Data resilience & mobility')}
+              ${suiteCol(BUSINESSPLUS,'Business+','Corporate operations')}
+              ${suiteCol(CLARIOSEC,'ClarioSec','Security & cyber programs')}
+              ${suiteCol(CLARIOINSIGHT,'ClarioInsight','Data intelligence & analytics')}
+            </div>
+          </div>
+        </div>
+        ${navLink('Platform','/platform','platform')}
+        ${navLink('Solutions','/solutions','solutions')}
+        ${navLink('Sovereignty','/sovereignty','sovereignty')}
+        ${navLink('Resources','/resources','resources')}
+        ${navLink('Pricing','/pricing','pricing')}
+        ${navLink('About','/about','about')}
+      </div>
+      <div class="nav-cta">
+        <a class="btn btn-ghost btn-demo" href="#/contact" onclick="navGo(event,'/contact')">Sign in</a>
+        <a class="btn btn-primary" href="#/contact" onclick="navGo(event,'/contact')">Request a demo</a>
+        <button class="burger" onclick="toggleDrawer(true)" aria-label="Open menu" aria-expanded="false" aria-controls="drawer"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </nav>
+  <div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Site menu" aria-hidden="true">
+    <button class="drawer-close" onclick="toggleDrawer(false)" aria-label="Close menu">&times;</button>
+    <a class="d-link" href="#/platform" onclick="navGo(event,'/platform')">Platform</a>
+    <a class="d-link" href="#/datastream" onclick="navGo(event,'/datastream')">DataStream Suite</a>
+    ${DATASTREAM.apps.map(a=>`<a class="d-sub" href="#/datastream/${a.id}" onclick="navGo(event,'/datastream/${a.id}')">${a.name} — ${a.role}</a>`).join('')}
+    <a class="d-link" href="#/business-plus" onclick="navGo(event,'/business-plus')">Business+ Suite</a>
+    ${BUSINESSPLUS.apps.map(a=>`<a class="d-sub" href="#/business-plus/${a.id}" onclick="navGo(event,'/business-plus/${a.id}')">${a.name} — ${a.role}</a>`).join('')}
+    <a class="d-link" href="#/clariosec" onclick="navGo(event,'/clariosec')">ClarioSec Suite</a>
+    ${CLARIOSEC.apps.map(a=>`<a class="d-sub" href="#/clariosec/${a.id}" onclick="navGo(event,'/clariosec/${a.id}')">${a.name} — ${a.role}</a>`).join('')}
+    <a class="d-link" href="#/clarioinsight" onclick="navGo(event,'/clarioinsight')">ClarioInsight Suite</a>
+    ${CLARIOINSIGHT.apps.map(a=>`<a class="d-sub" href="#/clarioinsight/${a.id}" onclick="navGo(event,'/clarioinsight/${a.id}')">${a.name} — ${a.role}</a>`).join('')}
+    <a class="d-link" href="#/solutions" onclick="navGo(event,'/solutions')">Solutions</a>
+    <a class="d-link" href="#/sovereignty" onclick="navGo(event,'/sovereignty')">Sovereignty</a>
+    <a class="d-link" href="#/resources" onclick="navGo(event,'/resources')">Resources</a>
+    <a class="d-link" href="#/pricing" onclick="navGo(event,'/pricing')">Pricing</a>
+    <a class="d-link" href="#/about" onclick="navGo(event,'/about')">About</a>
+    <a class="d-link" href="#/contact" onclick="navGo(event,'/contact')">Request a demo</a>
+  </div>
+  <main id="main" tabindex="-1">`;
+}
+
+function footer(){
+  return `
+  </main>
+  <footer class="footer">
+    <div class="hero-grad" style="opacity:.18;top:auto;bottom:-400px;right:-200px"></div>
+    <div class="wrap">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <div class="logo" onclick="go('/')" style="margin-bottom:0">${logoMark}<span class="logo-text">Clario<b style="color:var(--gold-400)">360</b></span></div>
+          <p style="margin-top:14px">The sovereign enterprise platform. Four suites, one platform core, one login — built Arabic-first and ready to deploy SaaS, on-prem, or fully air-gapped.</p>
+          <div class="footer-ar bilingual">المنصة السيادية للمؤسسات</div>
+        </div>
+        <div class="footer-col">
+          <h6>DataStream</h6>
+          ${DATASTREAM.apps.map(a=>`<a onclick="go('/datastream/${a.id}')">${a.name}</a>`).join('')}
+          <a onclick="go('/datastream')" style="color:var(--text-inv);font-weight:600">Overview →</a>
+          <h6 style="margin-top:22px">ClarioSec</h6>
+          ${CLARIOSEC.apps.map(a=>`<a onclick="go('/clariosec/${a.id}')">${a.name}</a>`).join('')}
+          <a onclick="go('/clariosec')" style="color:var(--text-inv);font-weight:600">Overview →</a>
+        </div>
+        <div class="footer-col">
+          <h6>Business+</h6>
+          ${BUSINESSPLUS.apps.map(a=>`<a onclick="go('/business-plus/${a.id}')">${a.name}</a>`).join('')}
+          <a onclick="go('/business-plus')" style="color:var(--text-inv);font-weight:600">Overview →</a>
+          <h6 style="margin-top:22px">ClarioInsight</h6>
+          ${CLARIOINSIGHT.apps.map(a=>`<a onclick="go('/clarioinsight/${a.id}')">${a.name}</a>`).join('')}
+          <a onclick="go('/clarioinsight')" style="color:var(--text-inv);font-weight:600">Overview →</a>
+        </div>
+        <div class="footer-col">
+          <h6>Platform</h6>
+          <a onclick="go('/platform')">Architecture</a>
+          <a onclick="go('/platform')">Platform core</a>
+          <a onclick="go('/sovereignty')">Deployment</a>
+          <a onclick="go('/sovereignty')">Compliance</a>
+          <a onclick="go('/solutions')">Solutions</a>
+          <a onclick="go('/compare')">Why Clario360</a>
+          <h6 style="margin-top:22px">Company</h6>
+          <a onclick="go('/about')">About</a>
+          <a onclick="go('/resources')">Resources</a>
+          <a onclick="go('/pricing')">Pricing</a>
+          <a onclick="go('/contact')">Contact</a>
+          <a onclick="go('/contact')">Request a demo</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div class="footer-badges">
+          <span class="fbadge">NCA-ready</span>
+          <span class="fbadge">SAMA CSF</span>
+          <span class="fbadge">PDPL</span>
+          <span class="fbadge">ISO 27001</span>
+          <span class="fbadge">Arabic-first</span>
+        </div>
+        <div class="footer-legal">
+          <a onclick="go('/sovereignty')">Security</a>
+          <a>Privacy</a>
+          <a>Terms</a>
+          <span style="font-size:.82rem">© 2026 Clario360</span>
+        </div>
+      </div>
+    </div>
+  </footer>`;
+}
+
+/* Reusable section: the event-bus signature element */
+function busSection(){
+  return `
+  <section class="section bus-section">
+    <div class="wrap">
+      <div class="sec-head center">
+        <div class="eyebrow" style="justify-content:center">The signature · Cross-suite flows</div>
+        <h2>The bus is the boundary</h2>
+        <p class="lede">Every application publishes facts as domain events. No service calls another service's database; no synchronous cross-suite chains exist. This single rule is why suites can ship, scale and fail independently.</p>
+      </div>
+      <div class="bus-diagram">
+        <div class="bus-row">
+          <div class="bus-node"><h6>EHKAM</h6><span>risk.events</span></div>
+          <div class="bus-node"><h6>MahamaTech</h6><span>delivery.events</span></div>
+          <div class="bus-node"><h6>Watheeq</h6><span>legal.events</span></div>
+          <div class="bus-node"><h6>DataStream</h6><span>data.cdc</span></div>
+          <div class="bus-node"><h6>Platform Core</h6><span>automation.triggers</span></div>
+        </div>
+        <div class="bus-spine">
+          <span class="bl">Event Bus</span>
+          <span class="bt">Ordered · partitioned per tenant · schema registry · replayable</span>
+          <div class="bus-events"><em>risk.events</em><em>delivery.events</em><em>legal.events</em><em>data.cdc</em><em>audit.*</em></div>
+        </div>
+        <div class="bus-row">
+          <div class="bus-node"><h6>BOSALAH</h6><span>exec views</span></div>
+          <div class="bus-node"><h6>ClarioDWH</h6><span>analytics</span></div>
+          <div class="bus-node"><h6>Automation</h6><span>runbooks</span></div>
+          <div class="bus-node"><h6>Notifications</h6><span>alerts</span></div>
+          <div class="bus-node"><h6>Audit Service</h6><span>attest</span></div>
+        </div>
+      </div>
+      <p class="center" style="margin-top:34px;color:var(--text-3);font-size:.9rem;max-width:620px;margin-left:auto;margin-right:auto">
+        Events carry facts, not commands. The bus absorbs what coupling would otherwise break.</p>
+    </div>
+  </section>`;
+}
+
+function ctaBand(title, sub){
+  return `
+  <section class="section">
+    <div class="wrap">
+      <div class="cta-band">
+        <div class="hero-grad"></div>
+        <h2>${title||'See Clario360 on your own data'}</h2>
+        <p>${sub||'A guided demo on a sovereign deployment — mapped to your frameworks, your workflows, and your Arabic-first requirements.'}</p>
+        <div class="cta-actions">
+          <span class="btn btn-gold btn-lg" onclick="go('/contact')">Request a demo ${svg(I.arrow)}</span>
+          <span class="btn btn-ondark btn-lg" onclick="go('/platform')">Explore the architecture</span>
+        </div>
+      </div>
+    </div>
+  </section>`;
+}
+
+/* ============================================================
+   INTERACTIVE: ROI / TCO CALCULATOR
+   ============================================================ */
+function roiCalculator(){
+  return `
+  <div class="calc" id="roi-calc">
+    <div class="calc-controls">
+      <div class="calc-field">
+        <label for="roi-tools">Point tools you'd otherwise license</label>
+        <div class="calc-range"><input type="range" id="roi-tools" min="2" max="12" value="6" oninput="updateRoi()" aria-describedby="roi-tools-val"><output id="roi-tools-val">6</output></div>
+      </div>
+      <div class="calc-field">
+        <label for="roi-users">Internal users (hundreds)</label>
+        <div class="calc-range"><input type="range" id="roi-users" min="1" max="50" value="10" oninput="updateRoi()" aria-describedby="roi-users-val"><output id="roi-users-val">1,000</output></div>
+      </div>
+      <div class="calc-field">
+        <label for="roi-integrations">Cross-tool integrations to maintain</label>
+        <div class="calc-range"><input type="range" id="roi-integrations" min="0" max="40" value="12" oninput="updateRoi()" aria-describedby="roi-int-val"><output id="roi-int-val">12</output></div>
+      </div>
+    </div>
+    <div class="calc-results" id="roi-results" aria-live="polite">
+      <div class="calc-result">
+        <span class="calc-result-label">Estimated point-tool stack</span>
+        <b id="roi-stack">—</b>
+        <span class="calc-result-sub">licences + integration upkeep, per year</span>
+      </div>
+      <div class="calc-result featured">
+        <span class="calc-result-label">Clario360 platform</span>
+        <b id="roi-platform">—</b>
+        <span class="calc-result-sub">four suites on one core, per year</span>
+      </div>
+      <div class="calc-result accent">
+        <span class="calc-result-label">Indicative annual difference</span>
+        <b id="roi-save">—</b>
+        <span class="calc-result-sub">redirected from duplication to outcomes</span>
+      </div>
+    </div>
+    <p class="calc-note">Illustrative model for comparison only — not a quote. It assumes a per-tool licence baseline, per-user scaling, and ongoing integration maintenance that a unified platform removes. We'll build a costed model for your environment on request.</p>
+  </div>`;
+}
+// pure function so it can be unit-checked
+function roiCompute(tools,usersHundreds,integrations){
+  const users=usersHundreds*100;
+  const perToolBase=42000;                 // avg annual licence per point tool
+  const perUserStack=tools*48;             // per-user cost scales with tool count
+  const intUpkeep=integrations*16000;      // annual maintenance per brittle integration
+  const stack=tools*perToolBase + users*perUserStack + intUpkeep;
+  // platform: flat suite licensing + gentler per-user, no integration tax
+  const platform=4*78000 + users*70 + 90000;
+  return {stack,platform,save:Math.max(0,stack-platform)};
+}
+function fmtMoney(n){
+  if(n>=1e6) return '$'+(n/1e6).toFixed(2)+'M';
+  if(n>=1e3) return '$'+Math.round(n/1e3)+'K';
+  return '$'+Math.round(n);
+}
+function updateRoi(){
+  const t=+document.getElementById('roi-tools').value;
+  const u=+document.getElementById('roi-users').value;
+  const i=+document.getElementById('roi-integrations').value;
+  document.getElementById('roi-tools-val').textContent=t;
+  document.getElementById('roi-users-val').textContent=(u*100).toLocaleString();
+  document.getElementById('roi-int-val').textContent=i;
+  const r=roiCompute(t,u,i);
+  document.getElementById('roi-stack').textContent=fmtMoney(r.stack);
+  document.getElementById('roi-platform').textContent=fmtMoney(r.platform);
+  document.getElementById('roi-save').textContent=fmtMoney(r.save);
+}
+
+/* ============================================================
+   INTERACTIVE: SUITE CONFIGURATOR ("build your platform")
+   ============================================================ */
+function suiteConfigurator(){
+  const card=(s,label,sub)=>`
+    <button class="cfg-suite" data-suite="${s.id}" aria-pressed="false" onclick="toggleCfg('${s.id}',this)">
+      <span class="cfg-check" aria-hidden="true">${svg(I.check)}</span>
+      <span class="cfg-ico" style="background:${COLORS[s.family].grad}" aria-hidden="true">${svg(s.apps[0].icon)}</span>
+      <span class="cfg-name">${label}</span>
+      <span class="cfg-sub">${sub}</span>
+      <span class="cfg-apps">${s.apps.length} apps</span>
+    </button>`;
+  return `
+  <div class="cfg" id="suite-cfg">
+    <div class="cfg-grid">
+      ${card(DATASTREAM,'DataStream','Resilience & mobility')}
+      ${card(BUSINESSPLUS,'Business+','Corporate operations')}
+      ${card(CLARIOSEC,'ClarioSec','Security & cyber')}
+      ${card(CLARIOINSIGHT,'ClarioInsight','Data & analytics')}
+    </div>
+    <div class="cfg-summary" aria-live="polite">
+      <div class="cfg-summary-row">
+        <div><span class="cfg-sum-label">Selected</span><b id="cfg-suites">No suites yet</b></div>
+        <div><span class="cfg-sum-label">Applications</span><b id="cfg-appcount">0</b></div>
+        <div><span class="cfg-sum-label">Platform core</span><b>All 12 engines included</b></div>
+        <div><span class="cfg-sum-label">Suggested tier</span><b id="cfg-tier">—</b></div>
+      </div>
+      <div class="cfg-deploy">
+        <span class="cfg-sum-label">Deployment</span>
+        <div class="cfg-deploy-opts" role="radiogroup" aria-label="Deployment model">
+          <button class="cfg-deploy-opt active" role="radio" aria-checked="true" onclick="setCfgDeploy(this,'SaaS')">SaaS</button>
+          <button class="cfg-deploy-opt" role="radio" aria-checked="false" onclick="setCfgDeploy(this,'On-premise')">On-premise</button>
+          <button class="cfg-deploy-opt" role="radio" aria-checked="false" onclick="setCfgDeploy(this,'Air-gapped')">Air-gapped</button>
+        </div>
+      </div>
+      <a class="btn btn-primary" href="#/contact" onclick="navGo(event,'/contact')" style="margin-top:6px">Request a quote for this configuration ${svg(I.arrow)}</a>
+    </div>
+  </div>`;
+}
+const _cfg={suites:new Set(),deploy:'SaaS'};
+function toggleCfg(id,btn){
+  if(_cfg.suites.has(id)){_cfg.suites.delete(id);btn.setAttribute('aria-pressed','false');btn.classList.remove('selected');}
+  else{_cfg.suites.add(id);btn.setAttribute('aria-pressed','true');btn.classList.add('selected');}
+  renderCfg();
+}
+function setCfgDeploy(btn,val){
+  _cfg.deploy=val;
+  [...btn.parentElement.children].forEach(b=>{b.classList.toggle('active',b===btn);b.setAttribute('aria-checked',b===btn?'true':'false');});
+  renderCfg();
+}
+function renderCfg(){
+  const names={datastream:'DataStream','business-plus':'Business+',clariosec:'ClarioSec',clarioinsight:'ClarioInsight'};
+  const sel=[..._cfg.suites];
+  const appCount=sel.reduce((n,id)=>n+SUITES[id].apps.length,0);
+  const sEl=document.getElementById('cfg-suites'); if(!sEl)return;
+  sEl.textContent=sel.length?sel.map(id=>names[id]).join(', '):'No suites yet';
+  document.getElementById('cfg-appcount').textContent=appCount;
+  let tier='—';
+  if(_cfg.deploy==='Air-gapped') tier='Sovereign';
+  else if(sel.length>=3) tier='Platform';
+  else if(sel.length>=1) tier='Suite';
+  document.getElementById('cfg-tier').textContent=tier;
+}
+
+/* ============================================================
+   PAGE: HOME
+   ============================================================ */
+function pageHome(){
+  return nav('home', true) + `
+  <header class="hero">
+    <div class="hero-bg">
+      <div class="hero-grad"></div><div class="hero-grad2"></div><div class="grid-overlay"></div>
+    </div>
+    <div class="wrap hero-inner">
+      <div class="hero-grid">
+        <div>
+          <div class="hero-badge"><b>Sovereign</b> <span>Deploys SaaS · on-prem · fully air-gapped</span></div>
+          <div class="hero-ar bilingual">منصة سيادية للمؤسسات · باللغة العربية أولاً</div>
+          <h1>One platform.<br>Four suites.<br><span class="accent">Sovereign by design.</span></h1>
+          <p class="lede">Clario360 unifies data resilience and corporate operations on a single configurable core — one login, one audit, Arabic-first. Built once as shared services, so every application inherits the platform instead of rebuilding it.</p>
+          <div class="hero-actions">
+            <span class="btn btn-gold btn-lg" onclick="go('/contact')">Request a demo ${svg(I.arrow)}</span>
+            <span class="btn btn-ondark btn-lg" onclick="go('/platform')">Explore the platform</span>
+          </div>
+          <div class="hero-trust">
+            <div class="t"><b>4</b><span>Product suites</span></div>
+            <div class="t"><b>15</b><span>Applications</span></div>
+            <div class="t"><b>12</b><span>Shared core engines</span></div>
+            <div class="t"><b>3</b><span>Deployment worlds</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="arch-card">
+            <div class="ac-top"><span>Clario360 · one platform</span>
+              <div class="ac-dots"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i style="background:#27c93f"></i></div>
+            </div>
+            <div class="ac-suites">
+              <div class="ac-suite ds"><h6>DataStream</h6><div class="apps"><em>DR</em><em>Migration</em><em>Sync</em><em>DWH</em></div></div>
+              <div class="ac-suite bp"><h6>Business+</h6><div class="apps"><em>Watheeq</em><em>EHKAM</em><em>BOSALAH</em></div></div>
+              <div class="ac-suite sec"><h6>ClarioSec</h6><div class="apps"><em>CTEM</em><em>DSPM</em><em>UEBA</em><em>vCISO</em></div></div>
+              <div class="ac-suite insight"><h6>ClarioInsight</h6><div class="apps"><em>Data</em><em>Dashboards</em></div></div>
+            </div>
+            <div class="ac-bus"><span class="pulse"></span><span>EVENT BUS · ordered · per-tenant · replayable</span></div>
+            <div class="ac-core">
+              <em>Workflow</em><em>Forms</em><em>IAM</em><em>Files</em>
+              <em>Automate</em><em>Integrate</em><em>Notify</em><em>AI</em>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="strip" style="margin-top:84px">
+      <div class="wrap strip-inner">
+        <span class="strip-label">Architected for the institutions that demand sovereignty</span>
+        <div class="strip-items">
+          <span>NCA</span><span>SAMA</span><span>PDPL</span><span>Najiz</span><span>ZATCA</span><span>ISO 27001</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Principles -->
+  <section class="section">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">Foundations</div>
+        <h2>Six principles every part of the platform obeys</h2>
+        <p class="lede">These are not slogans — they are architectural constraints. Each one removes a category of cost, lock-in, or duplication before it can take root.</p>
+      </div>
+      <div class="principles">
+        ${PRINCIPLES.map((p,i)=>`
+          <div class="principle fade-up">
+            <div class="num">P${String(i+1).padStart(2,'0')}</div>
+            <div class="pic">${svg(p[2])}</div>
+            <h4>${p[0]}</h4><p>${p[1]}</p>
+          </div>`).join('')}
+      </div>
+    </div>
+  </section>
+
+  <!-- Four suites -->
+  <section class="section" style="background:var(--paper-2)">
+    <div class="wrap">
+      <div class="sec-head center">
+        <div class="eyebrow" style="justify-content:center">The product</div>
+        <h2>Four suites, built on one core</h2>
+        <p class="lede">Each suite is a family of applications that share the platform — so capability compounds across resilience, operations, security and analytics, and you never pay to build the same thing twice.</p>
+      </div>
+      ${suiteSummary(DATASTREAM)}
+      <div style="height:30px"></div>
+      ${suiteSummary(BUSINESSPLUS)}
+      <div style="height:30px"></div>
+      ${suiteSummary(CLARIOSEC)}
+      <div style="height:30px"></div>
+      ${suiteSummary(CLARIOINSIGHT)}
+    </div>
+  </section>
+
+  ${busSection()}
+
+  <!-- Stats -->
+  <section class="section stats-band">
+    <div class="grid-overlay"></div>
+    <div class="wrap">
+      <div class="stats-grid">
+        <div class="stat"><b>≤<em>15</em>min</b><span>Recovery time objective with boot-ordered failover</span></div>
+        <div class="stat"><b>≤<em>10</em>s</b><span>Change-data-capture lag SLO across ClarioSync</span></div>
+        <div class="stat"><b>−<em>40</em>%</b><span>Cost per terabyte vs global cloud warehouses</span></div>
+        <div class="stat"><b><em>100</em>%</b><span>In-Kingdom data residency, air-gap capable</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Deployment -->
+  <section class="section">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">Sovereign by design</div>
+        <h2>Three deployment worlds, one codebase</h2>
+        <p class="lede">No cloud-only dependencies anywhere in the stack. The same components run as managed SaaS, inside your data centre, or in a fully disconnected environment.</p>
+      </div>
+      ${deployGrid()}
+    </div>
+  </section>
+
+  <!-- Evaluate / proof entry points -->
+  <section class="section-tight">
+    <div class="wrap">
+      <div class="home-links">
+        <a class="home-link" href="#/compare" onclick="navGo(event,'/compare')">
+          <div class="hl-ico" aria-hidden="true">${svg(I.trend)}</div>
+          <div><h4>Why Clario360</h4><p>One platform versus a stack of point tools — with an ROI model you can run.</p></div>
+          ${svg(I.arrow,'hl-arrow')}
+        </a>
+        <a class="home-link" href="#/resources" onclick="navGo(event,'/resources')">
+          <div class="hl-ico" aria-hidden="true">${svg(I.doc)}</div>
+          <div><h4>Resources</h4><p>Datasheets, deployment and security documentation, and developer references.</p></div>
+          ${svg(I.arrow,'hl-arrow')}
+        </a>
+        <a class="home-link" href="#/pricing" onclick="navGo(event,'/pricing')">
+          <div class="hl-ico" aria-hidden="true">${svg(I.cube)}</div>
+          <div><h4>Build your platform</h4><p>Configure suites and deployment to see the right tier for your institution.</p></div>
+          ${svg(I.arrow,'hl-arrow')}
+        </a>
+      </div>
+    </div>
+  </section>
+
+  ${ctaBand()}
+  ` + footer();
+}
+
+/* Suite summary block for the home page */
+function suiteSummary(s){
+  const c = COLORS[s.family];
+  const meta={
+    ds:{n:'Suite 01 · Go replication core',bg:'Data'},
+    bp:{n:'Suite 02 · NestJS on a shared shell',bg:'Ops'},
+    sec:{n:'Suite 03 · SOC + cyber programs',bg:'Sec'},
+    insight:{n:'Suite 04 · Data intelligence',bg:'BI'},
+  }[s.family];
+  return `
+  <div class="suite-block fade-up">
+    <div class="suite-hero ${s.family}">
+      <div class="suite-bgtext">${meta.bg}</div>
+      <div style="position:relative;z-index:2;max-width:640px">
+        <div class="eyebrow">${meta.n}</div>
+        <h2 style="font-size:clamp(1.8rem,3.5vw,2.6rem)">${s.name}</h2>
+        <p class="lede">${s.tagline}</p>
+        <span class="btn btn-ondark" style="margin-top:18px" onclick="go('/${s.id}')">Explore ${s.name} ${svg(I.arrow)}</span>
+      </div>
+    </div>
+    <div class="apps-grid">
+      ${s.apps.map(a=>appCard(a,s)).join('')}
+    </div>
+  </div>`;
+}
+
+function statusBadge(st){
+  if(st==='ga')return '<span class="badge-ga">GA</span>';
+  if(st==='new')return '<span class="badge-new">New</span>';
+  return '<span class="badge-soon">Roadmap</span>';
+}
+
+function appCard(a,s){
+  const c=COLORS[s.family];
+  return `
+  <div class="app-card" onclick="go('/${s.id}/${a.id}')">
+    <div class="ac-h">
+      <div class="app-ico" style="background:${c.grad}">${svg(a.icon)}</div>
+      <div style="flex:1">
+        <h4>${a.name} <span class="ar bilingual">${a.ar}</span> ${statusBadge(a.status)}</h4>
+        <p class="role">${a.role}</p>
+      </div>
+    </div>
+    <p>${a.short}</p>
+    <span class="more">Learn more ${svg(I.arrow)}</span>
+  </div>`;
+}
+
+/* ============================================================
+   PAGE: PLATFORM
+   ============================================================ */
+function pagePlatform(){
+  return nav('platform', true) + `
+  <header class="page-hero">
+    <div class="grid-overlay"></div>
+    <div class="wrap page-hero-inner">
+      <div class="breadcrumb"><a onclick="go('/')">Home</a> ${svg(I.chev,'')} <span>Platform</span></div>
+      <div class="eyebrow">Platform architecture</div>
+      <h1>Built once. Inherited everywhere.</h1>
+      <p class="lede">Clario360 is platform-first: a configurable core of shared engines, behind one gateway, with one identity and one audit trail. Applications consume these services — they never re-implement them. That is the whole economic argument, expressed in architecture.</p>
+      <div style="margin-top:30px;display:flex;gap:14px;flex-wrap:wrap">
+        <span class="btn btn-gold" onclick="go('/contact')">Request a technical deep-dive ${svg(I.arrow)}</span>
+        <span class="btn btn-ondark" onclick="go('/sovereignty')">Deployment & sovereignty</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- C4 context -->
+  <section class="section">
+    <div class="wrap split">
+      <div>
+        <div class="eyebrow">System context</div>
+        <h2>Clario360 in its world</h2>
+        <p class="lede" style="margin-bottom:22px">One platform serves every enterprise role and connects to the systems a Kingdom institution actually runs.</p>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          ${[['Enterprise users, IT & data teams, risk/legal/PMO, executives and board',I.users],
+             ['Customer identity — Active Directory / Entra, single sign-on',I.key],
+             ['Government platforms — Najiz, ZATCA and sector regulators',I.building],
+             ['Regulators — NCA, SAMA, PDPL alignment built in',I.shield]].map(r=>`
+            <div style="display:flex;gap:14px;align-items:flex-start">
+              <div style="width:42px;height:42px;border-radius:11px;background:var(--navy-50);display:grid;place-items:center;color:var(--navy-600);flex:none">${svg(r[1])}</div>
+              <p style="margin:0;padding-top:8px;font-size:.95rem">${r[0]}</p>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="arch-card" style="background:linear-gradient(160deg,var(--ink),var(--ink-soft));border-color:var(--ink-line)">
+        <div class="ac-top"><span>One login · one audit · Arabic-first</span><div class="ac-dots"><i style="background:var(--gold-400)"></i></div></div>
+        <div style="background:rgba(0,51,161,.18);border:1px solid rgba(79,123,240,.3);border-radius:12px;padding:14px;text-align:center;margin-bottom:10px">
+          <span style="font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;color:var(--navy-300)">API GATEWAY · GO</span>
+        </div>
+        <div class="ac-suites">
+          <div class="ac-suite ds"><h6>DataStream</h6><div class="apps"><em>4 apps</em></div></div>
+          <div class="ac-suite bp"><h6>Business+</h6><div class="apps"><em>5 apps</em></div></div>
+          <div class="ac-suite sec"><h6>ClarioSec</h6><div class="apps"><em>4 apps</em></div></div>
+          <div class="ac-suite insight"><h6>ClarioInsight</h6><div class="apps"><em>2 apps</em></div></div>
+        </div>
+        <div class="ac-bus"><span class="pulse"></span><span>AI Services · copilots & detection</span></div>
+        <div style="text-align:center;margin-top:10px;font-family:var(--mono);font-size:.66rem;color:var(--text-inv-2)">Data · events · sovereign infrastructure</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Core engines -->
+  <section class="section" style="background:var(--paper-2)">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">The platform core</div>
+        <h2>Twelve engines every application consumes</h2>
+        <p class="lede">Configured by administrators, not redeployed by engineers. Build a workflow, a form, an integration or an automation once — every suite can use it. Select any engine for detail.</p>
+      </div>
+      <div class="engines">
+        ${ENGINES.map(e=>`
+          <a class="engine" href="#/platform/${e[3]}" onclick="navGo(event,'/platform/${e[3]}')" style="cursor:pointer;text-decoration:none">
+            <div class="ei" aria-hidden="true">${svg(e[2])}</div>
+            <h5>${e[0]} ${svg(I.arrow,'eng-arrow')}</h5><p>${e[1]}</p>
+          </a>`).join('')}
+      </div>
+    </div>
+  </section>
+
+  <!-- Layered architecture -->
+  <section class="section">
+    <div class="wrap">
+      <div class="sec-head center">
+        <div class="eyebrow" style="justify-content:center">Master view</div>
+        <h2>The target architecture, top to bottom</h2>
+      </div>
+      ${layeredView()}
+    </div>
+  </section>
+
+  ${busSection()}
+
+  <!-- Tenancy -->
+  <section class="section" style="background:var(--paper-2)">
+    <div class="wrap split">
+      <div>
+        <div class="eyebrow">Tenancy & isolation</div>
+        <h2>Multi-tenant, with hard boundaries</h2>
+        <p class="lede" style="margin-bottom:20px">Every tenant is isolated at the data and event layer. The bus is partitioned per tenant; no application reads across tenant boundaries, and no service reaches into another service's database.</p>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          ${['Per-tenant event partitions with a shared schema registry',
+             'Branding, frameworks and entitlements configured per tenant',
+             'Identity federated to each customer\'s own IdP',
+             'Audit trail scoped, immutable and exportable per tenant'].map(t=>`
+            <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:var(--navy-600);margin-top:2px">${svg(I.checkCircle)}</span><span style="font-size:.94rem">${t}</span></div>`).join('')}
+        </div>
+      </div>
+      <div>
+        <div class="specs" style="grid-template-columns:1fr 1fr;margin-top:0">
+          <div class="spec"><b>1</b><span>Login across the whole platform</span></div>
+          <div class="spec"><b>1</b><span>Audit trail, immutable</span></div>
+          <div class="spec"><b>N</b><span>Tenants, fully isolated</span></div>
+          <div class="spec"><b>0</b><span>Cross-database calls, by rule</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  ${ctaBand('Walk the architecture with our team','From C4 context down to the replication core and the event bus — a working session mapped to your environment.')}
+  ` + footer();
+}
+
+function layeredView(){
+  const layers=[
+    ['Experience','Web · React (RTL/LTR) · Mobile · Partner & Public APIs · Admin Studio','var(--navy-50)','var(--navy-700)'],
+    ['Gateway','API Gateway · authN/Z · rate limits · routing · versioning · Go','var(--navy-100)','var(--navy-700)'],
+    ['Suites','DataStream (Go) · Business+ (NestJS) · ClarioSec · ClarioInsight','#fff','var(--text)'],
+    ['Platform Core','Workflow · Forms · Automation · Integration · IAM · Files · Notify · Licensing · AI','var(--gold-100)','var(--gold-600)'],
+    ['Event Bus','Ordered · partitioned per tenant · schema registry · replayable','var(--teal-100)','var(--teal-700)'],
+    ['Foundation','Data · sovereign object storage · observability · audit','var(--ink)','#fff'],
+  ];
+  return `<div style="display:flex;flex-direction:column;gap:10px;max-width:880px;margin:0 auto">
+    ${layers.map(l=>`
+      <div style="background:${l[2]};border:1px solid var(--line);border-radius:var(--r);padding:20px 26px;display:flex;align-items:center;gap:22px">
+        <span style="font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:${l[3]};min-width:120px;font-weight:600">${l[0]}</span>
+        <span style="color:${l[3]};font-size:.92rem;font-weight:500">${l[1]}</span>
+      </div>`).join('')}
+  </div>`;
+}
+
+function deployGrid(){
+  return `
+  <div class="deploy-grid">
+    <div class="deploy saas">
+      <span class="dtag">Managed</span>
+      <h4>SaaS</h4>
+      <p>Fully managed in a sovereign region. Fastest to value, with Clario360 operating the platform for you.</p>
+      <ul>
+        <li>${svg(I.check)} In-Kingdom hosting</li>
+        <li>${svg(I.check)} Managed upgrades & SLOs</li>
+        <li>${svg(I.check)} Elastic by tenant</li>
+      </ul>
+    </div>
+    <div class="deploy onprem">
+      <span class="dtag">Self-hosted</span>
+      <h4>On-premise</h4>
+      <p>Runs inside your own data centre under your control, using the identical components as the managed service.</p>
+      <ul>
+        <li>${svg(I.check)} Your infrastructure</li>
+        <li>${svg(I.check)} Your operations team</li>
+        <li>${svg(I.check)} Same codebase as SaaS</li>
+      </ul>
+    </div>
+    <div class="deploy airgap">
+      <span class="dtag">Disconnected</span>
+      <h4>Air-gapped</h4>
+      <p>A static-binary core with no cloud-only dependencies, deployable into fully disconnected, classified environments.</p>
+      <ul>
+        <li>${svg(I.check)} No external calls required</li>
+        <li>${svg(I.check)} Static binaries, portable</li>
+        <li>${svg(I.check)} Classified-environment ready</li>
+      </ul>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   PAGE: SUITE (datastream / business-plus)
+   ============================================================ */
+function pageSuite(suiteId){
+  const s=SUITES[suiteId]; if(!s) return page404();
+  const c=COLORS[s.family];
+  return nav(suiteId, true) + `
+  <header class="page-hero suite-${s.family}">
+    <div class="grid-overlay"></div>
+    <div class="wrap page-hero-inner">
+      <div class="breadcrumb"><a onclick="go('/')">Home</a> ${svg(I.chev)} <span>${s.name}</span></div>
+      <div class="eyebrow">${({ds:'Data resilience & mobility',bp:'Corporate operations',sec:'Security & cyber programs',insight:'Data intelligence & analytics'})[s.family]}</div>
+      <h1>${s.name}</h1>
+      <p class="lede">${s.blurb}</p>
+      <div style="margin-top:30px;display:flex;gap:14px;flex-wrap:wrap">
+        <span class="btn btn-gold" onclick="go('/contact')">Request a demo ${svg(I.arrow)}</span>
+        <span class="btn btn-ondark" onclick="go('/platform')">See the platform core</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Shared core explainer -->
+  <section class="section-tight" style="background:var(--paper-2)">
+    <div class="wrap split">
+      <div>
+        <div class="eyebrow">${s.core}</div>
+        <h3 style="margin-bottom:14px">${s.family==='ds'?'Four apps, one replication core — built once':s.family==='bp'?'Five apps on one shell — modular, not monolithic':s.family==='sec'?'Programs on one console — built once, shared everywhere':'Built on the platform — governed, sovereign, live'}</h3>
+        <p style="color:var(--text-2);margin:0">${s.coreDesc}</p>
+      </div>
+      <div class="ac-core" style="gap:10px">
+        ${s.apps.map(a=>`<div style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center">
+          <div style="width:34px;height:34px;border-radius:9px;background:${c.grad};display:grid;place-items:center;color:#fff;margin:0 auto 8px">${svg(a.icon)}</div>
+          <span style="font-size:.78rem;font-weight:700;color:var(--text)">${a.name}</span></div>`).join('')}
+      </div>
+    </div>
+  </section>
+
+  <!-- Apps -->
+  <section class="section">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">The applications</div>
+        <h2>${({1:'One application',2:'Two applications',3:'Three applications',4:'Four applications',5:'Five applications'})[s.apps.length]||(s.apps.length+' applications')}, deep where it counts</h2>
+      </div>
+      <div class="apps-grid">
+        ${s.apps.map(a=>`
+        <div class="app-card" onclick="go('/${s.id}/${a.id}')" style="grid-column:span 1">
+          <div class="ac-h">
+            <div class="app-ico" style="background:${c.grad}">${svg(a.icon)}</div>
+            <div style="flex:1"><h4>${a.name} <span class="ar bilingual">${a.ar}</span> ${statusBadge(a.status)}</h4><p class="role">${a.role}</p></div>
+          </div>
+          <p>${a.short}</p>
+          <div class="chips">${a.specs.map(sp=>`<span class="chip">${sp[0]}</span>`).join('')}</div>
+          <span class="more">Explore ${a.name} ${svg(I.arrow)}</span>
+        </div>`).join('')}
+      </div>
+    </div>
+  </section>
+
+  ${s.family==='ds'?dsCrossSuite():s.family==='bp'?bpCrossSuite():s.family==='sec'?secCrossSuite():insightCrossSuite()}
+
+  ${ctaBand(`See ${s.name} in action`, s.tagline)}
+  ` + footer();
+}
+
+function dsCrossSuite(){
+  return `<section class="section stats-band"><div class="grid-overlay"></div><div class="wrap">
+    <div class="sec-head center" style="margin-bottom:30px"><div class="eyebrow on-dark" style="justify-content:center">The build-once dividend</div>
+    <h2 style="color:#fff">One engine, three products — and a destination</h2>
+    <p class="lede" style="color:var(--text-inv-2)">ClarioDR ships first. Migration and Sync reuse its engine. DWH is the destination all three feed. Fix the core once, and every product improves at the same moment.</p></div>
+  </div></section>`;
+}
+function bpCrossSuite(){
+  return `<section class="section stats-band"><div class="grid-overlay"></div><div class="wrap">
+    <div class="sec-head center" style="margin-bottom:30px"><div class="eyebrow on-dark" style="justify-content:center">Cross-app flows</div>
+    <h2 style="color:#fff">A task traces up to a strategy and across to a risk</h2>
+    <p class="lede" style="color:var(--text-inv-2)">Strategy and OKRs cascade from BOSALAH into delivery. Delivery risks escalate into EHKAM. Legal events surface to the board. Nothing is an island — the connections are automatic, through the bus.</p></div>
+  </div></section>`;
+}
+function secCrossSuite(){
+  return `<section class="section stats-band"><div class="grid-overlay"></div><div class="wrap">
+    <div class="sec-head center" style="margin-bottom:30px"><div class="eyebrow on-dark" style="justify-content:center">One security loop</div>
+    <h2 style="color:#fff">Detection, exposure and evidence on one bus</h2>
+    <p class="lede" style="color:var(--text-inv-2)">Detections from the SOC, exposures from CTEM, data risk from DSPM and anomalies from UEBA all publish to the event bus — where Automation responds, the Audit Service attests, and ClarioVCISO turns it into a board-ready programme.</p></div>
+  </div></section>`;
+}
+function insightCrossSuite(){
+  return `<section class="section stats-band"><div class="grid-overlay"></div><div class="wrap">
+    <div class="sec-head center" style="margin-bottom:30px"><div class="eyebrow on-dark" style="justify-content:center">Governed, then surfaced</div>
+    <h2 style="color:#fff">Every figure traces back to governed data</h2>
+    <p class="lede" style="color:var(--text-inv-2)">Data Intelligence governs sources, pipelines and quality; the dashboards read from ClarioDWH and the bus. So a KPI on a board pack is the same governed number the pipeline produced — not a stale export.</p></div>
+  </div></section>`;
+}
+
+/* ============================================================
+   PAGE: APP DETAIL
+   ============================================================ */
+function pageApp(suiteId, appId){
+  const s=SUITES[suiteId]; if(!s)return page404();
+  const a=s.apps.find(x=>x.id===appId); if(!a)return page404();
+  const c=COLORS[s.family];
+  const siblings=s.apps.filter(x=>x.id!==appId);
+  return nav(suiteId, true) + `
+  <header class="page-hero suite-${s.family}">
+    <div class="grid-overlay"></div>
+    <div class="wrap page-hero-inner">
+      <div class="breadcrumb">
+        <a onclick="go('/')">Home</a> ${svg(I.chev)}
+        <a onclick="go('/${s.id}')">${s.name}</a> ${svg(I.chev)}
+        <span>${a.name}</span>
+      </div>
+      <div class="app-hero">
+        <div class="big-ico" style="background:linear-gradient(150deg,rgba(255,255,255,.22),rgba(255,255,255,.08));border:1px solid rgba(255,255,255,.25)">${svg(a.icon)}</div>
+        <div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <h1 style="margin:0">${a.name}</h1>
+            <span class="ar-big bilingual">${a.ar}</span>
+            ${statusBadge(a.status)}
+          </div>
+          <p style="font-family:var(--mono);color:var(--gold-400);margin:6px 0 0;letter-spacing:.04em;font-size:.9rem">${s.name} · ${a.role}</p>
+        </div>
+      </div>
+      <p class="lede" style="margin-top:10px">${a.hero}</p>
+      <div style="margin-top:28px;display:flex;gap:14px;flex-wrap:wrap">
+        <span class="btn btn-gold" onclick="go('/contact')">Request a demo ${svg(I.arrow)}</span>
+        <span class="btn btn-ondark" onclick="go('/${s.id}')">Back to ${s.name}</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Overview + specs -->
+  <section class="section">
+    <div class="wrap split">
+      <div>
+        <div class="eyebrow">Overview</div>
+        <h2 style="margin-bottom:18px">What ${a.name} does</h2>
+        <p class="lede" style="font-size:1.1rem">${a.desc}</p>
+      </div>
+      <div class="specs" style="grid-template-columns:1fr;gap:14px;margin-top:0">
+        ${a.specs.map(sp=>`<div class="spec" style="text-align:left;display:flex;align-items:center;gap:18px">
+          <b style="margin:0">${sp[0]}</b><span style="font-size:.9rem">${sp[1]}</span></div>`).join('')}
+      </div>
+    </div>
+  </section>
+
+  <!-- Flow -->
+  <section class="section-tight" style="background:var(--paper-2)">
+    <div class="wrap">
+      <div class="sec-head"><div class="eyebrow">How it works</div><h3>${s.family==='ds'?'The sequence, gated end to end':'From start to connected outcome'}</h3></div>
+      <div class="flow">
+        ${a.flow.map((f,i)=>`<div class="flow-step"><div class="fs-num">${i+1}</div><h6>${f[0]}</h6><p>${f[1]}</p></div>`).join('')}
+      </div>
+    </div>
+  </section>
+
+  <!-- Modules -->
+  <section class="section">
+    <div class="wrap">
+      <div class="sec-head"><div class="eyebrow">Capabilities</div><h2>Inside ${a.name}</h2>
+      <p class="lede">Eight core modules, each consuming the platform — not rebuilding it.</p></div>
+      <div class="modules">
+        ${a.modules.map(m=>`<div class="module"><div class="mi">${svg(m[2])}</div><div><h5>${m[0]}</h5><p>${m[1]}</p></div></div>`).join('')}
+      </div>
+    </div>
+  </section>
+
+  <!-- Benchmark -->
+  <section class="section" style="background:var(--ink);color:#fff">
+    <div class="wrap" style="max-width:820px;text-align:center">
+      <div class="eyebrow on-dark" style="justify-content:center">How it compares</div>
+      <h2 style="color:#fff;margin-bottom:18px">The honest benchmark</h2>
+      <p class="lede" style="color:var(--text-inv-2);font-size:1.25rem">${a.bench}</p>
+    </div>
+  </section>
+
+  <!-- Siblings -->
+  <section class="section">
+    <div class="wrap">
+      <div class="sec-head"><div class="eyebrow">More in ${s.name}</div><h3>The rest of the suite</h3></div>
+      <div class="apps-grid">
+        ${siblings.map(x=>appCard(x,s)).join('')}
+      </div>
+    </div>
+  </section>
+
+  ${ctaBand(`Put ${a.name} on your data`, a.short)}
+  ` + footer();
+}
+
+/* ============================================================
+   PAGE: SOLUTIONS
+   ============================================================ */
+function pageSolutions(){
+  const personas=[
+    ['IT & Data Teams',I.server,'Continuous protection, sovereign migration and a lakehouse that keeps data in-Kingdom — without stitching point tools together.',
+      ['ClarioDR for audit-grade failover and drills','ClarioMigration for cloud-agnostic moves','ClarioDWH as the single sovereign destination']],
+    ['Risk, Legal & Compliance',I.shield,'Saudi frameworks pre-loaded, contracts authored Arabic-first, and a live compliance posture instead of a quarterly scramble.',
+      ['EHKAM with NCA, SAMA and PDPL on day one','Watheeq for Arabic-native contract lifecycle','One control mapped to many frameworks']],
+    ['PMO & Delivery',I.target,'Delivery that never drifts from strategy — every task traces up to an objective and across to a risk, automatically.',
+      ['MahamaTech for portfolios, programs and gates','OKR cascade from BOSALAH','Delivery risks escalate into EHKAM']],
+    ['Executives & Board',I.gauge,'A live read-model of the whole organisation — Vision-2030-aligned, with Arabic board packs generated from real numbers, not slides.',
+      ['BOSALAH strategy map and OKRs','Live dashboards fed by the event bus','Board packs in Arabic, on demand']],
+    ['Security & SOC',I.shield,'A full security programme on one sovereign console — exposure, data security, behavioural analytics and a virtual CISO, all on the same bus.',
+      ['CTEM for continuous exposure reduction','DSPM and UEBA for data and behaviour','ClarioVCISO for a board-ready programme']],
+    ['Data & Analytics',I.trend,'Governed data turned into live decisions — pipelines and quality feeding dashboards and KPIs that every team can trust.',
+      ['Data Intelligence for pipelines and quality','Visus dashboards, KPIs and alerts','Every figure traceable to governed data']],
+  ];
+  return nav('solutions', true) + `
+  <header class="page-hero">
+    <div class="grid-overlay"></div>
+    <div class="wrap page-hero-inner">
+      <div class="breadcrumb"><a onclick="go('/')">Home</a> ${svg(I.chev)} <span>Solutions</span></div>
+      <div class="eyebrow">By role</div>
+      <h1>Built for the people who run the institution</h1>
+      <p class="lede">Clario360 is one platform, but every role meets it differently. Here is where each team starts — and how the suites compound once they are connected.</p>
+    </div>
+  </header>
+  <section class="section">
+    <div class="wrap">
+      <div class="persona-grid">
+        ${personas.map(p=>`
+          <div class="persona">
+            <div class="pi">${svg(p[1])}</div>
+            <h4>${p[0]}</h4>
+            <p>${p[2]}</p>
+            <div class="uses">${p[3].map(u=>`<div>${svg(I.check)}<span>${u}</span></div>`).join('')}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+  </section>
+  <section class="section" style="background:var(--paper-2)">
+    <div class="wrap">
+      <div class="sec-head center"><div class="eyebrow" style="justify-content:center">Why one platform</div>
+      <h2>Point tools don't compound. A platform does.</h2></div>
+      ${compareTable()}
+    </div>
+  </section>
+  ${busSection()}
+  ${ctaBand()}
+  ` + footer();
+}
+
+function compareTable(){
+  const rows=[
+    ['Identity & login','One login across every suite','Separate logins per tool'],
+    ['Workflow & forms','Configured once, used everywhere','Rebuilt in each product'],
+    ['Cross-product data','Facts flow on the event bus','Brittle point-to-point integrations'],
+    ['Arabic-first / RTL','Solved once in the shared shell','Bolted on, if at all'],
+    ['Sovereign deployment','SaaS, on-prem or air-gapped','Usually cloud-only'],
+    ['Audit trail','One immutable, platform-wide trail','Fragmented across vendors'],
+  ];
+  return `<div class="cmp">
+    <div class="cmp-row head"><div>Capability</div><div class="c-clario">Clario360 platform</div><div class="c-other">Stitched point tools</div></div>
+    ${rows.map(r=>`<div class="cmp-row">
+      <div class="c-label">${r[0]}</div>
+      <div class="c-clario">${svg(I.check,'yes')}<span>${r[1]}</span></div>
+      <div class="c-other">${svg(I.x,'no')}<span>${r[2]}</span></div>
+    </div>`).join('')}
+  </div>`;
+}
+
+/* ============================================================
+   PAGE: SOVEREIGNTY / SECURITY
+   ============================================================ */
+function pageSovereignty(){
+  const frameworks=[
+    ['NCA ECC / CSCC','National Cybersecurity Authority essential and critical controls',I.shield],
+    ['SAMA CSF','Saudi Central Bank cybersecurity framework',I.building],
+    ['PDPL','Personal Data Protection Law alignment',I.lock],
+    ['ISO 27001','Information-security management baseline',I.checkCircle],
+    ['NIST','Control mapping for international alignment',I.network],
+    ['Najiz / ZATCA','Government-platform integration where applicable',I.gavel],
+  ];
+  return nav('sovereignty', true) + `
+  <header class="page-hero">
+    <div class="grid-overlay"></div>
+    <div class="wrap page-hero-inner">
+      <div class="breadcrumb"><a onclick="go('/')">Home</a> ${svg(I.chev)} <span>Sovereignty & security</span></div>
+      <div class="eyebrow">Sovereign by design</div>
+      <h1>Your data, your Kingdom, your control</h1>
+      <p class="lede">Sovereignty is not a configuration flag bolted onto a cloud product — it is an architectural decision made at the foundation. No component of Clario360 depends on a public cloud to function.</p>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="sec-head"><div class="eyebrow">Deployment</div><h2>One codebase, three worlds</h2>
+      <p class="lede">The same components run as managed SaaS, inside your data centre, or in a fully disconnected environment — no feature cliff between them.</p></div>
+      ${deployGrid()}
+    </div>
+  </section>
+
+  <section class="section" style="background:var(--paper-2)">
+    <div class="wrap">
+      <div class="sec-head"><div class="eyebrow">Compliance</div><h2>Frameworks mapped, not promised</h2>
+      <p class="lede">EHKAM ships with the Kingdom's frameworks pre-loaded and a unified control library, so evidence collected once satisfies every mapped regulation at the same time.</p></div>
+      <div class="principles">
+        ${frameworks.map(f=>`<div class="principle"><div class="pic">${svg(f[2])}</div><h4>${f[0]}</h4><p>${f[1]}</p></div>`).join('')}
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap split">
+      <div>
+        <div class="eyebrow">Security architecture</div>
+        <h2 style="margin-bottom:18px">Defence built into the platform</h2>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          ${[['Identity & access','One IAM with RBAC, federated to your own IdP, enforced at the gateway.',I.key],
+             ['Tenant isolation','Per-tenant event partitions and data boundaries — no cross-tenant reads.',I.layers],
+             ['Immutable audit','Every action attested to a tamper-evident, exportable trail.',I.lock],
+             ['Encryption in transit','Replication and events compressed, encrypted and resumable.',I.shield]].map(x=>`
+            <div style="display:flex;gap:15px"><div style="width:46px;height:46px;border-radius:12px;background:var(--navy-50);display:grid;place-items:center;color:var(--navy-600);flex:none">${svg(x[2])}</div>
+            <div><h4 style="font-size:1.05rem;margin:0 0 4px">${x[0]}</h4><p style="margin:0;font-size:.92rem;color:var(--text-2)">${x[1]}</p></div></div>`).join('')}
+        </div>
+      </div>
+      <div class="deploy airgap" style="align-self:stretch;display:flex;flex-direction:column;justify-content:center">
+        <span class="dtag">The sovereign guarantee</span>
+        <h3 style="color:#fff;margin-bottom:16px">No cloud-only dependencies. Anywhere.</h3>
+        <p style="color:var(--text-inv-2)">The replication core is a static binary. The platform runs disconnected. Data stays in-Kingdom by construction — not by policy you have to trust.</p>
+        <div class="footer-badges" style="margin-top:20px">
+          <span class="fbadge" style="border-color:var(--gold-500);color:var(--gold-400)">Air-gap ready</span>
+          <span class="fbadge" style="border-color:var(--gold-500);color:var(--gold-400)">In-Kingdom data</span>
+          <span class="fbadge" style="border-color:var(--gold-500);color:var(--gold-400)">Static binaries</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  ${ctaBand('Review the controls with our security team','A working session mapped to NCA, SAMA and PDPL — against your environment and your auditors\' requirements.')}
+  ` + footer();
+}
+
+/* ============================================================
+   PAGE: PRICING
+   ============================================================ */
+function pagePricing(){
+  const tiers=[
+    {name:'Suite',desc:'Start with one suite — DataStream, Business+, ClarioSec or ClarioInsight — on the full platform core.',price:'Tailored',note:'Per suite · annual licence',featured:false,
+     feats:['One product suite (4 applications)','Full platform core — all 12 engines','SaaS or on-premise deployment','Standard support & onboarding','NCA / SAMA / PDPL framework packs','Up to defined tenant scope'],cta:'Talk to sales'},
+    {name:'Platform',desc:'All four suites, every application, with cross-suite flows on the event bus.',price:'Tailored',note:'All suites · annual licence',featured:true,
+     feats:['All four suites — every application','Cross-suite event flows enabled','SaaS, on-prem or air-gapped','Priority support & dedicated CSM','All framework packs + custom frameworks','Partner & public API access'],cta:'Request a quote'},
+    {name:'Sovereign',desc:'Air-gapped or classified deployment with bespoke residency and assurance.',price:'Bespoke',note:'Disconnected / classified',featured:false,
+     feats:['Fully air-gapped deployment','Dedicated sovereign infrastructure','Custom residency & assurance','On-site enablement & runbooks','Source-available options','White-glove migration & DR drills'],cta:'Contact us'},
+  ];
+  return nav('pricing', true) + `
+  <header class="page-hero">
+    <div class="grid-overlay"></div>
+    <div class="wrap page-hero-inner">
+      <div class="breadcrumb"><a onclick="go('/')">Home</a> ${svg(I.chev)} <span>Pricing</span></div>
+      <div class="eyebrow">Pricing</div>
+      <h1>Licensed by suite. Priced for the institution.</h1>
+      <p class="lede">Clario360 is an enterprise platform, not a per-seat app. Pricing reflects the suites you run and how you deploy them — flat and predictable, with no consumption surprises.</p>
+    </div>
+  </header>
+  <section class="section">
+    <div class="wrap">
+      <div class="tiers">
+        ${tiers.map(t=>`
+          <div class="tier ${t.featured?'featured':''}">
+            ${t.featured?'<span class="ribbon">Most chosen</span>':''}
+            <h3>${t.name}</h3>
+            <p class="tdesc">${t.desc}</p>
+            <div class="price">${t.price}</div>
+            <div class="pnote">${t.note}</div>
+            <ul>${t.feats.map(f=>`<li>${svg(I.check)}<span>${f}</span></li>`).join('')}</ul>
+            <span class="btn ${t.featured?'btn-primary':'btn-ghost'}" onclick="go('/contact')">${t.cta}</span>
+          </div>`).join('')}
+      </div>
+      <p class="center" style="margin-top:40px;color:var(--text-3);font-size:.9rem">All tiers include the full platform core. DataStream metering is for visibility only — never for billing.</p>
+    </div>
+  </section>
+  <section class="section" style="background:var(--paper-2)">
+    <div class="wrap">
+      <div class="sec-head"><div class="eyebrow">Build your platform</div><h2>Configure your suites</h2>
+      <p class="lede">Select the suites you need and your deployment model to see the suggested tier. Every configuration includes all 12 platform-core engines.</p></div>
+      ${suiteConfigurator()}
+    </div>
+  </section>
+  <section class="section">
+    <div class="wrap">
+      <div class="sec-head center"><div class="eyebrow" style="justify-content:center">Questions</div><h2>Common questions</h2></div>
+      ${faqBlock([
+        ['Is pricing per user?','No. Clario360 is licensed by suite and deployment model, not per seat. That keeps cost predictable as your organisation grows and avoids penalising adoption.'],
+        ['Can we start with one suite?','Yes. Many institutions begin with one suite — DataStream for resilience, Business+ for legal and GRC, ClarioSec for security, or ClarioInsight for analytics — and add others later. The platform core comes with any of them.'],
+        ['What about consumption costs?','There are none of the usual surprises. ClarioSync meters rows for observability, not billing, and ClarioDWH keeps data in-Kingdom at a lower cost per terabyte than global cloud warehouses.'],
+        ['Do air-gapped deployments cost more?','Sovereign and air-gapped deployments are bespoke because they involve dedicated infrastructure and assurance work. We scope them with you directly.'],
+      ])}
+    </div>
+  </section>
+  ${ctaBand('Let\'s scope the right configuration','Tell us which suites you need and how you deploy, and we\'ll put together pricing mapped to your environment.')}
+  ` + footer();
+}
+
+function faqBlock(items){
+  return `<div class="faq">
+    ${items.map((it,i)=>`
+      <div class="faq-item" id="faq-${i}">
+        <div class="faq-q" onclick="toggleFaq(${i})">${it[0]}<span class="fi">${svg(I.x).replace('stroke-width="1.8"','stroke-width="2.2"')}</span></div>
+        <div class="faq-a"><p>${it[1]}</p></div>
+      </div>`).join('')}
+  </div>`;
+}
+
+/* ============================================================
+   PAGE: ABOUT
+   ============================================================ */
+function pageAbout(){
+  const roadmap=[
+    ['H1 · 2026','Foundation','Platform core, gateway and IAM. ClarioDR GA on the replication core. Watheeq and the shared shell. Workflow and Integration engines, v1.'],
+    ['H2 · 2027','Parity race','ClarioSync and ClarioMigration GA. EHKAM, MahamaTech and BOSALAH. Automation engine GA with AI copilots. Benchmark-parity checks across the suite.'],
+    ['H3 · 2028','Scale & channel','ClarioDWH GA with RPO ≤30s. Marketplace listings, local and international. Partner API ecosystem. Service split where scale demands it.'],
+  ];
+  return nav('about', true) + `
+  <header class="page-hero">
+    <div class="grid-overlay"></div>
+    <div class="wrap page-hero-inner">
+      <div class="breadcrumb"><a onclick="go('/')">Home</a> ${svg(I.chev)} <span>About</span></div>
+      <div class="eyebrow">About Clario360</div>
+      <h1>A sovereign platform, built deliberately</h1>
+      <p class="lede">Clario360 was architected from a single conviction: that institutions in the Kingdom deserve enterprise software that is Arabic-first, sovereign by default, and platform-first — so capability compounds instead of fragmenting across vendors.</p>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="wrap split">
+      <div>
+        <div class="eyebrow">The thesis</div>
+        <h2 style="margin-bottom:18px">Build the platform once. Let the products inherit it.</h2>
+        <p style="color:var(--text-2)">Most enterprise portfolios are a collection of products that each re-implement identity, workflow, forms, integration and audit. The cost of that duplication is paid forever. Clario360 inverts it: shared services are built once in the platform core, and every application — across all four suites — consumes them.</p>
+        <p style="color:var(--text-2)">The result is a platform where adding the second suite is cheaper than the first, where a workflow built for legal can serve compliance, and where the board sees live numbers because they arrive on the same event bus that every app already publishes to.</p>
+      </div>
+      <div>
+        <div class="specs" style="grid-template-columns:1fr 1fr;margin-top:0">
+          <div class="spec"><b>Arabic</b><span>First, not translated</span></div>
+          <div class="spec"><b>Sovereign</b><span>By design, not by flag</span></div>
+          <div class="spec"><b>Platform</b><span>Shared, not duplicated</span></div>
+          <div class="spec"><b>Event-driven</b><span>Connected, not coupled</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="background:var(--paper-2)">
+    <div class="wrap">
+      <div class="sec-head"><div class="eyebrow">Roadmap</div><h2>Architecture meets roadmap</h2>
+      <p class="lede">Sequenced deliberately — protect first, reach parity, then scale and open the channel.</p></div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        ${roadmap.map((r,i)=>`
+          <div style="display:grid;grid-template-columns:160px 1fr;gap:24px;background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:28px;align-items:start">
+            <div><div style="font-family:var(--mono);font-size:.78rem;letter-spacing:.1em;color:var(--gold-600);margin-bottom:6px">${r[0]}</div>
+            <h4 style="margin:0">${r[1]}</h4></div>
+            <p style="margin:0;color:var(--text-2);padding-top:4px">${r[2]}</p>
+          </div>`).join('')}
+      </div>
+    </div>
+  </section>
+
+  ${busSection()}
+  ${ctaBand('Build the sovereign future with us','Whether you\'re evaluating, partnering, or buying — let\'s talk about what Clario360 can do for your institution.')}
+  ` + footer();
+}
+
+/* ============================================================
+   PAGE: CONTACT
+   ============================================================ */
+function pageContact(){
+  return nav('contact', true) + `
+  <header class="page-hero">
+    <div class="grid-overlay"></div>
+    <div class="wrap page-hero-inner">
+      <div class="breadcrumb"><a onclick="go('/')">Home</a> ${svg(I.chev)} <span>Contact</span></div>
+      <div class="eyebrow">Request a demo</div>
+      <h1>See it on your own environment</h1>
+      <p class="lede">Tell us which suites matter and how you deploy. We'll prepare a guided session mapped to your frameworks, your workflows and your Arabic-first requirements.</p>
+    </div>
+  </header>
+  <section class="section">
+    <div class="wrap">
+      <div class="contact-grid">
+        <div class="contact-info">
+          <div class="ci-item"><div class="cii">${svg(I.mail)}</div><div><h5>Sales & demos</h5><p>Speak with our solutions team about a deployment scoped to your institution.</p></div></div>
+          <div class="ci-item"><div class="cii">${svg(I.shield)}</div><div><h5>Security & compliance</h5><p>Review NCA, SAMA and PDPL alignment against your auditors' requirements.</p></div></div>
+          <div class="ci-item"><div class="cii">${svg(I.handshake)}</div><div><h5>Partnerships</h5><p>Integrators and channel partners — explore the partner API ecosystem.</p></div></div>
+          <div class="ci-item"><div class="cii">${svg(I.globe)}</div><div><h5>Sovereign deployments</h5><p>Air-gapped and classified environments, scoped directly with our team.</p></div></div>
+          <div style="background:var(--navy-50);border:1px solid var(--navy-100);border-radius:var(--r);padding:22px;margin-top:6px">
+            <div class="bilingual" style="font-family:var(--arabic);color:var(--navy-700);font-size:1.05rem;margin-bottom:6px">نتحدث العربية</div>
+            <p style="margin:0;font-size:.9rem;color:var(--text-2)">Our team works Arabic-first. Reach out in Arabic or English — your choice.</p>
+          </div>
+        </div>
+        <div class="form-card">
+          <h3 style="margin-bottom:6px">Request a demo</h3>
+          <p style="color:var(--text-3);font-size:.9rem;margin-bottom:24px">We'll respond within one business day.</p>
+          <div class="field-row">
+            <div class="field"><label>Full name</label><input type="text" placeholder="Your name"></div>
+            <div class="field"><label>Work email</label><input type="email" placeholder="you@institution.gov.sa"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Organisation</label><input type="text" placeholder="Institution name"></div>
+            <div class="field"><label>Role</label><input type="text" placeholder="Your role"></div>
+          </div>
+          <div class="field">
+            <label>Which interests you most?</label>
+            <select>
+              <option>The whole platform</option>
+              <option>DataStream Suite — resilience & data</option>
+              <option>Business+ Suite — corporate operations</option>
+              <option>ClarioSec Suite — security & cyber</option>
+              <option>ClarioInsight Suite — analytics</option>
+              <option>A specific application</option>
+              <option>Sovereign / air-gapped deployment</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Preferred deployment</label>
+            <select><option>Managed SaaS (in-Kingdom)</option><option>On-premise</option><option>Air-gapped / disconnected</option><option>Not sure yet</option></select>
+          </div>
+          <div class="field"><label>What would you like to see?</label><textarea placeholder="Tell us about your environment, frameworks, or the workflows you'd like demonstrated."></textarea></div>
+          <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="submitForm(event)">Request a demo ${svg(I.arrow)}</button>
+          <p class="form-note">By submitting, you agree to be contacted about Clario360. This demo form is illustrative.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  ` + footer();
+}
+
+/* ============================================================
+   PAGE: 404
+   ============================================================ */
+function page404(){
+  return nav('', true) + `
+  <header class="page-hero" style="min-height:70vh;display:flex;align-items:center">
+    <div class="grid-overlay"></div>
+    <div class="wrap page-hero-inner center" style="margin:0 auto">
+      <div class="eyebrow" style="justify-content:center">404</div>
+      <h1>This route isn't on the map</h1>
+      <p class="lede" style="margin:0 auto 30px">The page you're looking for doesn't exist — but the platform does. Head back to the hub or explore a suite.</p>
+      <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+        <span class="btn btn-gold" onclick="go('/')">Back to home</span>
+        <span class="btn btn-ondark" onclick="go('/platform')">Explore the platform</span>
+      </div>
+    </div>
+  </header>` + footer();
+}
+
+/* ============================================================
+   PAGE: ENGINE DETAIL (/platform/{slug})
+   ============================================================ */
+function pageEngine(slug){
+  const e=ENGINES.find(x=>x[3]===slug); const d=ENGINE_DETAIL[slug];
+  if(!e||!d) return page404();
+  const idx=ENGINES.findIndex(x=>x[3]===slug);
+  const others=ENGINES.filter(x=>x[3]!==slug);
+  return nav('platform', true) + `
+  <header class="page-hero">
+    <div class="grid-overlay"></div>
+    <div class="wrap page-hero-inner">
+      <div class="breadcrumb"><a href="#/" onclick="navGo(event,'/')">Home</a> ${svg(I.chev)} <a href="#/platform" onclick="navGo(event,'/platform')">Platform</a> ${svg(I.chev)} <span>${e[0]}</span></div>
+      <div class="app-hero">
+        <div class="big-ico" style="background:linear-gradient(150deg,rgba(255,255,255,.22),rgba(255,255,255,.08));border:1px solid rgba(255,255,255,.25)" aria-hidden="true">${svg(e[2])}</div>
+        <div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><h1 style="margin:0">${e[0]}</h1><span class="badge-ga">Platform core</span></div>
+          <p style="font-family:var(--mono);color:var(--gold-400);margin:6px 0 0;letter-spacing:.04em;font-size:.9rem">Engine ${String(idx+1).padStart(2,'0')} of 12 · ${d.tag}</p>
+        </div>
+      </div>
+      <p class="lede" style="margin-top:10px">${e[1]}.</p>
+      <div style="margin-top:28px;display:flex;gap:14px;flex-wrap:wrap">
+        <a class="btn btn-gold" href="#/contact" onclick="navGo(event,'/contact')">Request a demo ${svg(I.arrow)}</a>
+        <a class="btn btn-ondark" href="#/platform" onclick="navGo(event,'/platform')">All 12 engines</a>
+      </div>
+    </div>
+  </header>
+  <section class="section">
+    <div class="wrap split">
+      <div>
+        <div class="eyebrow">What it does</div>
+        <h2 style="margin-bottom:18px">${e[0]}</h2>
+        <p class="lede" style="font-size:1.1rem">${d.long}</p>
+      </div>
+      <div>
+        <div class="eyebrow">Consumed by</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+          ${d.consumers.map(c=>`<div style="display:flex;gap:11px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:13px 16px">
+            <span style="color:var(--navy-600)" aria-hidden="true">${svg(I.checkCircle)}</span><span style="font-size:.92rem;font-weight:500">${c}</span></div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="section-tight" style="background:var(--paper-2)">
+    <div class="wrap">
+      <div class="sec-head"><div class="eyebrow">Capabilities</div><h3>Inside the ${e[0]}</h3></div>
+      <div class="modules">
+        ${d.points.map(m=>`<div class="module"><div class="mi" aria-hidden="true">${svg(m[2])}</div><div><h5>${m[0]}</h5><p>${m[1]}</p></div></div>`).join('')}
+      </div>
+    </div>
+  </section>
+  <section class="section">
+    <div class="wrap">
+      <div class="sec-head"><div class="eyebrow">The platform core</div><h3>The other engines</h3>
+      <p class="lede">Every engine is built once and consumed by all four suites. That is the platform-first dividend.</p></div>
+      <div class="engines">
+        ${others.map(x=>`<a class="engine" href="#/platform/${x[3]}" onclick="navGo(event,'/platform/${x[3]}')" style="cursor:pointer;text-decoration:none">
+          <div class="ei" aria-hidden="true">${svg(x[2])}</div><h5>${x[0]}</h5><p>${x[1]}</p></a>`).join('')}
+      </div>
+    </div>
+  </section>
+  ${ctaBand('See the platform core in a deep-dive','From the gateway to the event bus — a working session on how the engines fit together in your environment.')}
+  ` + footer();
+}
+
+/* ============================================================
+   PAGE: RESOURCES / DOCUMENTATION HUB
+   ============================================================ */
+function pageResources(){
+  const datasheets=[
+    ['Platform overview','A one-page summary of the Clario360 platform, suites and deployment models.',I.doc,'Datasheet'],
+    ['DataStream Suite','Resilience and mobility — ClarioDR, Migration, Sync and DWH at a glance.',I.database,'Datasheet'],
+    ['Business+ Suite','Legal, delivery, GRC, executive and governance apps summarised.',I.briefcase,'Datasheet'],
+    ['ClarioSec Suite','Security operations and the four cyber programs.',I.shield,'Datasheet'],
+    ['ClarioInsight Suite','Data intelligence and dashboards.',I.gauge,'Datasheet'],
+  ];
+  const guides=[
+    ['Deployment guide','SaaS, on-premise and air-gapped — reference architectures and prerequisites for each.',I.server,'Guide'],
+    ['Security whitepaper','The sovereign security model, tenant isolation, encryption and audit, end to end.',I.lock,'Whitepaper'],
+    ['Compliance mapping','How EHKAM maps to NCA ECC/CSCC, SAMA CSF, PDPL, ISO 27001 and NIST.',I.scale,'Reference'],
+    ['Arabic-first design','How RTL/LTR, bilingual content and Arabic document generation work platform-wide.',I.book,'Guide'],
+  ];
+  const dev=[
+    ['API reference','Contract-first OpenAPI definitions, versioned and enforced at the gateway.',I.server],
+    ['Event catalog','The domain events each app publishes — schemas, ordering and replay semantics.',I.network],
+    ['Integration adapters','Available source/target adapters and government-platform connectors.',I.plug],
+    ['Authentication','SSO, federated identity and token flows for partner and public APIs.',I.key],
+  ];
+  return nav('resources', true) + `
+  <header class="page-hero">
+    <div class="grid-overlay"></div>
+    <div class="wrap page-hero-inner">
+      <div class="breadcrumb"><a href="#/" onclick="navGo(event,'/')">Home</a> ${svg(I.chev)} <span>Resources</span></div>
+      <div class="eyebrow">Resources & documentation</div>
+      <h1>Everything to evaluate Clario360</h1>
+      <p class="lede">Datasheets, deployment and security documentation, compliance mappings and developer references — the material procurement, security and engineering teams need to assess the platform properly.</p>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="sec-head"><div class="eyebrow">Datasheets</div><h2>Product datasheets</h2>
+      <p class="lede">One-page summaries of the platform and each suite.</p></div>
+      <div class="res-grid">
+        ${datasheets.map(r=>resCard(r)).join('')}
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="background:var(--paper-2)">
+    <div class="wrap">
+      <div class="sec-head"><div class="eyebrow">Deployment & security</div><h2>Guides & whitepapers</h2>
+      <p class="lede">The detail your security and infrastructure teams will ask for.</p></div>
+      <div class="res-grid">
+        ${guides.map(r=>resCard(r)).join('')}
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="sec-head"><div class="eyebrow">For developers</div><h2>Developer references</h2>
+      <p class="lede">Contract-first APIs and the event model, for partners building on the platform.</p></div>
+      <div class="modules">
+        ${dev.map(r=>`<div class="module"><div class="mi" aria-hidden="true">${svg(r[2])}</div><div><h5>${r[0]} <span class="badge-soon" style="margin-left:4px">Docs</span></h5><p>${r[1]}</p></div></div>`).join('')}
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="background:var(--ink);color:#fff">
+    <div class="wrap split">
+      <div>
+        <div class="eyebrow on-dark">Need something specific?</div>
+        <h2 style="color:#fff;margin-bottom:14px">Request the full evaluation pack</h2>
+        <p class="lede" style="color:var(--text-inv-2)">Security questionnaires, reference architectures mapped to your environment, and a sandbox — we'll prepare a pack scoped to your institution and frameworks.</p>
+        <div style="margin-top:22px;display:flex;gap:14px;flex-wrap:wrap">
+          <a class="btn btn-gold" href="#/contact" onclick="navGo(event,'/contact')">Request evaluation pack ${svg(I.arrow)}</a>
+          <a class="btn btn-ondark" href="#/compare" onclick="navGo(event,'/compare')">Why Clario360</a>
+        </div>
+      </div>
+      <div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          ${[['Security questionnaire support','SIG, CAIQ and custom questionnaires',I.clipboard],['Reference architecture','Mapped to your deployment model',I.network],['Proof-of-value sandbox','A scoped environment to evaluate',I.cube],['Compliance evidence','Framework mappings and attestations',I.checkCircle]].map(x=>`
+            <div style="display:flex;gap:13px;align-items:center;background:rgba(255,255,255,.05);border:1px solid var(--ink-line);border-radius:11px;padding:15px 17px">
+              <span style="color:var(--gold-400)" aria-hidden="true">${svg(x[2])}</span>
+              <div><b style="color:#fff;font-size:.95rem;display:block">${x[0]}</b><span style="color:var(--text-inv-2);font-size:.84rem">${x[1]}</span></div></div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </section>
+  ` + footer();
+}
+function resCard(r){
+  return `<div class="res-card">
+    <div class="res-ico" aria-hidden="true">${svg(r[0]&&r[2])}</div>
+    <span class="res-tag">${r[3]}</span>
+    <h4>${r[0]}</h4>
+    <p>${r[1]}</p>
+    <a class="linkarrow" href="#/contact" onclick="navGo(event,'/contact')">Request access ${svg(I.arrow)}</a>
+  </div>`;
+}
+
+/* ============================================================
+   PAGE: COMPARE — platform vs point tools (category positioning)
+   ============================================================ */
+function pageCompare(){
+  const rows=[
+    ['Scope','A unified platform spanning resilience, operations, security and analytics','Separate tools, one domain each'],
+    ['Identity & login','One login, one RBAC model, federated to your IdP','A new login and user store per tool'],
+    ['Process & forms','Workflow and forms built once, reused everywhere','Rebuilt inside each product'],
+    ['Cross-domain data','Facts flow on one ordered, replayable event bus','Brittle point-to-point integrations'],
+    ['Arabic-first / RTL','Solved once in the shared shell; Arabic as primary','Bolted on or English-first'],
+    ['Sovereign deployment','SaaS, on-premise or fully air-gapped — same codebase','Typically cloud-only or single-mode'],
+    ['Compliance','NCA, SAMA, PDPL, ISO, NIST mapped on day one','Manual mapping, per tool'],
+    ['Audit','One immutable, platform-wide trail','Fragmented across vendors'],
+    ['Commercial model','Licensed by suite; predictable, no consumption surprises','Per-seat or metered, stacked per tool'],
+    ['Total cost over time','Build once, compound across suites','Duplicated cost paid per product, forever'],
+  ];
+  return nav('', true) + `
+  <header class="page-hero">
+    <div class="grid-overlay"></div>
+    <div class="wrap page-hero-inner">
+      <div class="breadcrumb"><a href="#/" onclick="navGo(event,'/')">Home</a> ${svg(I.chev)} <span>Why Clario360</span></div>
+      <div class="eyebrow">Platform vs point tools</div>
+      <h1>One platform beats a stack of tools</h1>
+      <p class="lede">Most institutions assemble a portfolio of single-purpose products, each re-implementing identity, workflow, integration and audit. That duplication is paid for forever. Clario360 takes a different position: one sovereign platform where capability compounds across every suite.</p>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="sec-head center"><div class="eyebrow" style="justify-content:center">The comparison</div>
+      <h2>Where a platform pulls ahead</h2>
+      <p class="lede">An honest, category-level comparison — a sovereign enterprise platform versus a collection of point tools.</p></div>
+      <div class="cmp">
+        <div class="cmp-row head"><div>Dimension</div><div class="c-clario">Clario360 platform</div><div class="c-other">Stitched point tools</div></div>
+        ${rows.map(r=>`<div class="cmp-row">
+          <div class="c-label">${r[0]}</div>
+          <div class="c-clario">${svg(I.check,'yes')}<span>${r[1]}</span></div>
+          <div class="c-other">${svg(I.x,'no')}<span>${r[2]}</span></div>
+        </div>`).join('')}
+      </div>
+      <p class="center" style="margin-top:24px;color:var(--text-3);font-size:.85rem;max-width:680px;margin-left:auto;margin-right:auto">Comparison reflects the architectural difference between an integrated platform and independent point products. Specific competitor capabilities vary by vendor and release; we're happy to do a detailed, like-for-like evaluation against any named alternative on request.</p>
+    </div>
+  </section>
+
+  <section class="section" style="background:var(--paper-2)">
+    <div class="wrap">
+      <div class="sec-head"><div class="eyebrow">The economic argument</div><h2>The build-once dividend, quantified</h2>
+      <p class="lede">Estimate the difference between one platform and a stack of separate tools for your organisation.</p></div>
+      ${roiCalculator()}
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="sec-head"><div class="eyebrow">Three reasons it holds</div><h2>Why the platform position wins</h2></div>
+      <div class="principles">
+        ${[['Capability compounds','Adding the second, third and fourth suite is cheaper than the first — they inherit the platform core instead of rebuilding it.',I.trend],
+           ['One source of truth','Identity, audit and events are unified, so there is one answer to "who did what" and one live view of the organisation.',I.checkCircle],
+           ['Sovereign without compromise','The same product runs SaaS, on-premise or air-gapped — you do not trade capability for control.',I.globe]].map(p=>`
+          <div class="principle"><div class="pic" aria-hidden="true">${svg(p[2])}</div><h4>${p[0]}</h4><p>${p[1]}</p></div>`).join('')}
+      </div>
+    </div>
+  </section>
+  ${ctaBand('Bring your own shortlist','Send us the tools you are evaluating and we will prepare a detailed, like-for-like comparison against Clario360 — mapped to your requirements.')}
+  ` + footer();
+}
+
+/* ============================================================
+   ROUTER
+   ============================================================ */
+function go(path){
+  if(location.hash.slice(1)===path){ window.scrollTo(0,0); return; }
+  location.hash=path;
+}
+/* Click handler for nav links: respects modifier-clicks (open in new tab), else routes */
+function navGo(e,path){
+  if(e&&(e.metaKey||e.ctrlKey||e.shiftKey||e.button===1))return; // let browser handle new-tab
+  if(e)e.preventDefault();
+  closeMega();
+  closeDrawer();
+  go(path);
+}
+const ROUTE_TITLES={
+  '/':'Clario360 — The Sovereign Enterprise Platform',
+  '/platform':'Platform Architecture — Clario360',
+  '/solutions':'Solutions by Role — Clario360',
+  '/sovereignty':'Sovereignty & Security — Clario360',
+  '/resources':'Resources & Documentation — Clario360',
+  '/compare':'Why Clario360 — Platform vs Point Tools',
+  '/pricing':'Pricing — Clario360',
+  '/about':'About — Clario360',
+  '/contact':'Request a Demo — Clario360',
+};
+function setTitle(path,seg){
+  let t=ROUTE_TITLES[path];
+  if(!t){
+    if((seg[0]==='datastream'||seg[0]==='business-plus'||seg[0]==='clariosec'||seg[0]==='clarioinsight')){
+      const s=SUITES[seg[0]];
+      if(s&&seg[1]){const a=s.apps.find(x=>x.id===seg[1]); t=a?`${a.name} — ${s.name} — Clario360`:`${s.name} — Clario360`;}
+      else if(s) t=`${s.name} — Clario360`;
+    } else if(seg[0]==='platform'&&seg[1]){
+      const e=ENGINES.find(x=>x[3]===seg[1]); t=e?`${e[0]} — Platform Core — Clario360`:'Platform — Clario360';
+    }
+  }
+  document.title=t||'Clario360 — The Sovereign Enterprise Platform';
+}
+function route(){
+  const path=(location.hash.slice(1)||'/').replace(/\/+$/,'')||'/';
+  const seg=path.split('/').filter(Boolean);
+  let html;
+  if(path==='/') html=pageHome();
+  else if(seg[0]==='platform'){ html = seg[1] ? pageEngine(seg[1]) : pagePlatform(); }
+  else if(seg[0]==='solutions') html=pageSolutions();
+  else if(seg[0]==='sovereignty'||seg[0]==='security') html=pageSovereignty();
+  else if(seg[0]==='resources') html=pageResources();
+  else if(seg[0]==='compare') html=pageCompare();
+  else if(seg[0]==='pricing') html=pagePricing();
+  else if(seg[0]==='about') html=pageAbout();
+  else if(seg[0]==='contact') html=pageContact();
+  else if((seg[0]==='datastream'||seg[0]==='business-plus'||seg[0]==='clariosec'||seg[0]==='clarioinsight')){
+    if(seg[1]) html=pageApp(seg[0],seg[1]);
+    else html=pageSuite(seg[0]);
+  }
+  else html=page404();
+  const app=document.getElementById('app');
+  app.innerHTML=html;
+  setTitle(path,seg);
+  window.scrollTo(0,0);
+  initScroll();
+  observeFade();
+  closeDrawer();
+  closeMega();
+  if(document.getElementById('roi-calc')) updateRoi();
+  if(document.getElementById('suite-cfg')) renderCfg();
+  // Move focus to main content for screen-reader and keyboard users after route change
+  const main=document.getElementById('main');
+  if(main){ main.setAttribute('tabindex','-1'); main.focus({preventScroll:true}); }
+}
+window.addEventListener('hashchange',route);
+window.addEventListener('DOMContentLoaded',route);
+// Global keyboard: Escape closes any open overlay
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){ closeMega(); if(document.getElementById('drawer')?.classList.contains('open')) toggleDrawer(false); }
+});
+
+/* ============================================================
+   INTERACTIONS
+   ============================================================ */
+function initScroll(){
+  const nav=document.getElementById('nav');
+  if(!nav)return;
+  const onScroll=()=>{ nav.classList.toggle('scrolled', window.scrollY>20); };
+  onScroll();
+  window.onscroll=onScroll;
+}
+function observeFade(){
+  const els=[...document.querySelectorAll('.fade-up')];
+  if(!els.length)return;
+  if(!('IntersectionObserver' in window)){els.forEach(e=>e.classList.add('in'));return;}
+  const reveal=el=>el.classList.add('in');
+  const vh=window.innerHeight||800;
+  els.forEach(el=>{ if(el.getBoundingClientRect().top < vh*1.1) reveal(el); });
+  const io=new IntersectionObserver((ents)=>{
+    ents.forEach(e=>{ if(e.isIntersecting){ reveal(e.target); io.unobserve(e.target); } });
+  },{threshold:.08,rootMargin:'0px 0px -10% 0px'});
+  els.forEach(e=>{ if(!e.classList.contains('in')) io.observe(e); });
+  setTimeout(()=>els.forEach(reveal),1200);
+}
+/* Mega-menu (click + keyboard accessible) */
+function toggleMega(btn){
+  const open=btn.getAttribute('aria-expanded')==='true';
+  closeMega();
+  if(!open){
+    btn.setAttribute('aria-expanded','true');
+    btn.closest('.has-mega').classList.add('mega-open');
+  }
+}
+function closeMega(){
+  document.querySelectorAll('.has-mega.mega-open').forEach(m=>{
+    m.classList.remove('mega-open');
+    const b=m.querySelector('.nav-trigger'); if(b)b.setAttribute('aria-expanded','false');
+  });
+}
+function megaKey(e,btn){
+  if(e.key==='ArrowDown'||e.key==='Enter'||e.key===' '){
+    e.preventDefault();
+    if(btn.getAttribute('aria-expanded')!=='true') toggleMega(btn);
+    const first=btn.closest('.has-mega').querySelector('.mega a'); if(first)first.focus();
+  } else if(e.key==='Escape'){ closeMega(); btn.focus(); }
+}
+// Close mega when focus leaves the menu entirely
+document.addEventListener('focusin',e=>{
+  const open=document.querySelector('.has-mega.mega-open');
+  if(open&&!open.contains(e.target)) closeMega();
+});
+// Close mega/drawer on outside click
+document.addEventListener('click',e=>{
+  const open=document.querySelector('.has-mega.mega-open');
+  if(open&&!open.contains(e.target)) closeMega();
+});
+
+/* Drawer with focus trap */
+let _lastFocus=null;
+function toggleDrawer(open){
+  const d=document.getElementById('drawer');
+  if(!d)return;
+  d.classList.toggle('open',open);
+  d.setAttribute('aria-hidden',open?'false':'true');
+  document.body.style.overflow=open?'hidden':'';
+  const burger=document.querySelector('.burger');
+  if(burger)burger.setAttribute('aria-expanded',open?'true':'false');
+  if(open){
+    _lastFocus=document.activeElement;
+    const first=d.querySelector('.drawer-close'); if(first)first.focus();
+    d.addEventListener('keydown',trapDrawer);
+  } else {
+    d.removeEventListener('keydown',trapDrawer);
+    if(_lastFocus&&_lastFocus.focus)_lastFocus.focus();
+  }
+}
+function trapDrawer(e){
+  if(e.key!=='Tab')return;
+  const d=document.getElementById('drawer');
+  const f=[...d.querySelectorAll('button,a,[tabindex]:not([tabindex="-1"])')].filter(el=>el.offsetParent!==null);
+  if(!f.length)return;
+  const first=f[0],last=f[f.length-1];
+  if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+  else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+}
+function closeDrawer(){ toggleDrawer(false); }
+function toggleFaq(i){
+  const item=document.getElementById('faq-'+i);
+  if(!item)return;
+  const a=item.querySelector('.faq-a');
+  const btn=item.querySelector('.faq-q');
+  const isOpen=item.classList.toggle('open');
+  a.style.maxHeight=isOpen?a.scrollHeight+'px':'0';
+  if(btn)btn.setAttribute('aria-expanded',isOpen?'true':'false');
+}
+function submitForm(e){
+  e.preventDefault();
+  const btn=e.target.closest('button');
+  btn.innerHTML='Thank you — we\'ll be in touch ✓';
+  btn.style.background='var(--ok)';
+  btn.disabled=true;
+}
+</script>
+</body>
+</html>

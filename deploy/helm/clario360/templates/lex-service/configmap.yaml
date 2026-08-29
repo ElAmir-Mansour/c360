@@ -1,0 +1,30 @@
+{{- if .Values.lexService.enabled }}
+{{- $cfg := .Values.lexService.config | default dict }}
+{{- $approvalAuthority := .Values.lexService.approvalAuthority | default dict }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "clario360.componentName" (dict "root" . "component" "lex-service") }}-config
+  namespace: {{ include "clario360.namespace" . }}
+  labels:
+    {{- include "clario360.componentLabels" (dict "root" . "component" "lex-service") | nindent 4 }}
+data:
+  LEX_HTTP_PORT: "8087"
+  LEX_ADMIN_PORT: "9087"
+  LEX_KAFKA_GROUP_ID: {{ $cfg.kafkaGroupId | default .Values.lexService.kafkaGroupId | default "lex-service" | quote }}
+  LEX_KAFKA_TOPIC: {{ $cfg.kafkaTopic | default .Values.lexService.kafkaTopic | default "enterprise.lex.events" | quote }}
+  LEX_RATE_LIMIT_PER_MINUTE: {{ $cfg.rateLimitPerMinute | default .Values.lexService.rateLimitPerMinute | default "300" | quote }}
+  LEX_DASHBOARD_CACHE_TTL: {{ $cfg.dashboardCacheTtl | default .Values.lexService.dashboardCacheTtl | default "60s" | quote }}
+  LEX_EXPIRY_MONITOR_INTERVAL: {{ $cfg.expiryMonitorInterval | default .Values.lexService.expiryMonitorInterval | default "1h" | quote }}
+  LEX_COMPLIANCE_MONITOR_INTERVAL: {{ $cfg.complianceMonitorInterval | default .Values.lexService.complianceMonitorInterval | default "6h" | quote }}
+  LEX_RENEWAL_REMINDER_INTERVAL: {{ $cfg.renewalReminderInterval | default .Values.lexService.renewalReminderInterval | default "6h" | quote }}
+  LEX_SLA_MONITOR_INTERVAL: {{ $cfg.slaMonitorInterval | default .Values.lexService.slaMonitorInterval | default "15m" | quote }}
+  LEX_DELIVERY_AUTOCLOSE_INTERVAL: {{ $cfg.deliveryAutoCloseInterval | default .Values.lexService.deliveryAutoCloseInterval | default "1h" | quote }}
+  LEX_PROXIMITY_MONITOR_INTERVAL: {{ $cfg.proximityMonitorInterval | default .Values.lexService.proximityMonitorInterval | default "1h" | quote }}
+  LEX_OUTBOX_DISPATCH_INTERVAL: {{ $cfg.outboxDispatchInterval | default .Values.lexService.outboxDispatchInterval | default "60s" | quote }}
+  LEX_INTEGRATION_SYNC_INTERVAL: {{ $cfg.integrationSyncInterval | default .Values.lexService.integrationSyncInterval | default "5m" | quote }}
+  LEX_INTEGRATION_ROTATION_INTERVAL: {{ $cfg.integrationRotationInterval | default .Values.lexService.integrationRotationInterval | default "6h" | quote }}
+  LEX_ORG_JURISDICTION: {{ $cfg.orgJurisdiction | default .Values.lexService.orgJurisdiction | default "Saudi Arabia" | quote }}
+  LEX_APPROVAL_AUTHORITY_REVOCATION_ENABLED: {{ $approvalAuthority.revocationEnabled | default false | quote }}
+  LEX_APPROVAL_AUTHORITY_REVOKED_SERIALS: {{ $approvalAuthority.revokedSerials | default "" | quote }}
+{{- end }}

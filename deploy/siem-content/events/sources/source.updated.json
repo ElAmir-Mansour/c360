@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clario360.io/siem/events/sources/source.updated.json",
+  "title": "siem.source.updated",
+  "description": "Data payload of the siem.source.updated CloudEvent. Emitted on PATCH /sources/{id}.",
+  "type": "object",
+  "required": ["source_id", "tenant_id", "version", "updated_by", "updated_at", "changes"],
+  "properties": {
+    "source_id":  {"type": "string", "format": "uuid"},
+    "tenant_id":  {"type": "string", "format": "uuid"},
+    "version":    {"type": "integer", "minimum": 2},
+    "updated_by": {"type": "string", "format": "uuid"},
+    "updated_at": {"type": "string", "format": "date-time"},
+    "changes":    {
+      "type": "object",
+      "description": "Field-level diff (before/after) for every modified field."
+    }
+  }
+}

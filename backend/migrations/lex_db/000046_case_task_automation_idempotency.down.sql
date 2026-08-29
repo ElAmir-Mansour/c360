@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS idx_legal_case_tasks_automation_key_unique;

@@ -1,0 +1,3 @@
+# Real deploy config holds generated infra credentials — never commit it.
+clario360.env
+*.local

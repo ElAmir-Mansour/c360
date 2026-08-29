@@ -1,0 +1,146 @@
+{{- if .Values.aiSecondBrain.enabled }}
+{{- $ai := .Values.aiSecondBrain -}}
+{{- $secretName := $ai.secret.existingSecret | default (printf "%s-secret" (include "clario360.componentName" (dict "root" . "component" "ai-second-brain"))) -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "clario360.componentName" (dict "root" . "component" "ai-second-brain") }}
+  namespace: {{ include "clario360.namespace" . }}
+  labels:
+    {{- include "clario360.componentLabels" (dict "root" . "component" "ai-second-brain") | nindent 4 }}
+spec:
+  replicas: {{ $ai.replicas | default 1 }}
+  revisionHistoryLimit: 5
+  strategy:
+    type: Recreate   # RWO model PVC → old pod must release before the new one binds
+  selector:
+    matchLabels:
+      {{- include "clario360.componentSelectorLabels" (dict "root" . "component" "ai-second-brain") | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/ai-second-brain/configmap.yaml") . | sha256sum }}
+      labels:
+        {{- include "clario360.componentSelectorLabels" (dict "root" . "component" "ai-second-brain") | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml $ai.podSecurityContext | nindent 8 }}
+      {{- if $ai.pgvector.enabled }}
+      initContainers:
+        - name: wait-for-pgvector
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z {{ include "clario360.componentName" (dict "root" . "component" "ai-second-brain-db") }} {{ int $ai.pgvector.port }}; do echo "waiting for pgvector..."; sleep 2; done']
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      {{- end }}
+      containers:
+        - name: ai-second-brain
+          image: {{ include "clario360.image" (dict "imageConfig" $ai.image "root" . "defaultRepo" "clario360/ai-second-brain") }}
+          imagePullPolicy: {{ $ai.image.pullPolicy | default "IfNotPresent" }}
+          securityContext:
+            {{- toYaml $ai.containerSecurityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ int $ai.port }}
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "clario360.componentName" (dict "root" . "component" "ai-second-brain") }}-config
+          env:
+            - name: AI_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: AI_DATABASE_URL
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: ANTHROPIC_API_KEY
+            - name: LEX_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: LEX_API_TOKEN
+            {{- with $ai.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          # /health returns 200 even while degraded (DB/model not yet ready), so it
+          # is the liveness signal; the app's own 503s gate /search|/ask|/ingest
+          # until pgvector + the embedding model are live. Startup window is wide
+          # because the first model load can take minutes.
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 60
+          resources:
+            {{- toYaml $ai.resources | nindent 12 }}
+          volumeMounts:
+            - name: models
+              mountPath: /models
+            - name: tmp
+              mountPath: /tmp
+            {{- with $ai.corpus }}
+            {{- if .volume }}
+            - name: corpus
+              mountPath: /corpus
+              readOnly: true
+            {{- end }}
+            {{- end }}
+      volumes:
+        - name: models
+          {{- if $ai.modelCache.persistent }}
+          persistentVolumeClaim:
+            claimName: {{ include "clario360.componentName" (dict "root" . "component" "ai-second-brain") }}-models
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: tmp
+          emptyDir: {}
+        {{- with $ai.corpus }}
+        {{- if .volume }}
+        - name: corpus
+          {{- toYaml .volume | nindent 10 }}
+        {{- end }}
+        {{- end }}
+      {{- with $ai.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $ai.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $ai.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clario360.io/siem/events/sources/source.cert.expiring.json",
+  "title": "siem.source.cert.expiring",
+  "description": "Data payload of the siem.source.cert.expiring CloudEvent. Emitted once per day per source while the cert is within the rotation window.",
+  "type": "object",
+  "required": ["source_id", "tenant_id", "cert_serial", "cert_expires_at", "days_until_expiry"],
+  "properties": {
+    "source_id":         {"type": "string", "format": "uuid"},
+    "tenant_id":         {"type": "string", "format": "uuid"},
+    "cert_serial":       {"type": "string"},
+    "cert_expires_at":   {"type": "string", "format": "date-time"},
+    "days_until_expiry": {"type": "integer", "minimum": 0}
+  }
+}

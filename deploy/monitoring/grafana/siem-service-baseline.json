@@ -1,0 +1,129 @@
+{
+  "annotations": { "list": [] },
+  "description": "Baseline observability for siem-service (SIEM-01). Panels show liveness, request rate, latency p95/p99, DB pool, Kafka producer rate, and per-component readiness.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "siem-service up",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "id": 1,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+      "targets": [
+        {
+          "expr": "max(clario360_siem_up{service=\"siem-service\"})",
+          "refId": "A",
+          "legendFormat": "up"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Build info",
+      "gridPos": { "h": 4, "w": 18, "x": 6, "y": 0 },
+      "id": 2,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "value_and_name" },
+      "targets": [
+        {
+          "expr": "clario360_siem_build_info{service=\"siem-service\"}",
+          "refId": "A",
+          "legendFormat": "{{version}} / {{commit}} / {{build_time}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP request rate by status",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "id": 3,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(clario360_siem_http_requests_total{service=\"siem-service\"}[5m])) by (status)",
+          "refId": "A",
+          "legendFormat": "status={{status}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP request latency (seconds)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "id": 4,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(clario360_siem_http_request_duration_seconds_bucket{service=\"siem-service\"}[5m])) by (le, route))",
+          "refId": "p95",
+          "legendFormat": "p95 {{route}}"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(clario360_siem_http_request_duration_seconds_bucket{service=\"siem-service\"}[5m])) by (le, route))",
+          "refId": "p99",
+          "legendFormat": "p99 {{route}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "DB pool in use (self-reported)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "id": 5,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "clario360_siem_db_pool_in_use_self{service=\"siem-service\"}",
+          "refId": "A",
+          "legendFormat": "in_use"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Kafka producer messages by result",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "id": 6,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(clario360_siem_kafka_producer_messages_total{service=\"siem-service\"}[5m])) by (result)",
+          "refId": "A",
+          "legendFormat": "{{result}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Readiness by component",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 20 },
+      "id": 7,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "clario360_siem_readiness{service=\"siem-service\"}",
+          "refId": "A",
+          "legendFormat": "{{component}}"
+        }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["clario360", "siem", "baseline"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "Africa/Lagos",
+  "title": "Clario360 — SIEM Service Baseline (SIEM-01)",
+  "uid": "clario360-siem-baseline",
+  "version": 1,
+  "weekStart": ""
+}

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/mac/clario360/**)",
+      "Bash(rm -rf /private/tmp/claude-501/-Users-mac-clario360/*/tasks/*)",
+      "Read(//private/tmp/**)",
+      "Bash(rm -rf /private/tmp/ds-tokens-*)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"exit=$?\")",
+      "Read(//tmp/**)"
+    ]
+  }
+}

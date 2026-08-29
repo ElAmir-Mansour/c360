@@ -1,0 +1,96 @@
+# =============================================================================
+# Clario 360 — nginx vhost (rendered by deploy.sh into
+# /etc/nginx/sites-available/clario360.conf, symlinked into sites-enabled).
+#
+# ADDITIVE & SAFE on the shared box:
+#   * server_name-scoped — claims ONLY __SERVER_NAME__, never `default_server`,
+#     so the existing talent/digicorecba/boacrm vhosts are untouched.
+#   * Frontend (127.0.0.1:__FRONTEND_PORT__) and gateway (127.0.0.1:__GATEWAY_PORT__)
+#     are loopback-only; nginx is the single public ingress.
+#   * Same-origin: the browser hits this one host for both the app and /api/*,
+#     so cookies stay first-party and CORS is trivial.
+#
+# For TLS (domain mode) run `certbot --nginx -d __SERVER_NAME__` AFTER installing
+# this file; certbot injects the `listen 443 ssl` server + the http→https
+# redirect for this server_name only.
+# =============================================================================
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name __SERVER_NAME__;
+
+    # File uploads (file-service) + generous timeouts to match GW_WRITE_TIMEOUT.
+    client_max_body_size 100m;
+    proxy_read_timeout 120s;
+    proxy_send_timeout 120s;
+
+    # --- Gateway API (suite APIs + gateway WebSocket proxy) ------------------
+    # ONLY /api/v1/* goes to the gateway. The Next.js BFF routes (/api/auth/*,
+    # /api/status) are served by the frontend itself and must fall through to
+    # `location /` below — routing them here would 404.
+    location /api/v1/ {
+        proxy_pass http://127.0.0.1:__GATEWAY_PORT__;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade           $http_upgrade;
+        proxy_set_header Connection        $clario_connection_upgrade;
+    }
+
+    # Clario Recover product API. The Recover productization layer is served under
+    # its own /api/recover namespace (gateway routes.go maps /api/recover ->
+    # clario-dr-service), so it must reach the gateway like /api/v1/* rather than
+    # fall through to the frontend (which would 404 every Recover data call).
+    location /api/recover/ {
+        proxy_pass http://127.0.0.1:__GATEWAY_PORT__;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade           $http_upgrade;
+        proxy_set_header Connection        $clario_connection_upgrade;
+    }
+
+    # Authenticated WebSocket proxy. The gateway maps /ws/v1/* to the suite WS
+    # services (notifications/cyber/visus); nginx must route /ws/* to the GATEWAY,
+    # not let it fall through to `location /` (the frontend has no WS server, so the
+    # handshake fails with "closed before the connection is established"). Keep the
+    # connection-upgrade headers and use long read/send timeouts for the long-lived
+    # socket so it is not torn down at the default 120s proxy timeout.
+    location /ws/ {
+        proxy_pass http://127.0.0.1:__GATEWAY_PORT__;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade           $http_upgrade;
+        proxy_set_header Connection        $clario_connection_upgrade;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+
+    # Gateway health passthrough (handy for external probes).
+    location = /healthz { proxy_pass http://127.0.0.1:__GATEWAY_PORT__/healthz; }
+    location = /readyz  { proxy_pass http://127.0.0.1:__GATEWAY_PORT__/readyz;  }
+
+    # --- Next.js frontend (BFF + SSR + static via prod-server.mjs) -----------
+    location / {
+        proxy_pass http://127.0.0.1:__FRONTEND_PORT__;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        # Forward the public host so the Next.js middleware reconstructs the
+        # public origin for absolute redirects (e.g. session-timeout -> /login)
+        # instead of leaking the internal loopback host (127.0.0.1:__FRONTEND_PORT__).
+        proxy_set_header X-Forwarded-Host  $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade           $http_upgrade;
+        proxy_set_header Connection        $clario_connection_upgrade;
+    }
+}

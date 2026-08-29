@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clario360.io/siem/events/sources/source.silent.json",
+  "title": "siem.source.silent",
+  "description": "Data payload of the siem.source.silent CloudEvent. Emitted when the detector flips a source's status from active to silent due to EPS drift or heartbeat gap.",
+  "type": "object",
+  "required": ["source_id", "tenant_id", "source_name", "status_before", "status_after", "reason", "last_seen_at"],
+  "properties": {
+    "source_id":     {"type": "string", "format": "uuid"},
+    "tenant_id":     {"type": "string", "format": "uuid"},
+    "source_name":   {"type": "string"},
+    "status_before": {"type": "string", "enum": ["active"]},
+    "status_after":  {"type": "string", "enum": ["silent"]},
+    "reason":        {"type": "string", "enum": ["drift", "gap"]},
+    "baseline_eps":  {"type": "integer", "minimum": 0},
+    "observed_eps":  {"type": "integer", "minimum": 0},
+    "drift_pct":     {"type": "number"},
+    "last_seen_at":  {"type": "string", "format": "date-time"}
+  }
+}

@@ -1,0 +1,167 @@
+# promtool unit tests for the ClarioDR SLO rules.
+# Run: promtool test rules deploy/monitoring/prometheus/rules/dr-slo-rules_test.yaml
+rule_files:
+  - dr-slo-rules.yaml
+
+evaluation_interval: 1m
+
+tests:
+  # -------------------------------------------------------------------------
+  # RPO breach: a group sitting at 360s must fire both the warn (>=240) and
+  # the critical (>300) alerts, and the recording rules must compute.
+  # -------------------------------------------------------------------------
+  - interval: 1m
+    input_series:
+      - series: 'dr_rpo_seconds{group="core-banking"}'
+        values: '360 360 360 360'
+      - series: 'dr_recovery_point_validation_ratio{group="core-banking"}'
+        values: '0.9999 0.9999 0.9999 0.9999'
+      - series: 'dr_replication_lag_seconds{stream="pg-main"}'
+        values: '3 3 3 3'
+    promql_expr_test:
+      - expr: clario360:dr:rpo_seconds:max
+        eval_time: 2m
+        exp_samples:
+          - labels: 'clario360:dr:rpo_seconds:max'
+            value: 360
+      - expr: clario360:dr:rpo_objective_ratio:by_group
+        eval_time: 2m
+        exp_samples:
+          - labels: 'clario360:dr:rpo_objective_ratio:by_group{group="core-banking"}'
+            value: 1.2
+    alert_rule_test:
+      - alertname: DRRPOObjectiveBreached
+        eval_time: 2m
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              team: platform
+              suite: datastream
+              slo: rpo
+              group: core-banking
+            exp_annotations:
+              summary: "ClarioDR RPO SLO breached for group core-banking: 360s > 300s"
+              description: "Consistency group core-banking has a live RPO of 360s, exceeding the 300s data-loss-window SLO. Data older than the SLO would be lost on failover now."
+              runbook: "docs/runbooks/incident-response/IR-001-service-outage.md"
+      - alertname: DRRPOApproachingObjective
+        eval_time: 2m
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              team: platform
+              suite: datastream
+              slo: rpo
+              group: core-banking
+            exp_annotations:
+              summary: "ClarioDR RPO for group core-banking is 360s (warn >= 240s)"
+              description: "Live recovery-point objective for consistency group core-banking is 360s, approaching the 300s SLO ceiling."
+              runbook: "docs/runbooks/troubleshooting/TS-010-replication-lag.md"
+
+  # -------------------------------------------------------------------------
+  # RPO healthy: a group at 120s must NOT fire any RPO alert.
+  # -------------------------------------------------------------------------
+  - interval: 1m
+    input_series:
+      - series: 'dr_rpo_seconds{group="docs"}'
+        values: '120 120 120 120'
+    alert_rule_test:
+      - alertname: DRRPOObjectiveBreached
+        eval_time: 3m
+        exp_alerts: []
+      - alertname: DRRPOApproachingObjective
+        eval_time: 3m
+        exp_alerts: []
+
+  # -------------------------------------------------------------------------
+  # Validation ratio below 0.999 must fire the fidelity alert.
+  # -------------------------------------------------------------------------
+  - interval: 1m
+    input_series:
+      - series: 'dr_recovery_point_validation_ratio{group="core-banking"}'
+        values: '0.95 0.95 0.95 0.95'
+    alert_rule_test:
+      - alertname: DRRecoveryPointValidationBelowSLO
+        eval_time: 3m
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              team: platform
+              suite: datastream
+              slo: validation
+              group: core-banking
+            exp_annotations:
+              summary: "ClarioDR recovery-point validation below SLO for group core-banking: 95%"
+              description: "Recovery-point validation match ratio for group core-banking is 0.95, below the 0.999 fidelity SLO. A failover from this point could restore corrupt or incomplete data."
+              runbook: "docs/runbooks/incident-response/IR-001-service-outage.md"
+
+  # -------------------------------------------------------------------------
+  # RTO breach: a real failover histogram whose p95 is 1200s (> 900) fires.
+  # Two completed runs landing in the 1200s bucket and +Inf.
+  # -------------------------------------------------------------------------
+  - interval: 1m
+    input_series:
+      - series: 'dr_failover_rto_seconds_bucket{mode="real",le="900"}'
+        values: '0+0x20'
+      - series: 'dr_failover_rto_seconds_bucket{mode="real",le="1800"}'
+        values: '0+1x20'
+      - series: 'dr_failover_rto_seconds_bucket{mode="real",le="+Inf"}'
+        values: '0+1x20'
+    alert_rule_test:
+      - alertname: DRFailoverRTOObjectiveBreached
+        eval_time: 15m
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              team: platform
+              suite: datastream
+              slo: rto
+              mode: real
+            exp_annotations:
+              summary: "ClarioDR failover RTO SLO breached (real): p95 1755s > 900s"
+              description: "p95 recovery time for real failovers over the last day is 1755s, exceeding the 900s (15 min) RTO SLO."
+              runbook: "docs/runbooks/incident-response/IR-001-service-outage.md"
+
+  # -------------------------------------------------------------------------
+  # Stream degraded: dr_stream_status degraded series == 1 fires the alert.
+  # -------------------------------------------------------------------------
+  - interval: 1m
+    input_series:
+      - series: 'dr_stream_status{stream="pg-main",status="degraded"}'
+        values: '1 1 1 1'
+    alert_rule_test:
+      - alertname: DRStreamDegraded
+        eval_time: 2m
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              team: platform
+              suite: datastream
+              slo: stream_health
+              stream: pg-main
+              status: degraded
+            exp_annotations:
+              summary: "ClarioDR stream pg-main is degraded"
+              description: "Replication stream pg-main reported status degraded. Protection for the underlying site is no longer keeping pace; investigate the agent/transport."
+              runbook: "docs/runbooks/incident-response/IR-001-service-outage.md"
+
+  # -------------------------------------------------------------------------
+  # Replication lag: a stream lagging 90s fires both warn and critical.
+  # -------------------------------------------------------------------------
+  - interval: 1m
+    input_series:
+      - series: 'dr_replication_lag_seconds{stream="files-1"}'
+        values: '90 90 90 90'
+    alert_rule_test:
+      - alertname: DRReplicationLagCritical
+        eval_time: 3m
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              team: platform
+              suite: datastream
+              slo: replication_lag
+              stream: files-1
+            exp_annotations:
+              summary: "ClarioDR replication lag CRITICAL on stream files-1: 90s"
+              description: "Stream files-1 apply lag is 90s. The stream is falling behind faster than it can catch up; RPO breach is imminent."
+              runbook: "docs/runbooks/troubleshooting/TS-010-replication-lag.md"

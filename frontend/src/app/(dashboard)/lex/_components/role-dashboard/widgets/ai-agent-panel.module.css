@@ -1,0 +1,288 @@
+/*
+ * "My AI Agent" panel (LEX-LD-GAP-DESIGN §G4).
+ *
+ * Two columns once there is room for them — a narrow session rail beside the
+ * conversation — collapsing to a single stacked column below that. The split is
+ * container-driven rather than viewport-driven because the panel sits in a
+ * dashboard slot whose width is set by the grid around it, not by the screen.
+ *
+ * Only `--wt-*` / `--ds-*` tokens and logical properties are used, so the whole
+ * surface mirrors correctly under `dir="rtl"`.
+ */
+
+.panel {
+  container-type: inline-size;
+}
+
+.workspace {
+  display: grid;
+  min-inline-size: 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: calc(var(--wt-space-base) * 3);
+}
+
+/* ── Session rail ───────────────────────────────────────────────────────── */
+
+.rail {
+  display: flex;
+  min-inline-size: 0;
+  flex-direction: column;
+  gap: calc(var(--wt-space-base) * 1.5);
+}
+
+/*
+ * The rail's three actions (new chat, each session, send) are the shared
+ * `Button` primitive re-skinned in the panel source. Their chrome deliberately
+ * lives there rather than here, so a utility class and a module class can never
+ * disagree about the same property; this file keeps the layout around them.
+ */
+
+.search {
+  display: grid;
+  min-inline-size: 0;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--wt-space-base);
+  padding-block: var(--wt-space-base);
+  padding-inline: calc(var(--wt-space-base) * 1.5);
+  background: var(--wt-surface);
+  border: var(--wt-card-border-width) solid var(--wt-teal-300);
+  border-radius: var(--wt-radius-pill);
+}
+
+.searchIcon {
+  inline-size: 1rem;
+  block-size: 1rem;
+  color: var(--wt-teal-700);
+}
+
+.searchField {
+  min-inline-size: 0;
+  color: var(--wt-teal-900);
+  font-size: var(--wt-font-size-body);
+  line-height: var(--wt-line-height-body);
+  background: transparent;
+  border: 0;
+}
+
+.searchField::placeholder {
+  color: var(--wt-teal-700);
+}
+
+.railTitle {
+  margin: 0;
+  color: var(--wt-teal-700);
+  font-size: var(--wt-font-size-label);
+  font-weight: 700;
+  line-height: var(--wt-line-height-label);
+  letter-spacing: var(--wt-letter-spacing-label);
+  text-transform: uppercase;
+}
+
+.railEmpty {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--wt-teal-700);
+  font-size: var(--wt-font-size-caption);
+  line-height: var(--wt-line-height-caption);
+}
+
+.sessions {
+  display: flex;
+  min-inline-size: 0;
+  flex-direction: column;
+  gap: var(--wt-space-base);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.sessionTitle {
+  overflow-wrap: anywhere;
+  font-size: var(--wt-font-size-body);
+  font-weight: 700;
+  line-height: var(--wt-line-height-body);
+}
+
+.sessionTime {
+  overflow-wrap: anywhere;
+  color: var(--wt-teal-700);
+  font-size: var(--wt-font-size-caption);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--wt-line-height-caption);
+}
+
+/* ── Conversation ───────────────────────────────────────────────────────── */
+
+.conversation {
+  display: flex;
+  min-inline-size: 0;
+  flex-direction: column;
+  gap: calc(var(--wt-space-base) * 2);
+}
+
+.hero {
+  display: flex;
+  min-inline-size: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--wt-space-base);
+  padding-block: calc(var(--wt-space-base) * 4);
+  padding-inline: calc(var(--wt-space-base) * 2);
+  text-align: center;
+  background: var(--wt-canvas);
+  border: var(--wt-card-border-width) dashed var(--wt-teal-300);
+  border-radius: var(--wt-radius-card);
+}
+
+.heroIcon {
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  color: var(--wt-teal-700);
+}
+
+.heroHeading {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--wt-teal-900);
+  font-size: var(--wt-font-size-panel-title);
+  font-weight: 700;
+  line-height: var(--wt-line-height-panel-title);
+}
+
+.heroIntro {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--wt-teal-700);
+  font-size: var(--wt-font-size-body);
+  line-height: var(--wt-line-height-body);
+}
+
+.transcript {
+  display: flex;
+  min-inline-size: 0;
+  flex-direction: column;
+  gap: calc(var(--wt-space-base) * 2);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.turn {
+  display: grid;
+  min-inline-size: 0;
+  gap: calc(var(--wt-space-base) * 0.5);
+  padding-block: calc(var(--wt-space-base) * 1.5);
+  padding-inline: calc(var(--wt-space-base) * 2);
+  background: var(--wt-surface);
+  border: var(--wt-card-border-width) solid var(--wt-teal-300);
+  border-radius: var(--wt-radius-kpi-card);
+}
+
+.turn[data-ai-agent-turn='assistant'] {
+  background: var(--wt-canvas);
+}
+
+.turnRole {
+  display: flex;
+  min-inline-size: 0;
+  align-items: center;
+  gap: var(--wt-space-base);
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--wt-teal-700);
+  font-size: var(--wt-font-size-caption);
+  font-weight: 700;
+  line-height: var(--wt-line-height-caption);
+}
+
+.turnContent {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  color: var(--wt-teal-900);
+  font-size: var(--wt-font-size-body);
+  line-height: var(--wt-line-height-body);
+}
+
+.grounding {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--wt-teal-700);
+  font-size: var(--wt-font-size-caption);
+  line-height: var(--wt-line-height-caption);
+}
+
+.pending {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--wt-teal-700);
+  font-size: var(--wt-font-size-caption);
+  font-weight: 700;
+  line-height: var(--wt-line-height-caption);
+}
+
+.failure {
+  margin: 0;
+  padding-block: var(--wt-space-base);
+  padding-inline: calc(var(--wt-space-base) * 1.5);
+  overflow-wrap: anywhere;
+  color: var(--wt-teal-900);
+  font-size: var(--wt-font-size-caption);
+  line-height: var(--wt-line-height-caption);
+  background: var(--wt-warn-050);
+  border: var(--wt-card-border-width) solid var(--wt-high);
+  border-radius: var(--wt-radius-kpi-card);
+}
+
+/* ── Composer ───────────────────────────────────────────────────────────── */
+
+.composer {
+  display: grid;
+  min-inline-size: 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--wt-space-base);
+  align-items: end;
+}
+
+.composerField {
+  min-inline-size: 0;
+  padding-block: var(--wt-space-base);
+  padding-inline: calc(var(--wt-space-base) * 1.5);
+  color: var(--wt-teal-900);
+  font-size: var(--wt-font-size-body);
+  line-height: var(--wt-line-height-body);
+  background: var(--wt-surface);
+  border: var(--wt-card-border-width) solid var(--wt-teal-300);
+  border-radius: var(--wt-radius-kpi-card);
+  resize: vertical;
+}
+
+.composerField::placeholder {
+  color: var(--wt-teal-700);
+}
+
+.composerField:disabled {
+  background: var(--wt-track);
+  cursor: not-allowed;
+}
+
+/* The two raw text fields carry the panel's own focus ring; Button brings its own. */
+.searchField:focus-visible,
+.composerField:focus-visible {
+  outline: calc(var(--wt-card-border-width) * 2) solid var(--wt-teal-700);
+  outline-offset: calc(var(--wt-card-border-width) * 2);
+}
+
+@container (min-width: 44rem) {
+  .workspace {
+    grid-template-columns: minmax(0, 32fr) minmax(0, 68fr);
+    align-items: start;
+  }
+
+  .composer {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
