@@ -163,3 +163,6 @@ escrow-0.1.0-test/
 
 # WatheeqTech reference-library PDFs — served from object storage (MinIO), never versioned
 docs/ClarioWatheeq/WatheeqTech Library/
+
+# Internal deep-dive documentation & analysis (not for distribution)
+project-analysis/

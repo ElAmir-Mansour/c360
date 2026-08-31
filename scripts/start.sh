@@ -94,12 +94,16 @@ header()  { echo -e "\n${C_BOLD}${C_GREEN}╔═══════════�
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 DB_HOST="${DB_HOST:-localhost}"
-DB_PORT="${DB_PORT:-5432}"
+# Must match the host-side port docker-compose.yml maps postgres to (5436, not
+# the container-internal 5432) — mismatching this makes services connect to
+# whatever else is listening on 5432 on the host instead of clario360-postgres.
+DB_PORT="${DB_PORT:-5436}"
 DB_USER=clario
 DB_PASS=clario_dev_pass
 DB_NAME=clario360          # global DB for audit/notification services
 REDIS_HOST="${REDIS_HOST:-localhost}"
-REDIS_PORT="${REDIS_PORT:-6379}"
+# Must match docker-compose.yml's host-side redis port mapping (6382).
+REDIS_PORT="${REDIS_PORT:-6382}"
 KAFKA_BROKERS=localhost:9094
 JWT_PRIVATE_KEY="${SECRETS_DIR}/jwt-private.pem"
 JWT_PUBLIC_KEY="${SECRETS_DIR}/jwt-public.pem"
@@ -304,6 +308,20 @@ latest_migration_version() {
     tail -1
 }
 
+run_migrations_dir() {
+  # Apply every *.up.sql in a migrations directory, in numeric order. Replaces
+  # the old hand-maintained per-file lists, which silently drifted out of sync
+  # with the migrations directories on disk (platform_core was 26 files
+  # behind, lex_db 117 files behind, cyber_db 22 files behind) and left
+  # services running against schemas missing columns/tables the app code
+  # already expects.
+  local db="$1" dir="$2"
+  local file
+  for file in $(find "${dir}" -maxdepth 1 -type f -name '*.up.sql' | sort); do
+    run_migration "${db}" "${file}"
+  done
+}
+
 sync_migration_version() {
   local db="$1" dir="$2"
   local version
@@ -506,77 +524,43 @@ done
 
 echo ""
 info "Running migrations for platform_core..."
-MDIR="${BACKEND_DIR}/migrations/platform_core"
-run_migration "platform_core" "${MDIR}/000001_init_schema.up.sql"       "tenants"
-run_migration "platform_core" "${MDIR}/000002_rls.up.sql"               "tenants"
-run_migration "platform_core" "${MDIR}/000003_tenant_onboarding.up.sql" "tenant_onboarding"
-run_migration "platform_core" "${MDIR}/000004_ai_governance_schema.up.sql" "ai_models"
-run_migration "platform_core" "${MDIR}/000005_ai_governance_rls.up.sql" "ai_models"
 run_migration "platform_core" "${BACKEND_DIR}/migrations/000010_create_file_storage_tables.up.sql" "files"
+run_migrations_dir "platform_core" "${BACKEND_DIR}/migrations/platform_core"
+# iam-service runs its own embedded golang-migrate migrations against
+# platform_core on startup; without a synced schema_migrations row it replays
+# from scratch and fails with "type already exists" against the schema this
+# script just applied via psql.
+sync_migration_version "platform_core" "${BACKEND_DIR}/migrations/platform_core"
 
 echo ""
 info "Running migrations for cyber_db..."
-MDIR="${BACKEND_DIR}/migrations/cyber_db"
-run_migration "cyber_db" "${MDIR}/000001_init_schema.up.sql"
-run_migration "cyber_db" "${MDIR}/000002_asset_inventory.up.sql"
-run_migration "cyber_db" "${MDIR}/000003_threat_detection_engine.up.sql"
-run_migration "cyber_db" "${MDIR}/000004_ctem_assessment_engine.up.sql"
-run_migration "cyber_db" "${MDIR}/000005_risk_scoring_engine.up.sql"
-run_migration "cyber_db" "${MDIR}/000006_asset_inventory_owner_text.up.sql"
-run_migration "cyber_db" "${MDIR}/000007_remediation_dspm_vciso.up.sql"
-run_migration "cyber_db" "${MDIR}/000008_remediation_prompt20_compat.up.sql"
-run_migration "cyber_db" "${MDIR}/000009_dspm_score_precision_compat.up.sql"
-run_migration "cyber_db" "${MDIR}/000010_dspm_legacy_schema_compat.up.sql"
-run_migration "cyber_db" "${MDIR}/000011_rls.up.sql"
-run_migration "cyber_db" "${MDIR}/000012_ueba_engine.up.sql"
-run_migration "cyber_db" "${MDIR}/000013_vciso_chat.up.sql"
-sync_migration_version "cyber_db" "${MDIR}"
+run_migrations_dir "cyber_db" "${BACKEND_DIR}/migrations/cyber_db"
+sync_migration_version "cyber_db" "${BACKEND_DIR}/migrations/cyber_db"
 
 echo ""
 info "Running migrations for data_db..."
-MDIR="${BACKEND_DIR}/migrations/data_db"
-run_migration "data_db" "${MDIR}/000001_init_schema.up.sql"
-run_migration "data_db" "${MDIR}/000002_prompt23_data_source_engine.up.sql"
-run_migration "data_db" "${MDIR}/000003_prompt24_pipeline_quality_contradictions.up.sql"
-run_migration "data_db" "${MDIR}/000004_prompt25_lineage_darkdata_analytics_dashboard.up.sql"
-run_migration "data_db" "${MDIR}/000005_rls.up.sql"
-run_migration "data_db" "${MDIR}/000006_prompt51_connector_types.up.sql"
-sync_migration_version "data_db" "${MDIR}"
+run_migrations_dir "data_db" "${BACKEND_DIR}/migrations/data_db"
+sync_migration_version "data_db" "${BACKEND_DIR}/migrations/data_db"
 
 echo ""
 info "Running migrations for acta_db..."
-MDIR="${BACKEND_DIR}/migrations/acta_db"
-run_migration "acta_db" "${MDIR}/000001_init_schema.up.sql"
-run_migration "acta_db" "${MDIR}/000002_rls.up.sql"
-sync_migration_version "acta_db" "${MDIR}"
+run_migrations_dir "acta_db" "${BACKEND_DIR}/migrations/acta_db"
+sync_migration_version "acta_db" "${BACKEND_DIR}/migrations/acta_db"
 
 echo ""
 info "Running migrations for lex_db..."
-MDIR="${BACKEND_DIR}/migrations/lex_db"
-run_migration "lex_db" "${MDIR}/000001_init_schema.up.sql"
-run_migration "lex_db" "${MDIR}/000002_rls.up.sql"
-sync_migration_version "lex_db" "${MDIR}"
+run_migrations_dir "lex_db" "${BACKEND_DIR}/migrations/lex_db"
+sync_migration_version "lex_db" "${BACKEND_DIR}/migrations/lex_db"
 
 echo ""
 info "Running migrations for visus_db..."
-MDIR="${BACKEND_DIR}/migrations/visus_db"
-run_migration "visus_db" "${MDIR}/000001_init_schema.up.sql"
-run_migration "visus_db" "${MDIR}/000002_modular_schema_compat.up.sql"
-run_migration "visus_db" "${MDIR}/000003_rls.up.sql"
-sync_migration_version "visus_db" "${MDIR}"
+run_migrations_dir "visus_db" "${BACKEND_DIR}/migrations/visus_db"
+sync_migration_version "visus_db" "${BACKEND_DIR}/migrations/visus_db"
 
 echo ""
 info "Running migrations for ${DB_NAME} (audit/notification)..."
-MDIR="${BACKEND_DIR}/migrations/audit_db"
-if [ -f "${MDIR}/000001_init_schema.up.sql" ]; then
-  run_migration "${DB_NAME}" "${MDIR}/000001_init_schema.up.sql"
-  run_migration "${DB_NAME}" "${MDIR}/000002_rls.up.sql"
-fi
-MDIR="${BACKEND_DIR}/migrations/notification_db"
-if [ -f "${MDIR}/000001_init_schema.up.sql" ]; then
-  run_migration "${DB_NAME}" "${MDIR}/000001_init_schema.up.sql"
-  run_migration "${DB_NAME}" "${MDIR}/000002_rls.up.sql"
-fi
+run_migrations_dir "${DB_NAME}" "${BACKEND_DIR}/migrations/audit_db"
+run_migrations_dir "${DB_NAME}" "${BACKEND_DIR}/migrations/notification_db"
 
 ok "All migrations complete"
 
@@ -737,6 +721,7 @@ start_service() {
   local pidfile
   pidfile="$(pid_file "$name")"
   local previous_database_name="${DATABASE_NAME:-}"
+  local previous_metrics_port="${METRICS_PORT:-}"
 
   if [ ! -f "${bin}" ]; then
     warn "Binary not found: ${bin} — skipping ${name}"
@@ -759,8 +744,21 @@ start_service() {
     export DATABASE_NAME="${DB_NAME}"
   fi
 
+  # cyber-service has no dedicated CYBER_ADMIN_PORT; it falls back to the
+  # generic METRICS_PORT (default 9090), which otherwise collides with
+  # notification-service's NOTIF_ADMIN_PORT (also 9090 in this script's port
+  # table).
+  if [ "${name}" = "cyber-service" ]; then
+    export METRICS_PORT="${CYBER_SERVICE_ADMIN_PORT}"
+  fi
+
   nohup "${bin}" > "${log}" 2>&1 &
   local pid=$!
+  if [ -n "${previous_metrics_port}" ]; then
+    export METRICS_PORT="${previous_metrics_port}"
+  else
+    unset METRICS_PORT
+  fi
   export DATABASE_NAME="${previous_database_name}"
   save_pid "${name}" "${pid}"
   ok "Started ${name} (PID ${pid}) → ${log}"
@@ -870,6 +868,9 @@ export VISUS_SUITE_LEX_URL="http://localhost:${LEX_SERVICE_HTTP_PORT}"
 
 # ── notification-service ──────────────────────────────────────────────────────
 export NOTIF_HTTP_PORT=${NOTIFICATION_SERVICE_HTTP_PORT}
+# NOTIF_ADMIN_PORT defaults to 9094 in-code, which collides with the Kafka
+# broker's host-mapped external listener port — must be set explicitly.
+export NOTIF_ADMIN_PORT=${NOTIFICATION_SERVICE_ADMIN_PORT}
 export NOTIF_DB_MIN_CONNS="1"
 export NOTIF_DB_MAX_CONNS="4"
 export NOTIF_EMAIL_PROVIDER="smtp"
@@ -1091,8 +1092,8 @@ echo -e "${C_BOLD}  └───────────────────
 
 echo ""
 echo -e "${C_BOLD}  Infrastructure${C_RESET}"
-echo -e "  ${C_DIM}PostgreSQL${C_RESET}       → localhost:5432"
-echo -e "  ${C_DIM}Redis${C_RESET}            → localhost:6379"
+echo -e "  ${C_DIM}PostgreSQL${C_RESET}       → localhost:${DB_PORT}"
+echo -e "  ${C_DIM}Redis${C_RESET}            → localhost:${REDIS_PORT}"
 echo -e "  ${C_DIM}Kafka/Redpanda${C_RESET}   → localhost:9094"
 echo -e "  ${C_DIM}MinIO API${C_RESET}        → localhost:9000"
 echo -e "  ${C_DIM}MinIO Console${C_RESET}    → http://localhost:9001  (clario_minio / clario_minio_secret)"
