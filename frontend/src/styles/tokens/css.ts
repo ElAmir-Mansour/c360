@@ -60,7 +60,10 @@ export function primitiveVars(): string[] {
 
   lines.push('/* Spacing rhythm */');
   for (const [k, v] of Object.entries(primitives.spacing)) {
-    lines.push(`--ds-space-${k}: ${v};`);
+    // Fractional keys (0.5, 1.5, ...) produce an invalid CSS custom-property
+    // ident with a literal ".", which Turbopack's CSS parser rejects — swap
+    // the dot for an underscore.
+    lines.push(`--ds-space-${k.replace('.', '_')}: ${v};`);
   }
 
   lines.push('/* Motion */');

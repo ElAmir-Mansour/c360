@@ -112,18 +112,18 @@ port_open() {
 
 pg_check() {
   if command -v pg_isready &>/dev/null; then
-    pg_isready -h localhost -p 5432 -U clario -q 2>/dev/null && echo "UP" || echo "DOWN"
+    pg_isready -h localhost -p "${DB_PORT:-5436}" -U clario -q 2>/dev/null && echo "UP" || echo "DOWN"
   else
-    port_open localhost 5432
+    port_open localhost "${DB_PORT:-5436}"
   fi
 }
 
 redis_check() {
   if command -v redis-cli &>/dev/null; then
-    result=$(redis-cli -h localhost -p 6379 ping 2>/dev/null || echo "")
+    result=$(redis-cli -h localhost -p "${REDIS_PORT:-6382}" ping 2>/dev/null || echo "")
     [ "${result}" = "PONG" ] && echo "UP" || echo "DOWN"
   else
-    port_open localhost 6379
+    port_open localhost "${REDIS_PORT:-6382}"
   fi
 }
 
@@ -285,8 +285,8 @@ render_status() {
 
     # Map label to port for display
     case "${label}" in
-      Postgres) port_display="5432" ;;
-      Redis)    port_display="6379" ;;
+      Postgres) port_display="${DB_PORT:-5436}" ;;
+      Redis)    port_display="${REDIS_PORT:-6382}" ;;
       Kafka)    port_display="9094" ;;
       MinIO)    port_display="9000" ;;
       Jaeger)   port_display="16686" ;;

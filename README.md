@@ -49,6 +49,9 @@ AI capabilities in the current codebase are implemented through governed, explai
 
 ## Quick Start (Local Development)
 
+> **New to the project?** See [`LOCAL_SETUP.md`](LOCAL_SETUP.md) for the full step-by-step
+> guide, including the `.env` values `scripts/start.sh` expects and a troubleshooting section.
+
 ### Prerequisites
 
 - Go 1.25+
@@ -496,6 +499,7 @@ make helm-template
 
 | Document | Description |
 |----------|-------------|
+| [Local Setup](LOCAL_SETUP.md) | Step-by-step local dev environment guide + troubleshooting |
 | [API Reference](docs/api/) | OpenAPI 3.1 specification |
 | [Architecture](docs/architecture/) | Architecture decision records and diagrams |
 | [AI Capabilities Matrix](docs/architecture/AI_CAPABILITIES_MATRIX.md) | AI capabilities by suite, governance coverage |
