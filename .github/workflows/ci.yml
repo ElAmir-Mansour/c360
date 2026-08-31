@@ -40,6 +40,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # Full history so golangci-lint's only-new-issues can diff against the base.
+          fetch-depth: 0
 
       - name: Setup Go
         uses: ./.github/actions/setup-go
@@ -49,11 +52,17 @@ jobs:
 
       # --- Go linting ---
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v8
         with:
-          version: latest
+          version: v2.13.2
           working-directory: backend
-          args: --timeout=10m
+          # The Lint job never actually ran under the old v6 action: golangci-lint
+          # v1.64.8 (built with go1.24) refuses to load a module targeting go 1.25.12,
+          # erroring out before it linted anything. The v8 action + golangci-lint v2
+          # (config migrated to v2 format) fixes that. only-new-issues restricts
+          # enforcement to lines changed in the PR/push diff, so the large pre-existing
+          # backlog does not block CI while still preventing NEW findings (ratchet).
+          only-new-issues: true
 
       - name: Run go vet
         working-directory: backend
